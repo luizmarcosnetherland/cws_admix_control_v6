@@ -406,6 +406,8 @@ class _HomePageState extends State<HomePage> {
   bool _syncingFolders = false;
   late bool _connected;
 
+  bool get _localMode => !_connected && widget.appMode == AppMode.local;
+
   @override
   void initState() {
     super.initState();
@@ -468,7 +470,7 @@ class _HomePageState extends State<HomePage> {
   void _openObras() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ObrasPage(localMode: widget.appMode == AppMode.local),
+        builder: (_) => ObrasPage(localMode: _localMode),
       ),
     );
   }
@@ -507,7 +509,7 @@ class _HomePageState extends State<HomePage> {
         height: 128,
         child: Center(
           child: Opacity(
-            opacity: 0.46,
+            opacity: 1,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -539,14 +541,14 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 8),
             Text(
-              widget.appMode == AppMode.local
+              _localMode
                   ? '• Modo local ativo ✅'
                   : (_connected
                         ? '• Dropbox: conectado ✅'
                         : '• Dropbox: não conectado'),
             ),
             const SizedBox(height: 4),
-            if (widget.appMode == AppMode.local) ...[
+            if (_localMode) ...[
               const Text('• Dados ficam salvos apenas localmente'),
               const Text('• Relatórios das obras saem em PDF para WhatsApp'),
               const Text('• Sem login ou sincronização com Dropbox'),
@@ -630,20 +632,18 @@ class _HomePageState extends State<HomePage> {
           _brandingWatermark(),
           const SizedBox(height: 10),
           _menuButton(
-            title: 'Obras',
-            subtitle: widget.appMode == AppMode.local
-                ? 'Ativas/Arquivadas, lançamentos e PDF para WhatsApp'
-                : 'Ativas/Arquivadas, lançamentos e filtros',
-            icon: Icons.apartment,
-            onTap: _openObras,
-          ),
-          _menuButton(
-            title: 'Calculadora CWS (PDF)',
-            subtitle: widget.appMode == AppMode.local
-                ? 'PDF local sem depender do Dropbox'
-                : 'PDF + upload (se Dropbox conectado)',
+            title: 'Calculadora CWS',
+            subtitle:
+                'Calcule a quantidade de aditivo para sua concretagem e solicite uma cotação.',
             icon: Icons.calculate,
             onTap: _openCalculator,
+          ),
+          _menuButton(
+            title: 'Obras',
+            subtitle:
+                'Cadastre sua obra, controle sua concretagem e gere relatórios em PDF para e-mail ou WhatsApp.',
+            icon: Icons.apartment,
+            onTap: _openObras,
           ),
           _menuButton(
             title: 'Dropbox: pastas',
