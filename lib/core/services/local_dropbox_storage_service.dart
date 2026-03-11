@@ -24,6 +24,27 @@ class LocalDropboxStorageService {
     return p.join(home, 'Dropbox', 'CWSadmixControl');
   }
 
+  Future<String> get exportRootPath async {
+    if (Platform.isIOS) {
+      return p.join(await rootPath, 'Downloads');
+    }
+
+    final home = _detectHomeDir();
+
+    if (Platform.isMacOS) {
+      return p.join(
+        home,
+        'Library',
+        'CloudStorage',
+        'Dropbox',
+        'Downloads',
+        'CWSadmixControl',
+      );
+    }
+
+    return p.join(home, 'Dropbox', 'Downloads', 'CWSadmixControl');
+  }
+
   static String _detectHomeDir() {
     final envHome =
         Platform.environment['HOME'] ??
@@ -43,7 +64,7 @@ class LocalDropboxStorageService {
 
   Future<Directory> get rootDir async => Directory(await rootPath);
   Future<Directory> get exportsDir async =>
-      Directory(p.join(await rootPath, 'exports'));
+      Directory(await exportRootPath);
   Future<Directory> get dataDir async =>
       Directory(p.join(await rootPath, 'data'));
   Future<Directory> get snapshotsDir async =>

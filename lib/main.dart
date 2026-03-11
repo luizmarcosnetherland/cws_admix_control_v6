@@ -331,35 +331,50 @@ class _ModeOptionCard extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: const Color(0xFFD8E3F8),
-              child: Icon(icon, size: 28, color: const Color(0xFF1E3A5F)),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: const Color(0xFFD8E3F8),
+                  child: Icon(icon, size: 24, color: const Color(0xFF1E3A5F)),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 21,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Colors.black.withValues(alpha: 0.68),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black.withValues(alpha: 0.68),
-              ),
-            ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
                 onPressed: onTap,
                 style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: Text(actionLabel),
               ),
@@ -421,9 +436,10 @@ class _HomePageState extends State<HomePage> {
     await _auth.signOut();
     if (!mounted) return;
     setState(() => _connected = false);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Dropbox desconectado.')));
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..clearSnackBars()
+      ..showSnackBar(const SnackBar(content: Text('Dropbox desconectado.')));
   }
 
   Future<void> _syncDropboxFolders() async {
@@ -432,14 +448,18 @@ class _HomePageState extends State<HomePage> {
       final rootPath = await _storage.ensureBaseStructure();
 
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Pastas locais OK: $rootPath')));
+      final messenger = ScaffoldMessenger.of(context);
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(SnackBar(content: Text('Pastas locais OK: $rootPath')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao sincronizar pastas: $e')));
+      final messenger = ScaffoldMessenger.of(context);
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(content: Text('Erro ao sincronizar pastas: $e')),
+        );
     } finally {
       if (mounted) setState(() => _syncingFolders = false);
     }
@@ -534,7 +554,8 @@ class _HomePageState extends State<HomePage> {
               const Text(
                 '• Dados e arquivos ficam salvos localmente no Dropbox',
               ),
-              const Text('• Pasta local: Dropbox/CWSadmixControl'),
+              const Text('• Relatórios: Dropbox/Downloads/CWSadmixControl'),
+              const Text('• Dados internos: Dropbox/CWSadmixControl'),
               const Text('• CSV funciona sem Dropbox'),
             ],
           ],

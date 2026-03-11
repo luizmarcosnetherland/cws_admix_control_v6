@@ -39,6 +39,7 @@ class DropboxAuth {
       'grant_type': 'authorization_code',
       'code': authorizationCode,
       'client_id': dropboxClientId,
+      'redirect_uri': dropboxRedirectUri,
       if (codeVerifier != null && codeVerifier.isNotEmpty)
         'code_verifier': codeVerifier,
     });
