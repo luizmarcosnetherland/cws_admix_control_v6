@@ -1,0 +1,423 @@
+import 'package:flutter/material.dart';
+
+import '../../../data/models/lancamento_model.dart';
+import '../../../data/repositories/lancamento_repository.dart';
+
+class NovoLancamentoPage extends StatefulWidget {
+  final int obraId;
+  final String obraNome;
+  final Lancamento? lancamento; // null = novo | != null = edição
+
+  const NovoLancamentoPage({
+    super.key,
+    required this.obraId,
+    required this.obraNome,
+    this.lancamento,
+  });
+
+  @override
+  State<NovoLancamentoPage> createState() => _NovoLancamentoPageState();
+}
+
+class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _repo = LancamentoRepository();
+
+  final _betoneiraCtrl = TextEditingController();
+  final _concreteiraCtrl = TextEditingController();
+  final _notaFiscalCtrl = TextEditingController();
+
+  final _volumeCtrl = TextEditingController();
+  final _dosagemCtrl = TextEditingController();
+  final _cwsAdicionadoCtrl = TextEditingController();
+
+  final _slumpAntesCtrl = TextEditingController();
+  final _slumpDepoisCtrl = TextEditingController();
+  final _tempoMisturaCtrl = TextEditingController();
+
+  final _obsCtrl = TextEditingController();
+
+  late final DateTime _dataHora;
+  bool _saving = false;
+
+  bool get _isEdicao => widget.lancamento != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final l = widget.lancamento;
+    _dataHora = l?.dataHora ?? DateTime.now();
+
+    _betoneiraCtrl.text = l?.caminhao ?? '';
+    _concreteiraCtrl.text = l?.concreteira ?? '';
+    _notaFiscalCtrl.text = l?.notaFiscal ?? '';
+
+    _volumeCtrl.text = l != null
+        ? l.volumeM3.toStringAsFixed(3).replaceAll('.', ',')
+        : '';
+    _dosagemCtrl.text = l != null
+        ? l.dosagemKgM3.toStringAsFixed(3).replaceAll('.', ',')
+        : '0,80';
+    _cwsAdicionadoCtrl.text = l?.cwsAdicionadoKg == null
+        ? ''
+        : l!.cwsAdicionadoKg!.toStringAsFixed(3).replaceAll('.', ',');
+    _slumpAntesCtrl.text = l?.slumpAntes == null
+        ? ''
+        : l!.slumpAntes!.toStringAsFixed(1).replaceAll('.', ',');
+    _slumpDepoisCtrl.text = l?.slumpDepois == null
+        ? ''
+        : l!.slumpDepois!.toStringAsFixed(1).replaceAll('.', ',');
+    _tempoMisturaCtrl.text = l?.tempoMisturaMin == null
+        ? ''
+        : l!.tempoMisturaMin!.toStringAsFixed(1).replaceAll('.', ',');
+
+    _obsCtrl.text = l?.observacoes ?? '';
+
+    _volumeCtrl.addListener(_recalc);
+    _dosagemCtrl.addListener(_recalc);
+    _cwsAdicionadoCtrl.addListener(_recalc);
+  }
+
+  @override
+  void dispose() {
+    _betoneiraCtrl.dispose();
+    _concreteiraCtrl.dispose();
+    _notaFiscalCtrl.dispose();
+    _volumeCtrl.dispose();
+    _dosagemCtrl.dispose();
+    _cwsAdicionadoCtrl.dispose();
+    _slumpAntesCtrl.dispose();
+    _slumpDepoisCtrl.dispose();
+    _tempoMisturaCtrl.dispose();
+    _obsCtrl.dispose();
+    super.dispose();
+  }
+
+  void _recalc() {
+    if (mounted) setState(() {});
+  }
+
+  double? _parseNumero(String raw) {
+    final t = raw.trim().replaceAll(',', '.');
+    if (t.isEmpty) return null;
+    return double.tryParse(t);
+  }
+
+  String _fmtNum(double v, {int casas = 3}) {
+    return v.toStringAsFixed(casas).replaceAll('.', ',');
+  }
+
+  String _fmtDataHora(DateTime dt) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(dt.day)}/${two(dt.month)}/${dt.year} ${two(dt.hour)}:${two(dt.minute)}';
+  }
+
+  double get _volumePreview => _parseNumero(_volumeCtrl.text) ?? 0;
+  double get _dosagemPreview => _parseNumero(_dosagemCtrl.text) ?? 0;
+  double get _cwsPreview => _volumePreview * _dosagemPreview;
+
+  String? _validateOptionalNumber(String? value) {
+    final t = (value ?? '').trim();
+    if (t.isEmpty) return null;
+    final v = _parseNumero(t);
+    if (v == null) return 'Número inválido';
+    if (v < 0) return 'Não pode ser negativo';
+    return null;
+  }
+
+  Future<void> _salvar() async {
+    if (_saving) return;
+    if (!_formKey.currentState!.validate()) return;
+
+    final volume = _parseNumero(_volumeCtrl.text)!;
+    final dosagem = _parseNumero(_dosagemCtrl.text)!;
+
+    final slumpAntes = _parseNumero(_slumpAntesCtrl.text);
+    final slumpDepois = _parseNumero(_slumpDepoisCtrl.text);
+    final tempoMistura = _parseNumero(_tempoMisturaCtrl.text);
+    final cwsAdicionado = _parseNumero(_cwsAdicionadoCtrl.text);
+
+    setState(() => _saving = true);
+
+    try {
+      if (_isEdicao) {
+        final original = widget.lancamento!;
+        await _repo.atualizarLancamento(
+          original.copyWith(
+            dataHora: _dataHora,
+            caminhao: _betoneiraCtrl.text.trim(),
+            concreteira: _concreteiraCtrl.text.trim(),
+            volumeM3: volume,
+            dosagemKgM3: dosagem,
+            cwsAdicionadoKg: cwsAdicionado,
+            notaFiscal: _notaFiscalCtrl.text.trim(),
+            slumpAntes: slumpAntes,
+            slumpDepois: slumpDepois,
+            tempoMisturaMin: tempoMistura,
+            observacoes: _obsCtrl.text.trim(),
+          ),
+        );
+      } else {
+        await _repo.criarLancamento(
+          obraId: widget.obraId,
+          dataHora: _dataHora,
+          caminhao: _betoneiraCtrl.text,
+          concreteira: _concreteiraCtrl.text,
+          volumeM3: volume,
+          dosagemKgM3: dosagem,
+          cwsAdicionadoKg: cwsAdicionado,
+          notaFiscal: _notaFiscalCtrl.text,
+          slumpAntes: slumpAntes,
+          slumpDepois: slumpDepois,
+          tempoMisturaMin: tempoMistura,
+          observacoes: _obsCtrl.text,
+        );
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isEdicao
+                ? 'Lançamento atualizado com sucesso.'
+                : 'Lançamento salvo com sucesso.',
+          ),
+        ),
+      );
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isEdicao
+                ? 'Erro ao atualizar lançamento: $e'
+                : 'Erro ao salvar lançamento: $e',
+          ),
+        ),
+      );
+    }
+  }
+
+  InputDecoration _dec(String label) =>
+      InputDecoration(labelText: label, border: const OutlineInputBorder());
+
+  @override
+  Widget build(BuildContext context) {
+    final titulo = _isEdicao ? 'Editar Lançamento' : 'Novo Lançamento';
+
+
+    final cwsAddPreview = _parseNumero(_cwsAdicionadoCtrl.text);
+
+    int? dosagemOk;
+    if (cwsAddPreview != null && _volumePreview > 0 && _dosagemPreview > 0) {
+      final esperado = _cwsPreview;
+      final diff = (cwsAddPreview - esperado).abs();
+
+      final tol2pct = esperado * 0.02;
+      final tol = tol2pct < 0.2 ? 0.2 : tol2pct;
+
+      dosagemOk = diff <= tol ? 1 : 0;
+    }
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(titulo),
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : _salvar,
+            child: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Salvar'),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.obraNome,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 6),
+                      Text('Data/hora: ${_fmtDataHora(_dataHora)}'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              TextFormField(
+                controller: _betoneiraCtrl,
+                decoration: _dec('Betoneira * (nº/placa)'),
+                textInputAction: TextInputAction.next,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Informe a betoneira'
+                    : null,
+              ),
+              const SizedBox(height: 12),
+
+              TextFormField(
+                controller: _notaFiscalCtrl,
+                decoration: _dec('Nota fiscal (NF)'),
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 12),
+
+              TextFormField(
+                controller: _concreteiraCtrl,
+                decoration: _dec('Concreteira'),
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 12),
+
+              TextFormField(
+                controller: _volumeCtrl,
+                decoration: _dec('Volume (m³) *'),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                textInputAction: TextInputAction.next,
+                validator: (value) {
+                  final v = _parseNumero(value ?? '');
+                  if (v == null) return 'Informe o volume';
+                  if (v <= 0) return 'Volume deve ser maior que zero';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+
+              TextFormField(
+                controller: _dosagemCtrl,
+                decoration: _dec('Dosagem (kg/m³) *'),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                textInputAction: TextInputAction.next,
+                validator: (value) {
+                  final v = _parseNumero(value ?? '');
+                  if (v == null) return 'Informe a dosagem';
+                  if (v <= 0) return 'Dosagem deve ser maior que zero';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+
+              TextFormField(
+                controller: _cwsAdicionadoCtrl,
+                decoration: _dec('Quantidade adicionada (kg)'),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                textInputAction: TextInputAction.next,
+                validator: _validateOptionalNumber,
+              ),
+              const SizedBox(height: 12),
+
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calculate_outlined),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'CWS total: ${_fmtNum(_cwsPreview, casas: 3)} kg',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),              if (cwsAddPreview != null)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.fact_check_outlined),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'CWS adicionado: ${_fmtNum(cwsAddPreview!, casas: 3)} kg',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        if (dosagemOk != null) Text(dosagemOk == 1 ? '✅' : '⚠️'),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 12),
+
+
+
+              // Extras de campo
+              TextFormField(
+                controller: _slumpAntesCtrl,
+                decoration: _dec('Slump antes (cm)'),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                textInputAction: TextInputAction.next,
+                validator: _validateOptionalNumber,
+              ),
+              const SizedBox(height: 12),
+
+              TextFormField(
+                controller: _slumpDepoisCtrl,
+                decoration: _dec('Slump depois (cm)'),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                textInputAction: TextInputAction.next,
+                validator: _validateOptionalNumber,
+              ),
+              const SizedBox(height: 12),
+
+              TextFormField(
+                controller: _tempoMisturaCtrl,
+                decoration: _dec('Tempo de mistura (min)'),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                textInputAction: TextInputAction.next,
+                validator: _validateOptionalNumber,
+              ),
+              const SizedBox(height: 12),
+
+              TextFormField(
+                controller: _obsCtrl,
+                decoration: _dec('Observações'),
+                minLines: 2,
+                maxLines: 4,
+              ),
+
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _saving ? null : _salvar,
+                icon: const Icon(Icons.save),
+                label: Text(
+                  _isEdicao ? 'Salvar alterações' : 'Salvar lançamento',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
