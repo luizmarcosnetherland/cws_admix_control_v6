@@ -7,7 +7,9 @@ import 'nova_obra_page.dart';
 import 'obra_detalhe_page.dart';
 
 class ObrasPage extends StatefulWidget {
-  const ObrasPage({super.key});
+  final bool localMode;
+
+  const ObrasPage({super.key, required this.localMode});
 
   @override
   State<ObrasPage> createState() => _ObrasPageState();
@@ -132,9 +134,12 @@ class _ObrasPageState extends State<ObrasPage> {
   }
 
   Future<void> _abrirDetalhe(Obra obra) async {
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => ObraDetalhePage(obra: obra)));
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            ObraDetalhePage(obra: obra, localMode: widget.localMode),
+      ),
+    );
     await _carregarTudo();
   }
 

@@ -12,6 +12,8 @@ import 'features/dropbox/connect_dropbox_page.dart';
 import 'features/obras/pages/obras_page.dart';
 import 'cws_calculator_page.dart';
 
+enum AppMode { dropbox, local }
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   Intl.defaultLocale = 'pt_BR';
@@ -39,9 +41,7 @@ class NetherlandApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.transparent,
       ),
       builder: (context, child) {
-        return _AppWatermarkBackground(
-          child: child ?? const SizedBox.shrink(),
-        );
+        return _AppWatermarkBackground(child: child ?? const SizedBox.shrink());
       },
       home: const AppGate(),
     );
@@ -61,12 +61,13 @@ class _AppWatermarkBackground extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           IgnorePointer(
-            child: Center(
+            child: Align(
+              alignment: const Alignment(0, 0.55),
               child: Opacity(
-                opacity: 0.08,
+                opacity: 0.045,
                 child: Image.asset(
                   'assets/logos/netherland.png',
-                  width: 440,
+                  width: 360,
                   fit: BoxFit.contain,
                 ),
               ),
@@ -91,6 +92,7 @@ class _AppGateState extends State<AppGate> {
   late final Future<String?> _tokenFuture = _auth.getAccessToken();
   bool _showSplash = true;
   bool _connected = false;
+  AppMode? _mode;
 
   @override
   void initState() {
@@ -121,11 +123,45 @@ class _AppGateState extends State<AppGate> {
     });
   }
 
+  Future<void> _selecionarModoDropbox() async {
+    if (_connected) {
+      setState(() => _mode = AppMode.dropbox);
+      return;
+    }
+
+    final ok = await Navigator.of(
+      context,
+    ).push<bool>(MaterialPageRoute(builder: (_) => const ConnectDropboxPage()));
+    final token = await _auth.getAccessToken();
+    final connected = (ok == true) && token != null && token.isNotEmpty;
+
+    if (!mounted) return;
+    setState(() {
+      _connected = connected;
+      if (connected) _mode = AppMode.dropbox;
+    });
+  }
+
+  void _selecionarModoLocal() {
+    setState(() {
+      _mode = AppMode.local;
+      _connected = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final Widget baseChild = _mode == null
+        ? _ModeSelectionScreen(
+            dropboxConnected: _connected,
+            onConnectDropbox: _selecionarModoDropbox,
+            onContinueLocal: _selecionarModoLocal,
+          )
+        : HomePage(dropboxConnected: _connected, appMode: _mode!);
+
     return Stack(
       children: [
-        HomePage(dropboxConnected: _connected),
+        baseChild,
         IgnorePointer(
           ignoring: !_showSplash,
           child: AnimatedOpacity(
@@ -198,10 +234,152 @@ class _SplashScreen extends StatelessWidget {
   }
 }
 
+class _ModeSelectionScreen extends StatelessWidget {
+  final bool dropboxConnected;
+  final Future<void> Function() onConnectDropbox;
+  final VoidCallback onContinueLocal;
+
+  const _ModeSelectionScreen({
+    required this.dropboxConnected,
+    required this.onConnectDropbox,
+    required this.onContinueLocal,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3F5F7),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Como deseja usar o aplicativo?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    dropboxConnected
+                        ? 'Sua conta Dropbox já está conectada. Você pode entrar direto com sync ou seguir apenas localmente.'
+                        : 'Escolha entre conectar ao Dropbox ou continuar em modo local.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  _ModeOptionCard(
+                    icon: dropboxConnected
+                        ? Icons.cloud_done
+                        : Icons.cloud_sync,
+                    title: dropboxConnected
+                        ? 'Entrar com Dropbox'
+                        : 'Conectar ao Dropbox',
+                    subtitle:
+                        'Abre o login do Dropbox e habilita sync, CSV e pasta local integrada.',
+                    actionLabel: dropboxConnected
+                        ? 'Usar Dropbox'
+                        : 'Fazer login',
+                    onTap: onConnectDropbox,
+                  ),
+                  const SizedBox(height: 16),
+                  _ModeOptionCard(
+                    icon: Icons.phone_iphone,
+                    title: 'Seguir sem Dropbox',
+                    subtitle:
+                        'Usa o app localmente e gera relatórios em PDF para compartilhar no WhatsApp.',
+                    actionLabel: 'Usar modo local',
+                    onTap: () async {
+                      onContinueLocal();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ModeOptionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  final Future<void> Function() onTap;
+
+  const _ModeOptionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: const Color(0xFFD8E3F8),
+              child: Icon(icon, size: 28, color: const Color(0xFF1E3A5F)),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.black.withValues(alpha: 0.68),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: onTap,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                ),
+                child: Text(actionLabel),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class HomePage extends StatefulWidget {
   final bool dropboxConnected;
+  final AppMode appMode;
 
-  const HomePage({super.key, required this.dropboxConnected});
+  const HomePage({
+    super.key,
+    required this.dropboxConnected,
+    required this.appMode,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -251,14 +429,12 @@ class _HomePageState extends State<HomePage> {
   Future<void> _syncDropboxFolders() async {
     setState(() => _syncingFolders = true);
     try {
-      await _storage.ensureBaseStructure();
+      final rootPath = await _storage.ensureBaseStructure();
 
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(
-        SnackBar(content: Text('Pastas locais OK: ${LocalDropboxStorageService.rootPath}')),
-      );
+      ).showSnackBar(SnackBar(content: Text('Pastas locais OK: $rootPath')));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -270,9 +446,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _openObras() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const ObrasPage()));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ObrasPage(localMode: widget.appMode == AppMode.local),
+      ),
+    );
   }
 
   void _openCalculator() {
@@ -315,11 +493,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Image.asset('assets/logos/netherland.png', height: 56),
                 const SizedBox(width: 20),
-                Container(
-                  width: 1,
-                  height: 44,
-                  color: const Color(0xFF1E3A5F),
-                ),
+                Container(width: 1, height: 44, color: const Color(0xFF1E3A5F)),
                 const SizedBox(width: 20),
                 Image.asset('assets/logos/cwsadmix.jpg', height: 56),
               ],
@@ -340,21 +514,29 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Modo de operacao',
+              'Modo de operação',
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(
-              _connected
-                  ? '• Dropbox: conectado ✅'
-                  : '• Dropbox: não conectado (modo local)',
+              widget.appMode == AppMode.local
+                  ? '• Modo local ativo ✅'
+                  : (_connected
+                        ? '• Dropbox: conectado ✅'
+                        : '• Dropbox: não conectado'),
             ),
             const SizedBox(height: 4),
-            const Text('• Dados e arquivos ficam salvos localmente no Dropbox'),
-            const Text(
-              '• Pasta: /Users/luizmarcosvahollanda/Library/CloudStorage/Dropbox/CWSadmixControl',
-            ),
-            const Text('• CSV funciona sem Dropbox'),
+            if (widget.appMode == AppMode.local) ...[
+              const Text('• Dados ficam salvos apenas localmente'),
+              const Text('• Relatórios das obras saem em PDF para WhatsApp'),
+              const Text('• Sem login ou sincronização com Dropbox'),
+            ] else ...[
+              const Text(
+                '• Dados e arquivos ficam salvos localmente no Dropbox',
+              ),
+              const Text('• Pasta local: Dropbox/CWSadmixControl'),
+              const Text('• CSV funciona sem Dropbox'),
+            ],
           ],
         ),
       ),
@@ -402,7 +584,7 @@ class _HomePageState extends State<HomePage> {
                           )
                         : const Icon(Icons.folder),
                     const SizedBox(width: 10),
-                    const Text('Validar pastas Dropbox'),
+                    const Text('Validar pastas do Dropbox'),
                   ],
                 ),
               ),
@@ -428,13 +610,17 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 10),
           _menuButton(
             title: 'Obras',
-            subtitle: 'Ativas/Arquivadas, lançamentos e filtros',
+            subtitle: widget.appMode == AppMode.local
+                ? 'Ativas/Arquivadas, lançamentos e PDF para WhatsApp'
+                : 'Ativas/Arquivadas, lançamentos e filtros',
             icon: Icons.apartment,
             onTap: _openObras,
           ),
           _menuButton(
             title: 'Calculadora CWS (PDF)',
-            subtitle: 'PDF + upload (se Dropbox conectado)',
+            subtitle: widget.appMode == AppMode.local
+                ? 'PDF local sem depender do Dropbox'
+                : 'PDF + upload (se Dropbox conectado)',
             icon: Icons.calculate,
             onTap: _openCalculator,
           ),

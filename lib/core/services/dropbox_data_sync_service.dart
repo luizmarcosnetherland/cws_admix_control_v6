@@ -14,7 +14,8 @@ class DropboxDataSyncService {
   Future<String> syncAllToDropbox() async {
     final snapshot = await _buildSnapshot();
     final file = await _writeSnapshotToLocalDropbox(snapshot);
-    final latestFile = File(_storage.dataFilePath('latest.json'));
+    final latestPath = await _storage.dataFilePath('latest.json');
+    final latestFile = File(latestPath);
     await latestFile.writeAsBytes(await file.readAsBytes(), flush: true);
     return file.path;
   }
@@ -73,10 +74,12 @@ class DropboxDataSyncService {
     };
   }
 
-  Future<File> _writeSnapshotToLocalDropbox(Map<String, dynamic> snapshot) async {
+  Future<File> _writeSnapshotToLocalDropbox(
+    Map<String, dynamic> snapshot,
+  ) async {
     await _storage.ensureBaseStructure();
     final name = 'snapshot_${_timestamp()}.json';
-    final path = _storage.snapshotFilePath(name);
+    final path = await _storage.snapshotFilePath(name);
 
     final jsonStr = const JsonEncoder.withIndent('  ').convert(snapshot);
     final bytes = utf8.encode('\ufeff$jsonStr'); // BOM (Excel/editores)

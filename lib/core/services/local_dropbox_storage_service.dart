@@ -3,24 +3,77 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 class LocalDropboxStorageService {
-  static const rootPath =
-      '/Users/luizmarcosvahollanda/Library/CloudStorage/Dropbox/CWSadmixControl';
+  Future<String> get rootPath async {
+    if (Platform.isIOS) {
+      final sandboxRoot = Directory.systemTemp.parent.path;
+      return p.join(sandboxRoot, 'Documents', 'CWSadmixControl');
+    }
 
-  Directory get rootDir => Directory(rootPath);
-  Directory get exportsDir => Directory(p.join(rootPath, 'exports'));
-  Directory get dataDir => Directory(p.join(rootPath, 'data'));
-  Directory get snapshotsDir => Directory(p.join(rootPath, 'data', 'snapshots'));
+    final home = _detectHomeDir();
 
-  Future<void> ensureBaseStructure() async {
-    await rootDir.create(recursive: true);
-    await exportsDir.create(recursive: true);
-    await dataDir.create(recursive: true);
-    await snapshotsDir.create(recursive: true);
+    if (Platform.isMacOS) {
+      return p.join(
+        home,
+        'Library',
+        'CloudStorage',
+        'Dropbox',
+        'CWSadmixControl',
+      );
+    }
+
+    return p.join(home, 'Dropbox', 'CWSadmixControl');
   }
 
-  String exportFilePath(String filename) => p.join(exportsDir.path, filename);
+  static String _detectHomeDir() {
+    final envHome =
+        Platform.environment['HOME'] ??
+        Platform.environment['USERPROFILE'] ??
+        '';
+    if (envHome.isNotEmpty) return envHome;
 
-  String dataFilePath(String filename) => p.join(dataDir.path, filename);
+    final currentPath = Directory.current.path;
+    const marker = '/Library/Developer/';
+    final idx = currentPath.indexOf(marker);
+    if (idx > 0) {
+      return currentPath.substring(0, idx);
+    }
 
-  String snapshotFilePath(String filename) => p.join(snapshotsDir.path, filename);
+    return '';
+  }
+
+  Future<Directory> get rootDir async => Directory(await rootPath);
+  Future<Directory> get exportsDir async =>
+      Directory(p.join(await rootPath, 'exports'));
+  Future<Directory> get dataDir async =>
+      Directory(p.join(await rootPath, 'data'));
+  Future<Directory> get snapshotsDir async =>
+      Directory(p.join(await rootPath, 'data', 'snapshots'));
+
+  Future<String> ensureBaseStructure() async {
+    final root = await rootDir;
+    final exports = await exportsDir;
+    final data = await dataDir;
+    final snapshots = await snapshotsDir;
+
+    await root.create(recursive: true);
+    await exports.create(recursive: true);
+    await data.create(recursive: true);
+    await snapshots.create(recursive: true);
+    return root.path;
+  }
+
+  Future<String> exportFilePath(String filename) async {
+    final dir = await exportsDir;
+    return p.join(dir.path, filename);
+  }
+
+  Future<String> dataFilePath(String filename) async {
+    final dir = await dataDir;
+    return p.join(dir.path, filename);
+  }
+
+  Future<String> snapshotFilePath(String filename) async {
+    final dir = await snapshotsDir;
+    return p.join(dir.path, filename);
+  }
 }

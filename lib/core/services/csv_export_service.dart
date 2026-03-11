@@ -71,7 +71,9 @@ class CsvExportService {
         _fmtNum(l.dosagemKgM3, casas: 3),
         _fmtNum(l.cwsTotalKg, casas: 3),
         l.cwsAdicionadoKg == null ? '' : _fmtNum(l.cwsAdicionadoKg!, casas: 3),
-        l.dosagemDeAcordo == null ? '' : (l.dosagemDeAcordo == 1 ? 'OK' : 'DIVERGENTE'),
+        l.dosagemDeAcordo == null
+            ? ''
+            : (l.dosagemDeAcordo == 1 ? 'OK' : 'DIVERGENTE'),
         l.observacoes,
       ]);
     }
@@ -83,7 +85,7 @@ class CsvExportService {
     ).convert(rows);
 
     await _storage.ensureBaseStructure();
-    final exportDir = _storage.exportsDir;
+    final exportDir = await _storage.exportsDir;
     await exportDir.create(recursive: true);
 
     final fileName =

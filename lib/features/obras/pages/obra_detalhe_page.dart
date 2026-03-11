@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/services/csv_export_service.dart';
 import '../../../core/services/email_compose_service.dart';
+import '../../../core/services/obra_report_pdf_service.dart';
 import '../../../data/models/lancamento_model.dart';
 import '../../../data/models/obra_model.dart';
 import '../../../data/repositories/lancamento_repository.dart';
@@ -25,8 +26,13 @@ enum _Ordenacao {
 
 class ObraDetalhePage extends StatefulWidget {
   final Obra obra;
+  final bool localMode;
 
-  const ObraDetalhePage({super.key, required this.obra});
+  const ObraDetalhePage({
+    super.key,
+    required this.obra,
+    required this.localMode,
+  });
 
   @override
   State<ObraDetalhePage> createState() => _ObraDetalhePageState();
@@ -36,6 +42,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
   final _repo = LancamentoRepository();
   final CsvExportService _csv = CsvExportService();
   final EmailComposeService _email = EmailComposeService();
+  final ObraReportPdfService _obraPdf = ObraReportPdfService();
 
   late Obra _obraAtual;
 
@@ -364,13 +371,39 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
     }
   }
 
+  Future<void> _compartilharPdfWhatsapp() async {
+    try {
+      final box = context.findRenderObject() as RenderBox?;
+      final origin = box == null
+          ? null
+          : box.localToGlobal(Offset.zero) & box.size;
+      await _obraPdf.shareReportPdf(
+        obra: _obraAtual,
+        lancamentos: _filtrado,
+        periodoLabel: _labelPeriodo(),
+        ordenacaoLabel: _labelOrdenacao(),
+        concreteira: _filtroConcreteira,
+        betoneira: _filtroBetoneira,
+        busca: _buscaCtrl.text.trim(),
+        sharePositionOrigin: origin,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao compartilhar PDF: $e')));
+    }
+  }
+
   Future<void> _enviarEmailEngenheiro() async {
     final emailDestino = _obraAtual.emailEngenheiro.trim();
     if (emailDestino.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Cadastre o e-mail do engenheiro na obra antes de enviar.'),
+          content: Text(
+            'Cadastre o e-mail do engenheiro na obra antes de enviar.',
+          ),
         ),
       );
       return;
@@ -386,11 +419,11 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         lancamentos: _filtrado,
         exportLabel: _exportLabelAtual(),
       );
-      final assunto = 'Relatorio da obra ${_obraAtual.nome}';
+      final assunto = 'Relatório da obra ${_obraAtual.nome}';
       final body = [
-        'Segue em anexo o relatorio CSV da obra ${_obraAtual.nome}.',
+        'Segue em anexo o relatório CSV da obra ${_obraAtual.nome}.',
         '',
-        'Quantidade de lancamentos: ${_filtrado.length}',
+        'Quantidade de lançamentos: ${_filtrado.length}',
         'Volume total: ${_fmtNum(_resumo.volumeTotalM3, casas: 3)} m3',
         'CWS total: ${_fmtNum(_resumo.cwsTotalKg, casas: 3)} kg',
       ].join('\n');
@@ -409,9 +442,9 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao enviar e-mail: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao enviar e-mail: $e')));
     }
   }
 
@@ -646,7 +679,9 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
                   ),
                 ),
                 IconButton(
-                  tooltip: _filtrosExpandidos ? 'Recolher filtros' : 'Expandir filtros',
+                  tooltip: _filtrosExpandidos
+                      ? 'Recolher filtros'
+                      : 'Expandir filtros',
                   onPressed: () {
                     setState(() {
                       _filtrosExpandidos = !_filtrosExpandidos;
@@ -874,7 +909,9 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
                 Text('Dosagem: ${_fmtNum(l.dosagemKgM3, casas: 3)} kg/m³'),
                 Text('CWS: ${_fmtNum(l.cwsTotalKg, casas: 3)} kg'),
                 if (l.cwsAdicionadoKg != null)
-                  Text('CWS adicionado: ${_fmtNum(l.cwsAdicionadoKg!, casas: 3)} kg'),
+                  Text(
+                    'CWS adicionado: ${_fmtNum(l.cwsAdicionadoKg!, casas: 3)} kg',
+                  ),
                 if (l.observacoes.isNotEmpty) Text('Obs.: ${l.observacoes}'),
               ],
             ),
@@ -887,33 +924,33 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
                     child: Text(status, style: const TextStyle(fontSize: 18)),
                   ),
                 PopupMenuButton<String>(
-              onSelected: (value) async {
-                if (value == 'editar') {
-                  final updated = await Navigator.of(context).push<bool>(
-                    MaterialPageRoute(
-                      builder: (_) => NovoLancamentoPage(
-                        obraId: _obraAtual.id!,
-                        obraNome: _obraAtual.nome,
-                        lancamento: l,
-                      ),
-                    ),
-                  );
+                  onSelected: (value) async {
+                    if (value == 'editar') {
+                      final updated = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute(
+                          builder: (_) => NovoLancamentoPage(
+                            obraId: _obraAtual.id!,
+                            obraNome: _obraAtual.nome,
+                            lancamento: l,
+                          ),
+                        ),
+                      );
 
-                  if (updated == true) {
-                    await _carregar();
-                  }
-                  return;
-                }
+                      if (updated == true) {
+                        await _carregar();
+                      }
+                      return;
+                    }
 
-                if (value == 'excluir') {
-                  await _excluirLancamento(l);
-                }
-              },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'editar', child: Text('Editar')),
-                PopupMenuItem(value: 'excluir', child: Text('Excluir')),
-              ],
-            ),
+                    if (value == 'excluir') {
+                      await _excluirLancamento(l);
+                    }
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'editar', child: Text('Editar')),
+                    PopupMenuItem(value: 'excluir', child: Text('Excluir')),
+                  ],
+                ),
               ],
             ),
           ),
@@ -928,16 +965,24 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
       appBar: AppBar(
         title: const Text('Obra'),
         actions: [
-          IconButton(
-            tooltip: 'Exportar CSV (filtros atuais)',
-            onPressed: _exportarCsv,
-            icon: const Icon(Icons.download),
-          ),
-          IconButton(
-            tooltip: 'Enviar e-mail ao engenheiro',
-            onPressed: _enviarEmailEngenheiro,
-            icon: const Icon(Icons.email_outlined),
-          ),
+          if (widget.localMode)
+            IconButton(
+              tooltip: 'Compartilhar PDF no WhatsApp',
+              onPressed: _compartilharPdfWhatsapp,
+              icon: const Icon(Icons.share_outlined),
+            )
+          else ...[
+            IconButton(
+              tooltip: 'Exportar CSV (filtros atuais)',
+              onPressed: _exportarCsv,
+              icon: const Icon(Icons.download),
+            ),
+            IconButton(
+              tooltip: 'Enviar e-mail ao engenheiro',
+              onPressed: _enviarEmailEngenheiro,
+              icon: const Icon(Icons.email_outlined),
+            ),
+          ],
           IconButton(
             tooltip: 'Editar obra',
             onPressed: _editarObra,
@@ -960,7 +1005,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
                     _filtrosExtras(),
                     const SizedBox(height: 10),
                     _listaLancamentos(),
-                    const SizedBox(height: 90),
+                    const SizedBox(height: 128),
                   ],
                 ),
         ),

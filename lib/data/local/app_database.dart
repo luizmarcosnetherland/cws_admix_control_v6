@@ -52,67 +52,35 @@ class AppDatabase {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     // v1 -> v2: cria tabela de lançamentos
     if (oldVersion < 2) {
-      await _createLancamentosTable(db);    await _ensureLancamentosColumns(db);
-
+      await _createLancamentosTable(db);
     }
 
- // v2 -> v3: adiciona campos extras de lançamento
-if (oldVersion < 3) {
-  // NOT NULL precisa de DEFAULT
-  await db.execute(
-    "ALTER TABLE lancamentos ADD COLUMN nota_fiscal TEXT NOT NULL DEFAULT ''",
-  );
+    // v2 -> v3: adiciona campos extras de lançamento
+    if (oldVersion < 3) {
+      final names = await _tableColumnNames(db, 'lancamentos');
 
-  // campos numéricos opcionais (podem ser NULL)
-  await db.execute("ALTER TABLE lancamentos ADD COLUMN slump_antes REAL");
-  await db.execute("ALTER TABLE lancamentos ADD COLUMN slump_depois REAL");
-  await db.execute(
-    "ALTER TABLE lancamentos ADD COLUMN tempo_mistura_min REAL",
-  );
-}
-
-// v3 -> v4: controle de CWS adicionado + validação
-if (oldVersion < 4) {
-  final cols = await db.rawQuery("PRAGMA table_info(lancamentos)");
-  final names = cols.map((e) => e['name'] as String).toSet();
-
-  if (!names.contains('cws_adicionado_kg')) {
-    await db.execute(
-      "ALTER TABLE lancamentos ADD COLUMN cws_adicionado_kg REAL",
-    );
-    if (oldVersion < 7) {
-      final cols = await db.rawQuery("PRAGMA table_info(lancamentos)");
-      final names = cols.map((e) => e['name'] as String).toSet();
-
-      if (!names.contains('cws_adicionado_kg')) {
-        await db.execute("ALTER TABLE lancamentos ADD COLUMN cws_adicionado_kg REAL");
+      if (!names.contains('nota_fiscal')) {
+        await db.execute(
+          "ALTER TABLE lancamentos ADD COLUMN nota_fiscal TEXT NOT NULL DEFAULT ''",
+        );
       }
-      if (!names.contains('dosagem_de_acordo')) {
-        await db.execute("ALTER TABLE lancamentos ADD COLUMN dosagem_de_acordo INTEGER");
+      if (!names.contains('slump_antes')) {
+        await db.execute("ALTER TABLE lancamentos ADD COLUMN slump_antes REAL");
+      }
+      if (!names.contains('slump_depois')) {
+        await db.execute(
+          "ALTER TABLE lancamentos ADD COLUMN slump_depois REAL",
+        );
+      }
+      if (!names.contains('tempo_mistura_min')) {
+        await db.execute(
+          "ALTER TABLE lancamentos ADD COLUMN tempo_mistura_min REAL",
+        );
       }
     }
 
-
-  }
-
-    if (oldVersion < 5) {
-      final cols = await db.rawQuery("PRAGMA table_info(lancamentos)");
-      final names = cols.map((e) => e['name'] as String).toSet();
-
-      if (!names.contains('cws_adicionado_kg')) {
-        await db.execute("ALTER TABLE lancamentos ADD COLUMN cws_adicionado_kg REAL");
-      }
-      if (!names.contains('dosagem_de_acordo')) {
-        await db.execute("ALTER TABLE lancamentos ADD COLUMN dosagem_de_acordo INTEGER");
-      }
-    }
-
-  if (!names.contains('dosagem_de_acordo')) {
-    await db.execute(
-      "ALTER TABLE lancamentos ADD COLUMN dosagem_de_acordo INTEGER",
-    );
-  }
-}
+    // Mantém bancos antigos compatíveis com o schema atual.
+    await _ensureSchema(db);
   }
 
   Future<void> _createObrasTable(Database db) async {
@@ -147,6 +115,8 @@ if (oldVersion < 4) {
         volume_m3 REAL NOT NULL,
         dosagem_kg_m3 REAL NOT NULL DEFAULT 0.80,
         cws_total_kg REAL NOT NULL,
+        cws_adicionado_kg REAL,
+        dosagem_de_acordo INTEGER,
         nota_fiscal TEXT NOT NULL DEFAULT '',
         slump_antes REAL,
         slump_depois REAL,
@@ -164,20 +134,22 @@ if (oldVersion < 4) {
   }
 
   Future<void> _ensureLancamentosColumns(Database db) async {
-    final cols = await db.rawQuery("PRAGMA table_info(lancamentos)");
-    final names = cols.map((e) => e['name'] as String).toSet();
+    final names = await _tableColumnNames(db, 'lancamentos');
 
     if (!names.contains('cws_adicionado_kg')) {
-      await db.execute("ALTER TABLE lancamentos ADD COLUMN cws_adicionado_kg REAL");
+      await db.execute(
+        "ALTER TABLE lancamentos ADD COLUMN cws_adicionado_kg REAL",
+      );
     }
     if (!names.contains('dosagem_de_acordo')) {
-      await db.execute("ALTER TABLE lancamentos ADD COLUMN dosagem_de_acordo INTEGER");
+      await db.execute(
+        "ALTER TABLE lancamentos ADD COLUMN dosagem_de_acordo INTEGER",
+      );
     }
   }
 
   Future<void> _ensureObrasColumns(Database db) async {
-    final cols = await db.rawQuery("PRAGMA table_info(obras)");
-    final names = cols.map((e) => e['name'] as String).toSet();
+    final names = await _tableColumnNames(db, 'obras');
 
     if (!names.contains('email_engenheiro')) {
       await db.execute(
@@ -186,4 +158,8 @@ if (oldVersion < 4) {
     }
   }
 
+  Future<Set<String>> _tableColumnNames(Database db, String table) async {
+    final cols = await db.rawQuery('PRAGMA table_info($table)');
+    return cols.map((e) => e['name'] as String).toSet();
+  }
 }

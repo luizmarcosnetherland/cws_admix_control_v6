@@ -25,8 +25,10 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
   final _concreteSupplierCtrl = TextEditingController();
   final _engineerEmailCtrl = TextEditingController();
 
-  double get volume => double.tryParse(_volumeCtrl.text.replaceAll(',', '.')) ?? 0.0;
-  double get cementKgM3 => double.tryParse(_cementCtrl.text.replaceAll(',', '.')) ?? 0.0;
+  double get volume =>
+      double.tryParse(_volumeCtrl.text.replaceAll(',', '.')) ?? 0.0;
+  double get cementKgM3 =>
+      double.tryParse(_cementCtrl.text.replaceAll(',', '.')) ?? 0.0;
 
   double get dosageKgM3 => (cementKgM3 > 450) ? 1.0 : 0.8;
   double get totalKg => volume * dosageKgM3;
@@ -40,12 +42,14 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
     final now = DateTime.now();
     final dateStr = DateFormat("dd/MM/yyyy HH:mm", "pt_BR").format(now);
 
-    final netherlandBytes =
-        (await rootBundle.load('assets/logos/netherland.png')).buffer.asUint8List();
+    final netherlandBytes = (await rootBundle.load(
+      'assets/logos/netherland.png',
+    )).buffer.asUint8List();
 
     // Se o seu logo do CWS for PNG, troque aqui pra cwsadmix.png
-    final cwsBytes =
-        (await rootBundle.load('assets/logos/cwsadmix.jpg')).buffer.asUint8List();
+    final cwsBytes = (await rootBundle.load(
+      'assets/logos/cwsadmix.jpg',
+    )).buffer.asUint8List();
 
     final netherlandImg = pw.MemoryImage(netherlandBytes);
     final cwsImg = pw.MemoryImage(cwsBytes);
@@ -74,43 +78,73 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
             style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 4),
-          pw.Text('Netherland Admix Control • Gerado em: $dateStr',
-              style: const pw.TextStyle(fontSize: 10)),
+          pw.Text(
+            'Netherland Admix Control • Gerado em: $dateStr',
+            style: const pw.TextStyle(fontSize: 10),
+          ),
           pw.Divider(),
 
-          pw.Text('Identificação',
-              style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+            'Identificação',
+            style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+          ),
           pw.SizedBox(height: 6),
-          _kv('Obra', _jobNameCtrl.text.trim().isEmpty ? '—' : _jobNameCtrl.text.trim()),
-          _kv('Concreteira',
-              _concreteSupplierCtrl.text.trim().isEmpty ? '—' : _concreteSupplierCtrl.text.trim()),
-          _kv('E-mail do Engenheiro',
-              _engineerEmailCtrl.text.trim().isEmpty ? '—' : _engineerEmailCtrl.text.trim()),
+          _kv(
+            'Obra',
+            _jobNameCtrl.text.trim().isEmpty ? '—' : _jobNameCtrl.text.trim(),
+          ),
+          _kv(
+            'Concreteira',
+            _concreteSupplierCtrl.text.trim().isEmpty
+                ? '—'
+                : _concreteSupplierCtrl.text.trim(),
+          ),
+          _kv(
+            'E-mail do Engenheiro',
+            _engineerEmailCtrl.text.trim().isEmpty
+                ? '—'
+                : _engineerEmailCtrl.text.trim(),
+          ),
           pw.SizedBox(height: 10),
 
-          pw.Text('Parâmetros e Regra',
-              style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+            'Parâmetros e Regra',
+            style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+          ),
           pw.SizedBox(height: 6),
           _kv('Volume de concretagem', '${fmt(volume)} m³'),
           _kv('Consumo de cimento', '${fmt(cementKgM3)} kg/m³'),
           _kv('Regra', regra),
           pw.SizedBox(height: 10),
 
-          pw.Text('Resultado',
-              style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+            'Resultado',
+            style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+          ),
           pw.SizedBox(height: 6),
           _kv('Dosagem aplicada', '${fmt(dosageKgM3)} kg/m³'),
           _kv('Quantidade total (teórica)', '${fmt(totalKg)} kg'),
           _kv('Embalagens (6,4 kg) – arredondamento p/ cima', '$bags saco(s)'),
-          _kv('Quantidade fornecida (embalagens × 6,4 kg)', '${fmt(providedKg)} kg'),
+          _kv(
+            'Quantidade fornecida (embalagens × 6,4 kg)',
+            '${fmt(providedKg)} kg',
+          ),
 
           pw.SizedBox(height: 14),
           pw.Divider(),
-          pw.Text('Observações de Aplicação',
-              style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+            'Observações de Aplicação',
+            style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+          ),
           pw.SizedBox(height: 6),
-          pw.Bullet(text: 'Se dosado no caminhão betoneira: garantir mistura mínima de 10 minutos após adição.'),
-          pw.Bullet(text: 'Registrar horário da adição e horário de início de descarga.'),
+          pw.Bullet(
+            text:
+                'Se dosado no caminhão betoneira: garantir mistura mínima de 10 minutos após adição.',
+          ),
+          pw.Bullet(
+            text:
+                'Registrar horário da adição e horário de início de descarga.',
+          ),
           pw.Bullet(text: 'Registrar slump para controle tecnológico.'),
         ],
       ),
@@ -127,9 +161,14 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
         children: [
           pw.SizedBox(
             width: 185,
-            child: pw.Text(k, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+            child: pw.Text(
+              k,
+              style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+            ),
           ),
-          pw.Expanded(child: pw.Text(v, style: const pw.TextStyle(fontSize: 10))),
+          pw.Expanded(
+            child: pw.Text(v, style: const pw.TextStyle(fontSize: 10)),
+          ),
         ],
       ),
     );
@@ -143,13 +182,13 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
     final filename = 'Relatorio_CWS_$ts.pdf';
     final storage = LocalDropboxStorageService();
     await storage.ensureBaseStructure();
-    final path = storage.exportFilePath(filename);
+    final path = await storage.exportFilePath(filename);
     await File(path).writeAsBytes(bytes, flush: true);
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Salvo em ${p.basename(path)}')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Salvo em ${p.basename(path)}')));
   }
 
   @override
@@ -175,22 +214,34 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('Dados da Obra', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Dados da Obra',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           _field(_jobNameCtrl, 'Nome da obra'),
           _field(_concreteSupplierCtrl, 'Concreteira'),
           _field(_engineerEmailCtrl, 'E-mail do engenheiro'),
 
           const SizedBox(height: 16),
-          const Text('Cálculo de Dosagem', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Cálculo de Dosagem',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           _field(_volumeCtrl, 'Volume (m³)', keyboard: TextInputType.number),
-          _field(_cementCtrl, 'Cimento (kg/m³)', keyboard: TextInputType.number),
+          _field(
+            _cementCtrl,
+            'Cimento (kg/m³)',
+            keyboard: TextInputType.number,
+          ),
 
           const SizedBox(height: 16),
           Card(
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -207,69 +258,77 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
 
           const SizedBox(height: 12),
           Material(
-  color: const Color(0xFF1E3A5F),
-  borderRadius: BorderRadius.circular(28),
-  child: InkWell(
-    borderRadius: BorderRadius.circular(28),
-    onTap: () async {
-      final rootNav = Navigator.of(context);
-      final messenger = ScaffoldMessenger.of(context);
-      try {
-        final doc = await _buildPdf();
-        if (!mounted) return;
+            color: const Color(0xFF1E3A5F),
+            borderRadius: BorderRadius.circular(28),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(28),
+              onTap: () async {
+                final rootNav = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                try {
+                  final doc = await _buildPdf();
+                  if (!mounted) return;
 
-        rootNav.push(
-          MaterialPageRoute(
-            builder: (_) => Scaffold(
-              appBar: AppBar(
-                title: const Text('Prévia do PDF'),
-                backgroundColor: blue,
-                foregroundColor: Colors.white,
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  tooltip: 'Voltar',
-                  onPressed: () => rootNav.pop(),
+                  rootNav.push(
+                    MaterialPageRoute(
+                      builder: (_) => Scaffold(
+                        appBar: AppBar(
+                          title: const Text('Prévia do PDF'),
+                          backgroundColor: blue,
+                          foregroundColor: Colors.white,
+                          leading: IconButton(
+                            icon: const Icon(Icons.arrow_back),
+                            tooltip: 'Voltar',
+                            onPressed: () => rootNav.pop(),
+                          ),
+                          actions: [
+                            IconButton(
+                              icon: const Icon(Icons.dashboard_outlined),
+                              tooltip: 'Ir para o Dashboard',
+                              onPressed: () =>
+                                  rootNav.popUntil((route) => route.isFirst),
+                            ),
+                          ],
+                        ),
+                        body: PdfPreview(
+                          build: (format) async => doc.save(),
+                          canChangePageFormat: false,
+                          canChangeOrientation: false,
+                          allowPrinting: true,
+                          allowSharing: true,
+                        ),
+                      ),
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  messenger.showSnackBar(
+                    SnackBar(content: Text('Erro ao gerar PDF: $e')),
+                  );
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: 18,
                 ),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.dashboard_outlined),
-                    tooltip: 'Ir para o Dashboard',
-                    onPressed: () => rootNav.popUntil((route) => route.isFirst),
-                  ),
-                ],
-              ),
-              body: PdfPreview(
-                build: (format) async => doc.save(),
-                canChangePageFormat: false,
-                canChangeOrientation: false,
-                allowPrinting: true,
-                allowSharing: true,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.picture_as_pdf, color: Colors.white),
+                    SizedBox(width: 10),
+                    Text(
+                      'Abrir prévia do PDF',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        );
-      } catch (e) {
-        if (!mounted) return;
-        messenger.showSnackBar(
-          SnackBar(content: Text('Erro ao gerar PDF: $e')),
-        );
-      }
-    },
-    child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(Icons.picture_as_pdf, color: Colors.white),
-          SizedBox(width: 10),
-          Text('Abrir prévia do PDF',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-        ],
-      ),
-    ),
-  ),
-),
-
 
           const SizedBox(height: 10),
           OutlinedButton.icon(
@@ -303,7 +362,11 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
     );
   }
 
-  Widget _field(TextEditingController ctrl, String label, {TextInputType? keyboard}) {
+  Widget _field(
+    TextEditingController ctrl,
+    String label, {
+    TextInputType? keyboard,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: TextField(

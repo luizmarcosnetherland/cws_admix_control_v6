@@ -208,7 +208,6 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
   Widget build(BuildContext context) {
     final titulo = _isEdicao ? 'Editar Lançamento' : 'Novo Lançamento';
 
-
     final cwsAddPreview = _parseNumero(_cwsAdicionadoCtrl.text);
 
     int? dosagemOk;
@@ -305,7 +304,9 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
               TextFormField(
                 controller: _dosagemCtrl,
                 decoration: _dec('Dosagem (kg/m³) *'),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 textInputAction: TextInputAction.next,
                 validator: (value) {
                   final v = _parseNumero(value ?? '');
@@ -319,7 +320,9 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
               TextFormField(
                 controller: _cwsAdicionadoCtrl,
                 decoration: _dec('Quantidade adicionada (kg)'),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 textInputAction: TextInputAction.next,
                 validator: _validateOptionalNumber,
               ),
@@ -342,7 +345,8 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),              if (cwsAddPreview != null)
+              const SizedBox(height: 12),
+              if (cwsAddPreview != null)
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(12),
@@ -352,18 +356,17 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'CWS adicionado: ${_fmtNum(cwsAddPreview!, casas: 3)} kg',
+                            'CWS adicionado: ${_fmtNum(cwsAddPreview, casas: 3)} kg',
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
-                        if (dosagemOk != null) Text(dosagemOk == 1 ? '✅' : '⚠️'),
+                        if (dosagemOk != null)
+                          Text(dosagemOk == 1 ? '✅' : '⚠️'),
                       ],
                     ),
                   ),
                 ),
               const SizedBox(height: 12),
-
-
 
               // Extras de campo
               TextFormField(
