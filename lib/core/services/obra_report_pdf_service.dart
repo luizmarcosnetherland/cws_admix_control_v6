@@ -27,6 +27,7 @@ class ObraReportPdfService {
     final doc = pw.Document();
     final logos = await _loadLogos();
     final fonts = await _loadFonts();
+    final lancamentoCards = await _buildLancamentoCards(lancamentos);
     final generatedAt = DateTime.now();
     final generatedAtLabel = DateFormat(
       'dd/MM/yyyy HH:mm',
@@ -42,8 +43,8 @@ class ObraReportPdfService {
     final ultimoLancamento = lancamentos.isEmpty
         ? null
         : lancamentos
-            .map((l) => l.dataHora)
-            .reduce((a, b) => a.isAfter(b) ? a : b);
+              .map((l) => l.dataHora)
+              .reduce((a, b) => a.isAfter(b) ? a : b);
     final curaUmidaAte = ultimoLancamento?.add(const Duration(days: 7));
 
     doc.addPage(
@@ -113,18 +114,7 @@ class ObraReportPdfService {
           ),
           pw.SizedBox(height: 12),
           _sectionTitle('Lançamentos'),
-          pw.Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: lancamentos
-                .map(
-                  (l) => pw.SizedBox(
-                    width: _lancamentoCardWidth,
-                    child: _lancamentoCard(l),
-                  ),
-                )
-                .toList(),
-          ),
+          pw.Wrap(spacing: 8, runSpacing: 8, children: lancamentoCards),
         ],
       ),
     );
@@ -200,7 +190,44 @@ class ObraReportPdfService {
     );
   }
 
-  pw.Widget _lancamentoCard(Lancamento l) {
+  Future<List<pw.Widget>> _buildLancamentoCards(
+    List<Lancamento> lancamentos,
+  ) async {
+    final cards = <pw.Widget>[];
+    for (final lancamento in lancamentos) {
+      final fotos = await _loadLancamentoPhotos(lancamento);
+      cards.add(
+        pw.SizedBox(
+          width: _lancamentoCardWidth,
+          child: _lancamentoCardWithPhotos(lancamento, fotos),
+        ),
+      );
+    }
+    return cards;
+  }
+
+  Future<List<pw.MemoryImage>> _loadLancamentoPhotos(
+    Lancamento lancamento,
+  ) async {
+    final fotos = <pw.MemoryImage>[];
+    for (final path in lancamento.fotoPaths) {
+      try {
+        final file = File(path);
+        if (!await file.exists()) continue;
+        final bytes = await file.readAsBytes();
+        if (bytes.isEmpty) continue;
+        fotos.add(pw.MemoryImage(bytes));
+      } catch (_) {
+        continue;
+      }
+    }
+    return fotos;
+  }
+
+  pw.Widget _lancamentoCardWithPhotos(
+    Lancamento l,
+    List<pw.MemoryImage> fotos,
+  ) {
     final linhas = <String>[
       'Data/hora: ${DateFormat('dd/MM/yyyy HH:mm', 'pt_BR').format(l.dataHora)}',
       'Betoneira: ${_fallback(l.caminhao)}',
@@ -226,6 +253,9 @@ class ObraReportPdfService {
     if (l.observacoes.trim().isNotEmpty) {
       linhas.add('Observações: ${l.observacoes.trim()}');
     }
+    if (fotos.isNotEmpty) {
+      linhas.add('Fotos anexas: ${fotos.length}');
+    }
 
     return pw.Container(
       padding: const pw.EdgeInsets.all(8),
@@ -235,19 +265,47 @@ class ObraReportPdfService {
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: linhas
+        children: [
+          ...linhas.map(
+            (linha) => pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 1.5),
+              child: pw.Text(
+                _pdfSafe(linha),
+                style: const pw.TextStyle(fontSize: 8.6),
+              ),
+            ),
+          ),
+          ..._fotoWidgets(fotos),
+        ],
+      ),
+    );
+  }
+
+  List<pw.Widget> _fotoWidgets(List<pw.MemoryImage> fotos) {
+    if (fotos.isEmpty) return const [];
+
+    final widgets = <pw.Widget>[pw.SizedBox(height: 4)];
+    widgets.add(
+      pw.Wrap(
+        spacing: 4,
+        runSpacing: 4,
+        children: fotos
             .map(
-              (linha) => pw.Padding(
-                padding: const pw.EdgeInsets.only(bottom: 1.5),
-                child: pw.Text(
-                  _pdfSafe(linha),
-                  style: const pw.TextStyle(fontSize: 8.6),
+              (foto) => pw.ClipRRect(
+                horizontalRadius: 6,
+                verticalRadius: 6,
+                child: pw.Image(
+                  foto,
+                  width: 48,
+                  height: 48,
+                  fit: pw.BoxFit.cover,
                 ),
               ),
             )
             .toList(),
       ),
     );
+    return widgets;
   }
 
   Future<_PdfLogos> _loadLogos() async {

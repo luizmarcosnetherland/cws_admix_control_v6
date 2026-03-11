@@ -1,5 +1,10 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
 
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as p;
+
+import '../../../core/services/local_dropbox_storage_service.dart';
 import '../../../data/models/lancamento_model.dart';
 import '../../../data/repositories/lancamento_repository.dart';
 
@@ -22,6 +27,8 @@ class NovoLancamentoPage extends StatefulWidget {
 class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
   final _formKey = GlobalKey<FormState>();
   final _repo = LancamentoRepository();
+  final _storage = LocalDropboxStorageService();
+  final _imagePicker = ImagePicker();
 
   final _betoneiraCtrl = TextEditingController();
   final _concreteiraCtrl = TextEditingController();
@@ -36,9 +43,11 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
   final _tempoMisturaCtrl = TextEditingController();
 
   final _obsCtrl = TextEditingController();
+  List<String> _fotoPaths = [];
 
   late final DateTime _dataHora;
   bool _saving = false;
+  bool _pickingFotos = false;
 
   bool get _isEdicao => widget.lancamento != null;
 
@@ -73,6 +82,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
         : l!.tempoMisturaMin!.toStringAsFixed(1).replaceAll('.', ',');
 
     _obsCtrl.text = l?.observacoes ?? '';
+    _fotoPaths = List<String>.from(l?.fotoPaths ?? const []);
 
     _volumeCtrl.addListener(_recalc);
     _dosagemCtrl.addListener(_recalc);
@@ -156,6 +166,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
             slumpDepois: slumpDepois,
             tempoMisturaMin: tempoMistura,
             observacoes: _obsCtrl.text.trim(),
+            fotoPaths: _fotoPaths,
           ),
         );
       } else {
@@ -172,6 +183,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
           slumpDepois: slumpDepois,
           tempoMisturaMin: tempoMistura,
           observacoes: _obsCtrl.text,
+          fotoPaths: _fotoPaths,
         );
       }
 
@@ -203,6 +215,50 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
 
   InputDecoration _dec(String label) =>
       InputDecoration(labelText: label, border: const OutlineInputBorder());
+
+  Future<void> _adicionarFotos() async {
+    if (_pickingFotos || _saving) return;
+
+    setState(() => _pickingFotos = true);
+    try {
+      final picked = await _imagePicker.pickMultiImage(imageQuality: 85);
+      if (picked.isEmpty) return;
+
+      await _storage.ensureBaseStructure();
+      final fotosDir = await _storage.lancamentoPhotosDir(widget.obraId);
+      final savedPaths = <String>[];
+
+      for (final foto in picked) {
+        final source = File(foto.path);
+        if (!await source.exists()) continue;
+
+        final now = DateTime.now();
+        final ext = p.extension(foto.path).toLowerCase();
+        final safeExt = ext.isEmpty ? '.jpg' : ext;
+        final filename =
+            'obra_${widget.obraId}_${now.microsecondsSinceEpoch}_${savedPaths.length}$safeExt';
+        final target = File(p.join(fotosDir.path, filename));
+        await source.copy(target.path);
+        savedPaths.add(target.path);
+      }
+
+      if (!mounted || savedPaths.isEmpty) return;
+      setState(() => _fotoPaths = [..._fotoPaths, ...savedPaths]);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao adicionar fotos: $e')));
+    } finally {
+      if (mounted) setState(() => _pickingFotos = false);
+    }
+  }
+
+  void _removerFoto(String path) {
+    setState(() {
+      _fotoPaths = _fotoPaths.where((foto) => foto != path).toList();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -402,12 +458,93 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
               ),
               const SizedBox(height: 12),
 
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Observações',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: _pickingFotos || _saving
+                        ? null
+                        : _adicionarFotos,
+                    icon: _pickingFotos
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.photo_library_outlined),
+                    label: const Text('Fotos'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _obsCtrl,
-                decoration: _dec('Observações'),
+                decoration: const InputDecoration(
+                  hintText: 'Observações do lançamento',
+                  border: OutlineInputBorder(),
+                ),
                 minLines: 2,
                 maxLines: 4,
               ),
+              if (_fotoPaths.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 92,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _fotoPaths.length,
+                    separatorBuilder: (_, index) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final path = _fotoPaths[index];
+                      return Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              width: 92,
+                              height: 92,
+                              color: Colors.grey.shade200,
+                              child: Image.file(
+                                File(path),
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Center(
+                                      child: Icon(Icons.broken_image_outlined),
+                                    ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: Material(
+                              color: Colors.black54,
+                              shape: const CircleBorder(),
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                onTap: () => _removerFoto(path),
+                                child: const Padding(
+                                  padding: EdgeInsets.all(4),
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 16),
               ElevatedButton.icon(

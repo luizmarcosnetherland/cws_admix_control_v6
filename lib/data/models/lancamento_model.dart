@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Lancamento {
   final int? id;
   final int obraId;
@@ -19,6 +21,7 @@ class Lancamento {
   final double? tempoMisturaMin;
 
   final String observacoes;
+  final List<String> fotoPaths;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -38,6 +41,7 @@ class Lancamento {
     this.slumpDepois,
     this.tempoMisturaMin,
     this.observacoes = '',
+    this.fotoPaths = const [],
     required this.createdAt,
     required this.updatedAt,
   });
@@ -58,6 +62,7 @@ class Lancamento {
     double? slumpDepois,
     double? tempoMisturaMin,
     String? observacoes,
+    List<String>? fotoPaths,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -77,6 +82,7 @@ class Lancamento {
       slumpDepois: slumpDepois ?? this.slumpDepois,
       tempoMisturaMin: tempoMisturaMin ?? this.tempoMisturaMin,
       observacoes: observacoes ?? this.observacoes,
+      fotoPaths: fotoPaths ?? this.fotoPaths,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -99,6 +105,7 @@ class Lancamento {
       'slump_depois': slumpDepois,
       'tempo_mistura_min': tempoMisturaMin,
       'observacoes': observacoes,
+      'foto_paths': jsonEncode(fotoPaths),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -129,8 +136,37 @@ class Lancamento {
           ? null
           : (map['tempo_mistura_min'] as num).toDouble(),
       observacoes: (map['observacoes'] ?? '') as String,
+      fotoPaths: _fotoPathsFromMap(map['foto_paths']),
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
     );
+  }
+
+  static List<String> _fotoPathsFromMap(dynamic raw) {
+    if (raw == null) return const [];
+    if (raw is String) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) return const [];
+      try {
+        final decoded = jsonDecode(trimmed);
+        if (decoded is List) {
+          return decoded
+              .whereType<String>()
+              .map((path) => path.trim())
+              .where((path) => path.isNotEmpty)
+              .toList(growable: false);
+        }
+      } catch (_) {
+        return const [];
+      }
+    }
+    if (raw is List) {
+      return raw
+          .whereType<String>()
+          .map((path) => path.trim())
+          .where((path) => path.isNotEmpty)
+          .toList(growable: false);
+    }
+    return const [];
   }
 }

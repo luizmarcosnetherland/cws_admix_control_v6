@@ -59,6 +59,7 @@ class DropboxDataSyncService {
             'slump_depois': l.slumpDepois,
             'tempo_mistura_min': l.tempoMisturaMin,
             'observacoes': l.observacoes,
+            'foto_paths': l.fotoPaths,
             'created_at': l.createdAt.toIso8601String(),
             'updated_at': l.updatedAt.toIso8601String(),
           };

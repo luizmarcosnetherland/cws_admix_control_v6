@@ -913,6 +913,8 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
                     'CWS adicionado: ${_fmtNum(l.cwsAdicionadoKg!, casas: 3)} kg',
                   ),
                 if (l.observacoes.isNotEmpty) Text('Obs.: ${l.observacoes}'),
+                if (l.fotoPaths.isNotEmpty)
+                  Text('Fotos anexas: ${l.fotoPaths.length}'),
               ],
             ),
             trailing: Row(

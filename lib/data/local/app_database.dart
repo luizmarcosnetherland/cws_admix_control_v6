@@ -6,7 +6,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static const _dbName = 'cws_admix_control.db';
-  static const _dbVersion = 9;
+  static const _dbVersion = 10;
 
   Database? _database;
 
@@ -122,6 +122,7 @@ class AppDatabase {
         slump_depois REAL,
         tempo_mistura_min REAL,
         observacoes TEXT NOT NULL DEFAULT '',
+        foto_paths TEXT NOT NULL DEFAULT '[]',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (obra_id) REFERENCES obras(id) ON DELETE RESTRICT
@@ -144,6 +145,11 @@ class AppDatabase {
     if (!names.contains('dosagem_de_acordo')) {
       await db.execute(
         "ALTER TABLE lancamentos ADD COLUMN dosagem_de_acordo INTEGER",
+      );
+    }
+    if (!names.contains('foto_paths')) {
+      await db.execute(
+        "ALTER TABLE lancamentos ADD COLUMN foto_paths TEXT NOT NULL DEFAULT '[]'",
       );
     }
   }

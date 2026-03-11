@@ -54,6 +54,7 @@ class LancamentoRepository {
     required double volumeM3,
     double dosagemKgM3 = 0.80,
     String observacoes = '',
+    List<String> fotoPaths = const [],
     String notaFiscal = '',
     double? cwsAdicionadoKg,
     double? slumpAntes,
@@ -90,12 +91,14 @@ class LancamentoRepository {
       slumpDepois: slumpDepois,
       tempoMisturaMin: tempoMisturaMin,
       observacoes: observacoes.trim(),
+      fotoPaths: fotoPaths,
       createdAt: now,
       updatedAt: now,
     );
 
     return db.insert('lancamentos', lancamento.toMap()..remove('id'));
   }
+
   int? _calcDosagemDeAcordo({
     required double volumeM3,
     required double dosagemKgM3,
@@ -112,6 +115,7 @@ class LancamentoRepository {
 
     return diff <= tol ? 1 : 0;
   }
+
   Future<int> atualizarLancamento(Lancamento lancamento) async {
     final db = await _db.database;
 
@@ -132,9 +136,7 @@ class LancamentoRepository {
       cwsAdicionadoKg: updatedBase.cwsAdicionadoKg,
     );
 
-    final updated = updatedBase.copyWith(
-      dosagemDeAcordo: dosagemAcordo,
-    );
+    final updated = updatedBase.copyWith(dosagemDeAcordo: dosagemAcordo);
     return db.update(
       'lancamentos',
       updated.toMap()..remove('id'),
