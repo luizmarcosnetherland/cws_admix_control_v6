@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -139,7 +140,7 @@ class _AppGateState extends State<AppGate> {
       _connected = token != null && token.isNotEmpty;
     });
 
-    await Future<void>.delayed(const Duration(milliseconds: 900));
+    await Future<void>.delayed(const Duration(milliseconds: 1400));
     if (!mounted) return;
 
     setState(() {
@@ -205,6 +206,15 @@ class _SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const brandBlue = Color(0xFF1E3A5F);
+    const titleStyle = TextStyle(
+      fontSize: 30,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 0.2,
+      color: brandBlue,
+      height: 1.0,
+    );
+
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5F7),
       body: Center(
@@ -240,15 +250,50 @@ class _SplashScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 28),
-              const Text(
-                'Netherland Admix Control',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.2,
-                  color: Color(0xFF1E3A5F),
-                ),
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.end,
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  const Text('Netherland Admix', style: titleStyle),
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 1100),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, value, child) {
+                      return Opacity(
+                        opacity: value.clamp(0.0, 1.0),
+                        child: Transform.translate(
+                          offset: Offset(18 * (1 - value), 0),
+                          child: SizedBox(
+                            width: 116,
+                            child: ClipRect(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                widthFactor: value.clamp(0.0, 1.0),
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 10),
+                                  child: child,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    child: Text(
+                      'Control',
+                      style: GoogleFonts.caveat(
+                        fontSize: 36,
+                        fontWeight: FontWeight.w700,
+                        fontStyle: FontStyle.italic,
+                        color: brandBlue,
+                        height: 0.9,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
