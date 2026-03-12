@@ -221,26 +221,41 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
 
     setState(() => _pickingFotos = true);
     try {
-      final picked = await _imagePicker.pickMultiImage(imageQuality: 85);
+      final source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        builder: (context) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Tirar foto'),
+                onTap: () => Navigator.of(context).pop(ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Escolher da galeria'),
+                onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (source == null) return;
+
+      final List<XFile> picked;
+      if (source == ImageSource.camera) {
+        final captured = await _imagePicker.pickImage(
+          source: ImageSource.camera,
+          imageQuality: 85,
+        );
+        picked = captured == null ? <XFile>[] : <XFile>[captured];
+      } else {
+        picked = await _imagePicker.pickMultiImage(imageQuality: 85);
+      }
       if (picked.isEmpty) return;
 
-      await _storage.ensureBaseStructure();
-      final fotosDir = await _storage.lancamentoPhotosDir(widget.obraId);
-      final savedPaths = <String>[];
-
-      for (final foto in picked) {
-        final source = File(foto.path);
-        if (!await source.exists()) continue;
-
-        final now = DateTime.now();
-        final ext = p.extension(foto.path).toLowerCase();
-        final safeExt = ext.isEmpty ? '.jpg' : ext;
-        final filename =
-            'obra_${widget.obraId}_${now.microsecondsSinceEpoch}_${savedPaths.length}$safeExt';
-        final target = File(p.join(fotosDir.path, filename));
-        await source.copy(target.path);
-        savedPaths.add(target.path);
-      }
+      final savedPaths = await _salvarFotosSelecionadas(picked);
 
       if (!mounted || savedPaths.isEmpty) return;
       setState(() => _fotoPaths = [..._fotoPaths, ...savedPaths]);
@@ -252,6 +267,28 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     } finally {
       if (mounted) setState(() => _pickingFotos = false);
     }
+  }
+
+  Future<List<String>> _salvarFotosSelecionadas(List<XFile> picked) async {
+    await _storage.ensureBaseStructure();
+    final fotosDir = await _storage.lancamentoPhotosDir(widget.obraId);
+    final savedPaths = <String>[];
+
+    for (final foto in picked) {
+      final source = File(foto.path);
+      if (!await source.exists()) continue;
+
+      final now = DateTime.now();
+      final ext = p.extension(foto.path).toLowerCase();
+      final safeExt = ext.isEmpty ? '.jpg' : ext;
+      final filename =
+          'obra_${widget.obraId}_${now.microsecondsSinceEpoch}_${savedPaths.length}$safeExt';
+      final target = File(p.join(fotosDir.path, filename));
+      await source.copy(target.path);
+      savedPaths.add(target.path);
+    }
+
+    return savedPaths;
   }
 
   void _removerFoto(String path) {
