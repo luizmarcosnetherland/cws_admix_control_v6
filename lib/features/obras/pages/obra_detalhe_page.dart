@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/services/csv_export_service.dart';
 import '../../../core/services/email_compose_service.dart';
@@ -352,6 +353,20 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         exportLabel: _exportLabelAtual(),
       );
       if (!mounted) return;
+
+      if (Platform.isIOS) {
+        final box = context.findRenderObject() as RenderBox?;
+        final origin = box == null
+            ? null
+            : box.localToGlobal(Offset.zero) & box.size;
+        await Share.shareXFiles(
+          [XFile(path)],
+          subject: 'Relatório CSV da obra ${_obraAtual.nome}',
+          text: 'Relatório CSV da obra ${_obraAtual.nome}',
+          sharePositionOrigin: origin,
+        );
+        if (!mounted) return;
+      }
 
       if (Platform.isMacOS) {
         await Process.run('open', ['-R', path]);
