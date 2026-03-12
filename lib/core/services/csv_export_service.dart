@@ -67,10 +67,10 @@ class CsvExportService {
         l.slumpAntes == null ? '' : _fmtNum(l.slumpAntes!, casas: 1),
         l.slumpDepois == null ? '' : _fmtNum(l.slumpDepois!, casas: 1),
         l.tempoMisturaMin == null ? '' : _fmtNum(l.tempoMisturaMin!, casas: 1),
-        _fmtNum(l.volumeM3, casas: 3),
-        _fmtNum(l.dosagemKgM3, casas: 3),
-        _fmtNum(l.cwsTotalKg, casas: 3),
-        l.cwsAdicionadoKg == null ? '' : _fmtNum(l.cwsAdicionadoKg!, casas: 3),
+        _fmtNum(l.volumeM3, casas: 1),
+        _fmtNum(l.dosagemKgM3, casas: 1),
+        _fmtNum(l.cwsTotalKg, casas: 1),
+        l.cwsAdicionadoKg == null ? '' : _fmtNum(l.cwsAdicionadoKg!, casas: 1),
         l.dosagemDeAcordo == null
             ? ''
             : (l.dosagemDeAcordo == 1 ? 'OK' : 'DIVERGENTE'),
@@ -119,7 +119,7 @@ class CsvExportService {
     return '${two(dt.day)}/${two(dt.month)}/${dt.year} ${two(dt.hour)}:${two(dt.minute)}';
   }
 
-  String _fmtNum(double v, {int casas = 2}) {
+  String _fmtNum(double v, {int casas = 1}) {
     return v.toStringAsFixed(casas).replaceAll('.', ',');
   }
 }

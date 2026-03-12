@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -16,6 +17,40 @@ class ObraReportPdfService {
   static const _lancamentoCardWidth = 168.0;
 
   Future<String> buildReportPdf({
+    required Obra obra,
+    required List<Lancamento> lancamentos,
+    required String periodoLabel,
+    required String ordenacaoLabel,
+    String? concreteira,
+    String? betoneira,
+    String? busca,
+  }) async {
+    if (kIsWeb) {
+      throw UnsupportedError(
+        'Geracao de arquivo local PDF nao esta disponivel no navegador.',
+      );
+    }
+
+    final bytes = await buildReportPdfBytes(
+      obra: obra,
+      lancamentos: lancamentos,
+      periodoLabel: periodoLabel,
+      ordenacaoLabel: ordenacaoLabel,
+      concreteira: concreteira,
+      betoneira: betoneira,
+      busca: busca,
+    );
+
+    await _storage.ensureBaseStructure();
+    final filePath = await _storage.exportFilePath(
+      'Relatorio_Obra_${_safeFile(obra.nome)}_${_timestamp()}.pdf',
+    );
+    final file = File(filePath);
+    await file.writeAsBytes(bytes, flush: true);
+    return file.path;
+  }
+
+  Future<Uint8List> buildReportPdfBytes({
     required Obra obra,
     required List<Lancamento> lancamentos,
     required String periodoLabel,
@@ -104,8 +139,8 @@ class ObraReportPdfService {
           pw.SizedBox(height: 10),
           _sectionTitle('Resumo'),
           _kv('Lançamentos', '${lancamentos.length}'),
-          _kv('Volume total', '${_fmtNum(volumeTotal, 3)} m³'),
-          _kv('CWS total', '${_fmtNum(cwsTotal, 3)} kg'),
+          _kv('Volume total', '${_fmtNum(volumeTotal, 1)} m³'),
+          _kv('CWS total', '${_fmtNum(cwsTotal, 1)} kg'),
           _kv(
             'Cura úmida recomendada até',
             curaUmidaAte == null
@@ -118,14 +153,7 @@ class ObraReportPdfService {
         ],
       ),
     );
-
-    await _storage.ensureBaseStructure();
-    final filePath = await _storage.exportFilePath(
-      'Relatorio_Obra_${_safeFile(obra.nome)}_${_timestamp()}.pdf',
-    );
-    final file = File(filePath);
-    await file.writeAsBytes(await doc.save(), flush: true);
-    return file.path;
+    return Uint8List.fromList(await doc.save());
   }
 
   Future<void> shareReportPdf({
@@ -138,6 +166,35 @@ class ObraReportPdfService {
     String? busca,
     Rect? sharePositionOrigin,
   }) async {
+    final filename =
+        'Relatorio_Obra_${_safeFile(obra.nome)}_${_timestamp()}.pdf';
+
+    if (kIsWeb) {
+      final bytes = await buildReportPdfBytes(
+        obra: obra,
+        lancamentos: lancamentos,
+        periodoLabel: periodoLabel,
+        ordenacaoLabel: ordenacaoLabel,
+        concreteira: concreteira,
+        betoneira: betoneira,
+        busca: busca,
+      );
+
+      await Share.shareXFiles(
+        [
+          XFile.fromData(
+            bytes,
+            mimeType: 'application/pdf',
+            name: filename,
+          ),
+        ],
+        text: 'Relatório em PDF da obra ${obra.nome}',
+        subject: 'Relatório da obra ${obra.nome}',
+        sharePositionOrigin: sharePositionOrigin,
+      );
+      return;
+    }
+
     final path = await buildReportPdf(
       obra: obra,
       lancamentos: lancamentos,
@@ -149,7 +206,7 @@ class ObraReportPdfService {
     );
 
     await Share.shareXFiles(
-      [XFile(path)],
+      [XFile(path, name: filename)],
       text: 'Relatório em PDF da obra ${obra.nome}',
       subject: 'Relatório da obra ${obra.nome}',
       sharePositionOrigin: sharePositionOrigin,
@@ -233,13 +290,13 @@ class ObraReportPdfService {
       'Betoneira: ${_fallback(l.caminhao)}',
       'Concreteira: ${_fallback(l.concreteira)}',
       'NF: ${_fallback(l.notaFiscal)}',
-      'Volume: ${_fmtNum(l.volumeM3, 3)} m³',
-      'Dosagem: ${_fmtNum(l.dosagemKgM3, 3)} kg/m³',
-      'CWS total: ${_fmtNum(l.cwsTotalKg, 3)} kg',
+      'Volume: ${_fmtNum(l.volumeM3, 1)} m³',
+      'Dosagem: ${_fmtNum(l.dosagemKgM3, 1)} kg/m³',
+      'CWS total: ${_fmtNum(l.cwsTotalKg, 1)} kg',
     ];
 
     if (l.cwsAdicionadoKg != null) {
-      linhas.add('CWS adicionado: ${_fmtNum(l.cwsAdicionadoKg!, 3)} kg');
+      linhas.add('CWS adicionado: ${_fmtNum(l.cwsAdicionadoKg!, 1)} kg');
     }
     if (l.slumpAntes != null) {
       linhas.add('Slump antes: ${_fmtNum(l.slumpAntes!, 1)} cm');

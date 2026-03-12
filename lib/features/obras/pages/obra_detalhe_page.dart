@@ -424,8 +424,8 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         'Segue em anexo o relatório CSV da obra ${_obraAtual.nome}.',
         '',
         'Quantidade de lançamentos: ${_filtrado.length}',
-        'Volume total: ${_fmtNum(_resumo.volumeTotalM3, casas: 3)} m3',
-        'CWS total: ${_fmtNum(_resumo.cwsTotalKg, casas: 3)} kg',
+        'Volume total: ${_fmtNum(_resumo.volumeTotalM3, casas: 1)} m3',
+        'CWS total: ${_fmtNum(_resumo.cwsTotalKg, casas: 1)} kg',
       ].join('\n');
 
       await _email.composeEmail(
@@ -501,7 +501,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         title: const Text('Excluir lançamento'),
         content: Text(
           'Deseja excluir o lançamento da betoneira "${l.caminhao}"?\n\n'
-          'Volume: ${_fmtNum(l.volumeM3, casas: 3)} m³ | CWS: ${_fmtNum(l.cwsTotalKg, casas: 3)} kg',
+          'Volume: ${_fmtNum(l.volumeM3, casas: 1)} m³ | CWS: ${_fmtNum(l.cwsTotalKg, casas: 1)} kg',
         ),
         actions: [
           TextButton(
@@ -554,7 +554,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
     return '${two(dt.day)}/${two(dt.month)}/${dt.year} ${two(dt.hour)}:${two(dt.minute)}';
   }
 
-  String _fmtNum(double v, {int casas = 2}) {
+  String _fmtNum(double v, {int casas = 1}) {
     return v.toStringAsFixed(casas).replaceAll('.', ',');
   }
 
@@ -606,8 +606,8 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
               runSpacing: 8,
               children: [
                 _tag('Lançamentos: ${_resumo.quantidade}'),
-                _tag('Volume: ${_fmtNum(_resumo.volumeTotalM3, casas: 3)} m³'),
-                _tag('CWS: ${_fmtNum(_resumo.cwsTotalKg, casas: 3)} kg'),
+                _tag('Volume: ${_fmtNum(_resumo.volumeTotalM3, casas: 1)} m³'),
+                _tag('CWS: ${_fmtNum(_resumo.cwsTotalKg, casas: 1)} kg'),
               ],
             ),
           ],
@@ -905,12 +905,12 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
                   Text('Slump depois: ${_fmtNum(l.slumpDepois!, casas: 1)} cm'),
                 if (l.tempoMisturaMin != null)
                   Text('Mistura: ${_fmtNum(l.tempoMisturaMin!, casas: 1)} min'),
-                Text('Volume: ${_fmtNum(l.volumeM3, casas: 3)} m³'),
-                Text('Dosagem: ${_fmtNum(l.dosagemKgM3, casas: 3)} kg/m³'),
-                Text('CWS: ${_fmtNum(l.cwsTotalKg, casas: 3)} kg'),
+                Text('Volume: ${_fmtNum(l.volumeM3, casas: 1)} m³'),
+                Text('Dosagem: ${_fmtNum(l.dosagemKgM3, casas: 1)} kg/m³'),
+                Text('CWS: ${_fmtNum(l.cwsTotalKg, casas: 1)} kg'),
                 if (l.cwsAdicionadoKg != null)
                   Text(
-                    'CWS adicionado: ${_fmtNum(l.cwsAdicionadoKg!, casas: 3)} kg',
+                    'CWS adicionado: ${_fmtNum(l.cwsAdicionadoKg!, casas: 1)} kg',
                   ),
                 if (l.observacoes.isNotEmpty) Text('Obs.: ${l.observacoes}'),
                 if (l.fotoPaths.isNotEmpty)
@@ -967,17 +967,16 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
       appBar: AppBar(
         title: const Text('Obra'),
         actions: [
-          if (widget.localMode)
-            IconButton(
-              tooltip: 'Compartilhar PDF no WhatsApp',
-              onPressed: _compartilharPdfWhatsapp,
-              icon: const Icon(Icons.share_outlined),
-            )
-          else ...[
+          IconButton(
+            tooltip: 'Compartilhar PDF no WhatsApp',
+            onPressed: _compartilharPdfWhatsapp,
+            icon: const Icon(Icons.picture_as_pdf),
+          ),
+          if (!widget.localMode) ...[
             IconButton(
               tooltip: 'Exportar CSV (filtros atuais)',
               onPressed: _exportarCsv,
-              icon: const Icon(Icons.download),
+              icon: const Icon(Icons.table_chart_outlined),
             ),
             IconButton(
               tooltip: 'Enviar e-mail ao engenheiro',
@@ -1012,10 +1011,16 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
                 ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _abrirNovoLancamento,
-        icon: const Icon(Icons.add),
-        label: const Text('Novo Lançamento'),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        child: SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: _abrirNovoLancamento,
+            icon: const Icon(Icons.add),
+            label: const Text('Novo Lançamento'),
+          ),
+        ),
       ),
     );
   }

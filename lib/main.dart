@@ -1,9 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 import 'dropbox_auth.dart';
 import 'core/services/local_dropbox_storage_service.dart';
@@ -16,9 +19,30 @@ enum AppMode { dropbox, local }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await _configureDatabaseFactory();
   Intl.defaultLocale = 'pt_BR';
   await initializeDateFormatting('pt_BR', null);
   runApp(const NetherlandApp());
+}
+
+Future<void> _configureDatabaseFactory() async {
+  if (kIsWeb) {
+    databaseFactory = databaseFactoryFfiWeb;
+    return;
+  }
+
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.windows:
+    case TargetPlatform.linux:
+    case TargetPlatform.macOS:
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+      return;
+    case TargetPlatform.android:
+    case TargetPlatform.iOS:
+    case TargetPlatform.fuchsia:
+      return;
+  }
 }
 
 class NetherlandApp extends StatelessWidget {

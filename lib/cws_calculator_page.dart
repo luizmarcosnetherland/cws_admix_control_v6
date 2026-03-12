@@ -26,7 +26,7 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
   int get bags => totalKg <= 0 ? 0 : (totalKg / 6.4).ceil();
   double get providedKg => bags * 6.4;
 
-  String fmt(double value, {int casas = 2}) =>
+  String fmt(double value, {int casas = 1}) =>
       NumberFormat.decimalPatternDigits(
         locale: 'pt_BR',
         decimalDigits: casas,
@@ -35,12 +35,12 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
   String get _mensagemCotacao => [
         'Olá, gostaria de solicitar uma cotação do CWS Admix.',
         '',
-        'Volume de concreto: ${fmt(volume, casas: 2)} m³',
-        'Consumo de cimento: ${fmt(cementKgM3, casas: 2)} kg/m³',
-        'Dosagem aplicada: ${fmt(dosageKgM3, casas: 2)} kg/m³',
-        'Quantidade necessária: ${fmt(totalKg, casas: 2)} kg',
+        'Volume de concreto: ${fmt(volume, casas: 1)} m³',
+        'Consumo de cimento: ${fmt(cementKgM3, casas: 1)} kg/m³',
+        'Dosagem aplicada: ${fmt(dosageKgM3, casas: 1)} kg/m³',
+        'Quantidade necessária: ${fmt(totalKg, casas: 1)} kg',
         'Sacos de 6,4 kg: $bags',
-        'Quantidade fornecida: ${fmt(providedKg, casas: 2)} kg',
+        'Quantidade para compra: ${fmt(providedKg, casas: 1)} kg',
       ].join('\n');
 
   Future<void> _solicitarCotacaoEmail() async {
@@ -94,7 +94,7 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
     return params.entries
         .map(
           (e) =>
-              '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}',
+              '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}',
         )
         .join('&');
   }
@@ -210,16 +210,16 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
                   const SizedBox(height: 12),
                   _resultLine(
                     'Dosagem aplicada',
-                    '${fmt(dosageKgM3, casas: 2)} kg/m³',
+                    '${fmt(dosageKgM3, casas: 1)} kg/m³',
                   ),
                   _resultLine(
                     'Quantidade necessária',
-                    '${fmt(totalKg, casas: 2)} kg',
+                    '${fmt(totalKg, casas: 1)} kg',
                   ),
                   _resultLine('Sacos de 6,4 kg', '$bags'),
                   _resultLine(
-                    'Quantidade fornecida',
-                    '${fmt(providedKg, casas: 2)} kg',
+                    'Quantidade para compra',
+                    '${fmt(providedKg, casas: 1)} kg',
                   ),
                 ],
               ),

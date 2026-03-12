@@ -63,14 +63,14 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     _notaFiscalCtrl.text = l?.notaFiscal ?? '';
 
     _volumeCtrl.text = l != null
-        ? l.volumeM3.toStringAsFixed(3).replaceAll('.', ',')
+        ? l.volumeM3.toStringAsFixed(1).replaceAll('.', ',')
         : '';
     _dosagemCtrl.text = l != null
-        ? l.dosagemKgM3.toStringAsFixed(3).replaceAll('.', ',')
-        : '0,80';
+        ? l.dosagemKgM3.toStringAsFixed(1).replaceAll('.', ',')
+        : '0,8';
     _cwsAdicionadoCtrl.text = l?.cwsAdicionadoKg == null
         ? ''
-        : l!.cwsAdicionadoKg!.toStringAsFixed(3).replaceAll('.', ',');
+        : l!.cwsAdicionadoKg!.toStringAsFixed(1).replaceAll('.', ',');
     _slumpAntesCtrl.text = l?.slumpAntes == null
         ? ''
         : l!.slumpAntes!.toStringAsFixed(1).replaceAll('.', ',');
@@ -114,7 +114,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     return double.tryParse(t);
   }
 
-  String _fmtNum(double v, {int casas = 3}) {
+  String _fmtNum(double v, {int casas = 1}) {
     return v.toStringAsFixed(casas).replaceAll('.', ',');
   }
 
@@ -393,7 +393,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'CWS total: ${_fmtNum(_cwsPreview, casas: 3)} kg',
+                          'CWS total: ${_fmtNum(_cwsPreview, casas: 1)} kg',
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
@@ -412,7 +412,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'CWS adicionado: ${_fmtNum(cwsAddPreview, casas: 3)} kg',
+                            'CWS adicionado: ${_fmtNum(cwsAddPreview, casas: 1)} kg',
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),

@@ -64,12 +64,12 @@ class LancamentoRepository {
     final db = await _db.database;
     final now = DateTime.now();
 
-    final volume = double.parse(volumeM3.toStringAsFixed(3));
-    final dosagem = double.parse(dosagemKgM3.toStringAsFixed(3));
-    final cwsTotal = double.parse((volume * dosagem).toStringAsFixed(3));
+    final volume = double.parse(volumeM3.toStringAsFixed(1));
+    final dosagem = double.parse(dosagemKgM3.toStringAsFixed(1));
+    final cwsTotal = double.parse((volume * dosagem).toStringAsFixed(1));
     final cwsAdd = cwsAdicionadoKg == null
         ? null
-        : double.parse(cwsAdicionadoKg.toStringAsFixed(3));
+        : double.parse(cwsAdicionadoKg.toStringAsFixed(1));
 
     final dosagemAcordo = _calcDosagemDeAcordo(
       volumeM3: volume,
@@ -119,9 +119,9 @@ class LancamentoRepository {
   Future<int> atualizarLancamento(Lancamento lancamento) async {
     final db = await _db.database;
 
-    final volume = double.parse(lancamento.volumeM3.toStringAsFixed(3));
-    final dosagem = double.parse(lancamento.dosagemKgM3.toStringAsFixed(3));
-    final cwsTotal = double.parse((volume * dosagem).toStringAsFixed(3));
+    final volume = double.parse(lancamento.volumeM3.toStringAsFixed(1));
+    final dosagem = double.parse(lancamento.dosagemKgM3.toStringAsFixed(1));
+    final cwsTotal = double.parse((volume * dosagem).toStringAsFixed(1));
 
     final updatedBase = lancamento.copyWith(
       volumeM3: volume,

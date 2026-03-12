@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -14,7 +15,15 @@ class DropboxAuth {
   static const _kRefreshToken = 'dbx_refresh_token';
   static const _kExpiresAt = 'dbx_expires_at_ms';
 
+  bool get supportsInteractiveSignIn => !kIsWeb;
+
   Future<void> signIn() async {
+    if (!supportsInteractiveSignIn) {
+      throw Exception(
+        'Login com Dropbox nao esta disponivel no navegador. Use um app nativo ou configure OAuth web para este projeto.',
+      );
+    }
+
     final authorization = await _appAuth.authorize(
       AuthorizationRequest(
         dropboxClientId,
