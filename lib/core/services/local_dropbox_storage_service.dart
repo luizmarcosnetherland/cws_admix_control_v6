@@ -1,12 +1,18 @@
 import 'dart:io';
 
+import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
 class LocalDropboxStorageService {
   Future<String> get rootPath async {
+    if (Platform.isAndroid) {
+      final dir = await getApplicationDocumentsDirectory();
+      return p.join(dir.path, 'CWSadmixControl');
+    }
+
     if (Platform.isIOS) {
-      final sandboxRoot = Directory.systemTemp.parent.path;
-      return p.join(sandboxRoot, 'Documents', 'CWSadmixControl');
+      final dir = await getApplicationDocumentsDirectory();
+      return p.join(dir.path, 'CWSadmixControl');
     }
 
     final home = _detectHomeDir();
@@ -25,7 +31,7 @@ class LocalDropboxStorageService {
   }
 
   Future<String> get exportRootPath async {
-    if (Platform.isIOS) {
+    if (Platform.isAndroid || Platform.isIOS) {
       return p.join(await rootPath, 'Downloads');
     }
 
