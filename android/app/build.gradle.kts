@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.cws_admix_control"
+    namespace = "br.com.netherland.cwsadmixcontrol"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.cws_admix_control"
+        applicationId = "br.com.netherland.cwsadmixcontrol"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

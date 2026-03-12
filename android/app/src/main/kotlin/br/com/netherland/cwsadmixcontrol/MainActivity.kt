@@ -1,4 +1,4 @@
-package com.example.cws_admix_control
+package br.com.netherland.cwsadmixcontrol
 
 import io.flutter.embedding.android.FlutterActivity
 
