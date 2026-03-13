@@ -317,6 +317,60 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  Widget _literaturaBanner() {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      clipBehavior: Clip.antiAlias,
+      child: SizedBox(
+        height: 168,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ShaderMask(
+              shaderCallback: (bounds) {
+                return const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.white,
+                    Colors.white,
+                    Colors.transparent,
+                  ],
+                  stops: [0.0, 0.16, 0.84, 1.0],
+                ).createShader(bounds);
+              },
+              blendMode: BlendMode.dstIn,
+              child: Opacity(
+                opacity: 0.75,
+                child: Image.asset(
+                  'assets/marketing/cws_dashboard_banner.jpg',
+                  fit: BoxFit.cover,
+                  alignment: const Alignment(-0.08, -0.52),
+                ),
+              ),
+            ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    const Color(0xFFF3F5F7),
+                    const Color(0xFFF3F5F7).withValues(alpha: 0.35),
+                    const Color(0xFFF3F5F7),
+                  ],
+                  stops: const [0.0, 0.52, 1.0],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -357,6 +411,8 @@ class HomePage extends StatelessWidget {
             icon: Icons.menu_book_outlined,
             onTap: () => _openLiteraturaTecnica(context),
           ),
+          const SizedBox(height: 6),
+          _literaturaBanner(),
         ],
       ),
     );
@@ -378,6 +434,7 @@ class LiteraturaTecnicaPage extends StatelessWidget {
   static final Uri _emailUri = Uri.parse(
     'mailto:luizmarcos@netherland.com.br?subject=Solicita%C3%A7%C3%A3o%20de%20FDS%20CWS%20Admix',
   );
+  static final Uri _siteUri = Uri.parse('https://www.netherland.com.br');
 
   Future<void> _abrirLink(
     BuildContext context, {
@@ -561,6 +618,16 @@ class LiteraturaTecnicaPage extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: 10),
+          _docCard(
+            context,
+            title: 'Acesse nosso site',
+            subtitle:
+                'Maiores informações, outros produtos da Netherland, videos e obras executadas.',
+            icon: Icons.language_outlined,
+            onTap: () =>
+                _abrirLink(context, uri: _siteUri, label: 'Site Netherland'),
           ),
         ],
       ),
