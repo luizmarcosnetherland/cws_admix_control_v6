@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 
-import '../../../core/services/local_dropbox_storage_service.dart';
+import '../../../core/services/local_storage_service.dart';
 import '../../../data/models/lancamento_model.dart';
 import '../../../data/repositories/lancamento_repository.dart';
 
@@ -27,7 +27,7 @@ class NovoLancamentoPage extends StatefulWidget {
 class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
   final _formKey = GlobalKey<FormState>();
   final _repo = LancamentoRepository();
-  final _storage = LocalDropboxStorageService();
+  final _storage = LocalStorageService();
   final _imagePicker = ImagePicker();
 
   final _betoneiraCtrl = TextEditingController();

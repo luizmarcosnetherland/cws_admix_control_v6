@@ -7,11 +7,11 @@ import 'package:path/path.dart' as p;
 import '../../data/models/lancamento_model.dart';
 import '../../data/models/obra_model.dart';
 import '../../data/repositories/lancamento_repository.dart';
-import 'local_dropbox_storage_service.dart';
+import 'local_storage_service.dart';
 
 class CsvExportService {
   final LancamentoRepository _repo = LancamentoRepository();
-  final LocalDropboxStorageService _storage = LocalDropboxStorageService();
+  final LocalStorageService _storage = LocalStorageService();
 
   /// Mantido por compatibilidade: exporta TODOS os lançamentos da obra.
   Future<String> exportLancamentosObraToDownloads({required Obra obra}) async {
@@ -38,6 +38,9 @@ class CsvExportService {
       'Obra',
       'Cliente',
       'Local',
+      'Localizacao da obra',
+      'Latitude',
+      'Longitude',
       'Responsável',
       'Data/Hora',
       'Betoneira (nº/placa)',
@@ -59,6 +62,9 @@ class CsvExportService {
         obra.nome,
         obra.cliente,
         obra.local,
+        obra.localizacaoDescricao,
+        obra.latitude == null ? '' : _fmtNum(obra.latitude!, casas: 6),
+        obra.longitude == null ? '' : _fmtNum(obra.longitude!, casas: 6),
         obra.responsavel,
         _fmtDataHora(l.dataHora),
         l.caminhao,

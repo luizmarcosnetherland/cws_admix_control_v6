@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/services/csv_export_service.dart';
 import '../../../core/services/email_compose_service.dart';
+import '../../../core/services/obra_location_service.dart';
 import '../../../core/services/obra_report_pdf_service.dart';
 import '../../../data/models/lancamento_model.dart';
 import '../../../data/models/obra_model.dart';
@@ -27,13 +28,8 @@ enum _Ordenacao {
 
 class ObraDetalhePage extends StatefulWidget {
   final Obra obra;
-  final bool localMode;
 
-  const ObraDetalhePage({
-    super.key,
-    required this.obra,
-    required this.localMode,
-  });
+  const ObraDetalhePage({super.key, required this.obra});
 
   @override
   State<ObraDetalhePage> createState() => _ObraDetalhePageState();
@@ -44,6 +40,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
   final CsvExportService _csv = CsvExportService();
   final EmailComposeService _email = EmailComposeService();
   final ObraReportPdfService _obraPdf = ObraReportPdfService();
+  final ObraLocationService _locationService = ObraLocationService();
 
   late Obra _obraAtual;
 
@@ -368,6 +365,21 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         if (!mounted) return;
       }
 
+      if (Platform.isAndroid) {
+        final box = context.findRenderObject() as RenderBox?;
+        final origin = box == null
+            ? null
+            : box.localToGlobal(Offset.zero) & box.size;
+        await Share.shareXFiles(
+          [XFile(path)],
+          subject: 'Relatório CSV da obra ${_obraAtual.nome}',
+          text:
+              'CSV da obra ${_obraAtual.nome}. Use "Salvar em Arquivos" ou sua nuvem preferida.',
+          sharePositionOrigin: origin,
+        );
+        if (!mounted) return;
+      }
+
       if (Platform.isMacOS) {
         await Process.run('open', ['-R', path]);
         if (!mounted) return;
@@ -573,6 +585,25 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
     return v.toStringAsFixed(casas).replaceAll('.', ',');
   }
 
+  Future<void> _abrirNoMapa() async {
+    final latitude = _obraAtual.latitude;
+    final longitude = _obraAtual.longitude;
+    if (latitude == null || longitude == null) return;
+
+    try {
+      await _locationService.abrirNoMapa(
+        latitude: latitude,
+        longitude: longitude,
+        label: _obraAtual.nome,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao abrir mapa: $e')));
+    }
+  }
+
   Widget _tag(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -609,6 +640,19 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
             const SizedBox(height: 8),
             if (obra.cliente.isNotEmpty) Text('Cliente: ${obra.cliente}'),
             if (obra.local.isNotEmpty) Text('Local: ${obra.local}'),
+            if (obra.localizacaoDescricao.isNotEmpty) ...[
+              Text('Localizacao da obra: ${obra.localizacaoDescricao}'),
+              if (obra.latitude != null && obra.longitude != null)
+                Text(
+                  'Coordenadas: ${obra.latitude!.toStringAsFixed(6)}, ${obra.longitude!.toStringAsFixed(6)}',
+                ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _abrirNoMapa,
+                icon: const Icon(Icons.map_outlined),
+                label: const Text('Abrir no mapa'),
+              ),
+            ],
             if (obra.responsavel.isNotEmpty)
               Text('Responsável: ${obra.responsavel}'),
             if (obra.emailEngenheiro.isNotEmpty)
@@ -983,22 +1027,20 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         title: const Text('Obra'),
         actions: [
           IconButton(
-            tooltip: 'Compartilhar PDF no WhatsApp',
+            tooltip: 'Salvar ou compartilhar PDF',
             onPressed: _compartilharPdfWhatsapp,
             icon: const Icon(Icons.picture_as_pdf),
           ),
-          if (!widget.localMode) ...[
-            IconButton(
-              tooltip: 'Exportar CSV (filtros atuais)',
-              onPressed: _exportarCsv,
-              icon: const Icon(Icons.table_chart_outlined),
-            ),
-            IconButton(
-              tooltip: 'Enviar e-mail ao engenheiro',
-              onPressed: _enviarEmailEngenheiro,
-              icon: const Icon(Icons.email_outlined),
-            ),
-          ],
+          IconButton(
+            tooltip: 'Salvar ou compartilhar CSV',
+            onPressed: _exportarCsv,
+            icon: const Icon(Icons.table_chart_outlined),
+          ),
+          IconButton(
+            tooltip: 'Enviar e-mail ao engenheiro',
+            onPressed: _enviarEmailEngenheiro,
+            icon: const Icon(Icons.email_outlined),
+          ),
           IconButton(
             tooltip: 'Editar obra',
             onPressed: _editarObra,

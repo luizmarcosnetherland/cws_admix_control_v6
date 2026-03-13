@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/services/dropbox_data_sync_service.dart';
 import '../../../data/models/obra_model.dart';
 import '../../../data/repositories/obra_repository.dart';
 import 'nova_obra_page.dart';
 import 'obra_detalhe_page.dart';
 
 class ObrasPage extends StatefulWidget {
-  final bool localMode;
-
-  const ObrasPage({super.key, required this.localMode});
+  const ObrasPage({super.key});
 
   @override
   State<ObrasPage> createState() => _ObrasPageState();
@@ -19,7 +16,6 @@ class _ObrasPageState extends State<ObrasPage> {
   final _repo = ObraRepository();
 
   bool _loading = true;
-  bool _syncingData = false;
 
   List<Obra> _ativas = [];
   List<Obra> _arquivadas = [];
@@ -47,28 +43,6 @@ class _ObrasPageState extends State<ObrasPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Erro ao carregar obras: $e')));
-    }
-  }
-
-  Future<void> _syncDadosDropbox() async {
-    if (_syncingData) return;
-    setState(() => _syncingData = true);
-
-    try {
-      final svc = DropboxDataSyncService();
-      final dropboxPath = await svc.syncAllToDropbox();
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Dados sincronizados ✅ ($dropboxPath)')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao sincronizar dados: $e')));
-    } finally {
-      if (mounted) setState(() => _syncingData = false);
     }
   }
 
@@ -134,12 +108,9 @@ class _ObrasPageState extends State<ObrasPage> {
   }
 
   Future<void> _abrirDetalhe(Obra obra) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) =>
-            ObraDetalhePage(obra: obra, localMode: widget.localMode),
-      ),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => ObraDetalhePage(obra: obra)));
     await _carregarTudo();
   }
 
@@ -189,6 +160,8 @@ class _ObrasPageState extends State<ObrasPage> {
               children: [
                 if (obra.cliente.isNotEmpty) Text('Cliente: ${obra.cliente}'),
                 if (obra.local.isNotEmpty) Text('Local: ${obra.local}'),
+                if (obra.localizacaoDescricao.isNotEmpty)
+                  Text('Localizacao: ${obra.localizacaoDescricao}'),
                 Text(
                   arquivadas
                       ? 'Arquivada em: ${_fmt(obra.updatedAt)}'
@@ -230,19 +203,6 @@ class _ObrasPageState extends State<ObrasPage> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Obras'),
-          actions: [
-            IconButton(
-              tooltip: 'Sync dados (Dropbox)',
-              icon: _syncingData
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.cloud_upload),
-              onPressed: _syncingData ? null : _syncDadosDropbox,
-            ),
-          ],
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Ativas'),

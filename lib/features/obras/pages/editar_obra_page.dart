@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/services/obra_location_service.dart';
 import '../../../data/models/obra_model.dart';
 import '../../../data/repositories/obra_repository.dart';
 
@@ -21,9 +22,14 @@ class _EditarObraPageState extends State<EditarObraPage> {
   late final TextEditingController _localCtrl;
   late final TextEditingController _responsavelCtrl;
   late final TextEditingController _emailEngenheiroCtrl;
+  late final TextEditingController _localizacaoCtrl;
   late final TextEditingController _obsCtrl;
+  final _locationService = ObraLocationService();
 
   bool _saving = false;
+  bool _loadingLocation = false;
+  double? _latitude;
+  double? _longitude;
 
   @override
   void initState() {
@@ -35,7 +41,12 @@ class _EditarObraPageState extends State<EditarObraPage> {
     _emailEngenheiroCtrl = TextEditingController(
       text: widget.obra.emailEngenheiro,
     );
+    _localizacaoCtrl = TextEditingController(
+      text: widget.obra.localizacaoDescricao,
+    );
     _obsCtrl = TextEditingController(text: widget.obra.observacoes);
+    _latitude = widget.obra.latitude;
+    _longitude = widget.obra.longitude;
   }
 
   @override
@@ -45,12 +56,50 @@ class _EditarObraPageState extends State<EditarObraPage> {
     _localCtrl.dispose();
     _responsavelCtrl.dispose();
     _emailEngenheiroCtrl.dispose();
+    _localizacaoCtrl.dispose();
     _obsCtrl.dispose();
     super.dispose();
   }
 
   InputDecoration _dec(String label) =>
       InputDecoration(labelText: label, border: const OutlineInputBorder());
+
+  String? get _coordenadasLabel {
+    final latitude = _latitude;
+    final longitude = _longitude;
+    if (latitude == null || longitude == null) return null;
+    return _locationService.coordenadasLabel(latitude, longitude);
+  }
+
+  Future<void> _usarLocalizacaoAtual() async {
+    if (_loadingLocation || _saving) return;
+    setState(() => _loadingLocation = true);
+
+    try {
+      final result = await _locationService.obterLocalizacaoAtual();
+      if (!mounted) return;
+      setState(() {
+        _latitude = result.latitude;
+        _longitude = result.longitude;
+        _localizacaoCtrl.text = result.descricao;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao obter localizacao: $e')));
+    } finally {
+      if (mounted) setState(() => _loadingLocation = false);
+    }
+  }
+
+  void _limparLocalizacao() {
+    setState(() {
+      _latitude = null;
+      _longitude = null;
+      _localizacaoCtrl.clear();
+    });
+  }
 
   Future<void> _salvar() async {
     if (_saving) return;
@@ -64,6 +113,9 @@ class _EditarObraPageState extends State<EditarObraPage> {
       local: _localCtrl.text.trim(),
       responsavel: _responsavelCtrl.text.trim(),
       emailEngenheiro: _emailEngenheiroCtrl.text.trim(),
+      latitude: _latitude,
+      longitude: _longitude,
+      localizacaoDescricao: _localizacaoCtrl.text.trim(),
       observacoes: _obsCtrl.text.trim(),
     );
 
@@ -147,10 +199,63 @@ class _EditarObraPageState extends State<EditarObraPage> {
                 validator: (v) {
                   final value = (v ?? '').trim();
                   if (value.isEmpty) return null;
-                  final ok = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value);
+                  final ok = RegExp(
+                    r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                  ).hasMatch(value);
                   return ok ? null : 'Informe um e-mail válido';
                 },
               ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _localizacaoCtrl,
+                readOnly: true,
+                decoration: _dec(
+                  'Localizacao da obra',
+                ).copyWith(hintText: 'Use a localizacao atual do aparelho'),
+                minLines: 2,
+                maxLines: 3,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: (_saving || _loadingLocation)
+                          ? null
+                          : _usarLocalizacaoAtual,
+                      icon: _loadingLocation
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.my_location),
+                      label: Text(
+                        _localizacaoCtrl.text.trim().isEmpty
+                            ? 'Usar localizacao atual'
+                            : 'Atualizar localizacao',
+                      ),
+                    ),
+                  ),
+                  if (_localizacaoCtrl.text.trim().isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    IconButton(
+                      tooltip: 'Limpar localizacao',
+                      onPressed: (_saving || _loadingLocation)
+                          ? null
+                          : _limparLocalizacao,
+                      icon: const Icon(Icons.delete_outline),
+                    ),
+                  ],
+                ],
+              ),
+              if (_coordenadasLabel != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Coordenadas: $_coordenadasLabel',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
               const SizedBox(height: 12),
               TextFormField(
                 controller: _obsCtrl,

@@ -52,6 +52,9 @@ class ObraRepository {
     String local = '',
     String responsavel = '',
     String emailEngenheiro = '',
+    double? latitude,
+    double? longitude,
+    String localizacaoDescricao = '',
     String observacoes = '',
   }) async {
     final db = await _db.database;
@@ -63,6 +66,9 @@ class ObraRepository {
       local: local.trim(),
       responsavel: responsavel.trim(),
       emailEngenheiro: emailEngenheiro.trim(),
+      latitude: latitude,
+      longitude: longitude,
+      localizacaoDescricao: localizacaoDescricao.trim(),
       observacoes: observacoes.trim(),
       createdAt: now,
       updatedAt: now,

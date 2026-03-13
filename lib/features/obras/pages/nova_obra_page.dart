@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/services/obra_location_service.dart';
 import '../../../data/repositories/obra_repository.dart';
 
 class NovaObraPage extends StatefulWidget {
@@ -17,11 +18,16 @@ class _NovaObraPageState extends State<NovaObraPage> {
   final _localCtrl = TextEditingController();
   final _responsavelCtrl = TextEditingController();
   final _emailEngenheiroCtrl = TextEditingController();
+  final _localizacaoCtrl = TextEditingController();
   final _obsCtrl = TextEditingController();
 
   final _repo = ObraRepository();
+  final _locationService = ObraLocationService();
 
   bool _saving = false;
+  bool _loadingLocation = false;
+  double? _latitude;
+  double? _longitude;
 
   @override
   void dispose() {
@@ -30,8 +36,46 @@ class _NovaObraPageState extends State<NovaObraPage> {
     _localCtrl.dispose();
     _responsavelCtrl.dispose();
     _emailEngenheiroCtrl.dispose();
+    _localizacaoCtrl.dispose();
     _obsCtrl.dispose();
     super.dispose();
+  }
+
+  String? get _coordenadasLabel {
+    final latitude = _latitude;
+    final longitude = _longitude;
+    if (latitude == null || longitude == null) return null;
+    return _locationService.coordenadasLabel(latitude, longitude);
+  }
+
+  Future<void> _usarLocalizacaoAtual() async {
+    if (_loadingLocation || _saving) return;
+    setState(() => _loadingLocation = true);
+
+    try {
+      final result = await _locationService.obterLocalizacaoAtual();
+      if (!mounted) return;
+      setState(() {
+        _latitude = result.latitude;
+        _longitude = result.longitude;
+        _localizacaoCtrl.text = result.descricao;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao obter localizacao: $e')));
+    } finally {
+      if (mounted) setState(() => _loadingLocation = false);
+    }
+  }
+
+  void _limparLocalizacao() {
+    setState(() {
+      _latitude = null;
+      _longitude = null;
+      _localizacaoCtrl.clear();
+    });
   }
 
   Future<void> _salvar() async {
@@ -61,27 +105,28 @@ class _NovaObraPageState extends State<NovaObraPage> {
         local: _localCtrl.text,
         responsavel: _responsavelCtrl.text,
         emailEngenheiro: _emailEngenheiroCtrl.text,
+        latitude: _latitude,
+        longitude: _longitude,
+        localizacaoDescricao: _localizacaoCtrl.text,
         observacoes: _obsCtrl.text,
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Obra criada com sucesso.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Obra criada com sucesso.')));
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao salvar obra: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao salvar obra: $e')));
       setState(() => _saving = false);
     }
   }
 
-  InputDecoration _dec(String label) => InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-      );
+  InputDecoration _dec(String label) =>
+      InputDecoration(labelText: label, border: const OutlineInputBorder());
 
   @override
   Widget build(BuildContext context) {
@@ -153,6 +198,57 @@ class _NovaObraPageState extends State<NovaObraPage> {
                   return ok ? null : 'Informe um e-mail válido';
                 },
               ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _localizacaoCtrl,
+                readOnly: true,
+                decoration: _dec(
+                  'Localizacao da obra',
+                ).copyWith(hintText: 'Use a localizacao atual do aparelho'),
+                minLines: 2,
+                maxLines: 3,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: (_saving || _loadingLocation)
+                          ? null
+                          : _usarLocalizacaoAtual,
+                      icon: _loadingLocation
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.my_location),
+                      label: Text(
+                        _localizacaoCtrl.text.trim().isEmpty
+                            ? 'Usar localizacao atual'
+                            : 'Atualizar localizacao',
+                      ),
+                    ),
+                  ),
+                  if (_localizacaoCtrl.text.trim().isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    IconButton(
+                      tooltip: 'Limpar localizacao',
+                      onPressed: (_saving || _loadingLocation)
+                          ? null
+                          : _limparLocalizacao,
+                      icon: const Icon(Icons.delete_outline),
+                    ),
+                  ],
+                ],
+              ),
+              if (_coordenadasLabel != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Coordenadas: $_coordenadasLabel',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
               const SizedBox(height: 12),
               TextFormField(
                 controller: _obsCtrl,

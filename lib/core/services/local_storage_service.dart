@@ -3,69 +3,23 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
-class LocalDropboxStorageService {
+class LocalStorageService {
   Future<String> get rootPath async {
-    if (Platform.isAndroid) {
-      final dir = await getApplicationDocumentsDirectory();
-      return p.join(dir.path, 'CWSadmixControl');
-    }
-
-    if (Platform.isIOS) {
-      final dir = await getApplicationDocumentsDirectory();
-      return p.join(dir.path, 'CWSadmixControl');
-    }
-
-    final home = _detectHomeDir();
-
-    if (Platform.isMacOS) {
-      return p.join(
-        home,
-        'Library',
-        'CloudStorage',
-        'Dropbox',
-        'CWSadmixControl',
-      );
-    }
-
-    return p.join(home, 'Dropbox', 'CWSadmixControl');
+    final dir = await getApplicationDocumentsDirectory();
+    return p.join(dir.path, 'CWSadmixControl');
   }
 
   Future<String> get exportRootPath async {
     if (Platform.isAndroid || Platform.isIOS) {
-      return p.join(await rootPath, 'Downloads');
+      return p.join(await rootPath, 'exports');
     }
 
-    final home = _detectHomeDir();
-
-    if (Platform.isMacOS) {
-      return p.join(
-        home,
-        'Library',
-        'CloudStorage',
-        'Dropbox',
-        'Downloads',
-        'CWSadmixControl',
-      );
+    final downloadsDir = await getDownloadsDirectory();
+    if (downloadsDir != null) {
+      return p.join(downloadsDir.path, 'CWSadmixControl');
     }
 
-    return p.join(home, 'Dropbox', 'Downloads', 'CWSadmixControl');
-  }
-
-  static String _detectHomeDir() {
-    final envHome =
-        Platform.environment['HOME'] ??
-        Platform.environment['USERPROFILE'] ??
-        '';
-    if (envHome.isNotEmpty) return envHome;
-
-    final currentPath = Directory.current.path;
-    const marker = '/Library/Developer/';
-    final idx = currentPath.indexOf(marker);
-    if (idx > 0) {
-      return currentPath.substring(0, idx);
-    }
-
-    return '';
+    return p.join(await rootPath, 'exports');
   }
 
   Future<Directory> get rootDir async => Directory(await rootPath);

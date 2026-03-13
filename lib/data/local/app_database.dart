@@ -6,7 +6,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static const _dbName = 'cws_admix_control.db';
-  static const _dbVersion = 10;
+  static const _dbVersion = 11;
 
   Database? _database;
 
@@ -92,6 +92,9 @@ class AppDatabase {
         local TEXT NOT NULL DEFAULT '',
         responsavel TEXT NOT NULL DEFAULT '',
         email_engenheiro TEXT NOT NULL DEFAULT '',
+        latitude REAL,
+        longitude REAL,
+        localizacao_descricao TEXT NOT NULL DEFAULT '',
         observacoes TEXT NOT NULL DEFAULT '',
         ativo INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL,
@@ -160,6 +163,17 @@ class AppDatabase {
     if (!names.contains('email_engenheiro')) {
       await db.execute(
         "ALTER TABLE obras ADD COLUMN email_engenheiro TEXT NOT NULL DEFAULT ''",
+      );
+    }
+    if (!names.contains('latitude')) {
+      await db.execute("ALTER TABLE obras ADD COLUMN latitude REAL");
+    }
+    if (!names.contains('longitude')) {
+      await db.execute("ALTER TABLE obras ADD COLUMN longitude REAL");
+    }
+    if (!names.contains('localizacao_descricao')) {
+      await db.execute(
+        "ALTER TABLE obras ADD COLUMN localizacao_descricao TEXT NOT NULL DEFAULT ''",
       );
     }
   }

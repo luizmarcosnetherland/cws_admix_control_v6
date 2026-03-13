@@ -10,10 +10,10 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../data/models/lancamento_model.dart';
 import '../../data/models/obra_model.dart';
-import 'local_dropbox_storage_service.dart';
+import 'local_storage_service.dart';
 
 class ObraReportPdfService {
-  final LocalDropboxStorageService _storage = LocalDropboxStorageService();
+  final LocalStorageService _storage = LocalStorageService();
   static const _lancamentoCardWidth = 168.0;
 
   Future<String> buildReportPdf({
@@ -126,6 +126,12 @@ class ObraReportPdfService {
           _sectionTitle('Obra'),
           _kv('Cliente', _fallback(obra.cliente)),
           _kv('Local', _fallback(obra.local)),
+          _kv('Localizacao da obra', _fallback(obra.localizacaoDescricao)),
+          if (obra.latitude != null && obra.longitude != null)
+            _kv(
+              'Coordenadas',
+              '${obra.latitude!.toStringAsFixed(6)}, ${obra.longitude!.toStringAsFixed(6)}',
+            ),
           _kv('Responsável', _fallback(obra.responsavel)),
           _kv('E-mail engenheiro', _fallback(obra.emailEngenheiro)),
           pw.SizedBox(height: 10),
@@ -181,13 +187,7 @@ class ObraReportPdfService {
       );
 
       await Share.shareXFiles(
-        [
-          XFile.fromData(
-            bytes,
-            mimeType: 'application/pdf',
-            name: filename,
-          ),
-        ],
+        [XFile.fromData(bytes, mimeType: 'application/pdf', name: filename)],
         text: 'Relatório em PDF da obra ${obra.nome}',
         subject: 'Relatório da obra ${obra.nome}',
         sharePositionOrigin: sharePositionOrigin,
