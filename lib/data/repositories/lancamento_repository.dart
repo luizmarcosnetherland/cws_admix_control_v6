@@ -15,6 +15,7 @@ class ResumoLancamentosObra {
 
 class LancamentoRepository {
   final AppDatabase _db = AppDatabase.instance;
+
   Future<List<Lancamento>> listarPorObra(
     int obraId, {
     DateTime? inicio,
@@ -64,12 +65,12 @@ class LancamentoRepository {
     final db = await _db.database;
     final now = DateTime.now();
 
-    final volume = double.parse(volumeM3.toStringAsFixed(1));
-    final dosagem = double.parse(dosagemKgM3.toStringAsFixed(1));
-    final cwsTotal = double.parse((volume * dosagem).toStringAsFixed(1));
+    final volume = _round1(volumeM3);
+    final dosagem = _round1(dosagemKgM3);
+    final cwsTotal = _round1(volume * dosagem);
     final cwsAdd = cwsAdicionadoKg == null
         ? null
-        : double.parse(cwsAdicionadoKg.toStringAsFixed(1));
+        : _round1(cwsAdicionadoKg);
 
     final dosagemAcordo = _calcDosagemDeAcordo(
       volumeM3: volume,
@@ -119,9 +120,9 @@ class LancamentoRepository {
   Future<int> atualizarLancamento(Lancamento lancamento) async {
     final db = await _db.database;
 
-    final volume = double.parse(lancamento.volumeM3.toStringAsFixed(1));
-    final dosagem = double.parse(lancamento.dosagemKgM3.toStringAsFixed(1));
-    final cwsTotal = double.parse((volume * dosagem).toStringAsFixed(1));
+    final volume = _round1(lancamento.volumeM3);
+    final dosagem = _round1(lancamento.dosagemKgM3);
+    final cwsTotal = _round1(volume * dosagem);
 
     final updatedBase = lancamento.copyWith(
       volumeM3: volume,
@@ -186,4 +187,6 @@ class LancamentoRepository {
       cwsTotalKg: ((row['cws_total'] as num?) ?? 0).toDouble(),
     );
   }
+
+  double _round1(double value) => (value * 10).roundToDouble() / 10;
 }

@@ -4,22 +4,38 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
 class LocalStorageService {
+  String? _rootPathCache;
+  String? _exportRootPathCache;
+
   Future<String> get rootPath async {
+    final cached = _rootPathCache;
+    if (cached != null) return cached;
     final dir = await getApplicationDocumentsDirectory();
-    return p.join(dir.path, 'CWSadmixControl');
+    final path = p.join(dir.path, 'CWSadmixControl');
+    _rootPathCache = path;
+    return path;
   }
 
   Future<String> get exportRootPath async {
+    final cached = _exportRootPathCache;
+    if (cached != null) return cached;
+
     if (Platform.isAndroid || Platform.isIOS) {
-      return p.join(await rootPath, 'exports');
+      final path = p.join(await rootPath, 'exports');
+      _exportRootPathCache = path;
+      return path;
     }
 
     final downloadsDir = await getDownloadsDirectory();
     if (downloadsDir != null) {
-      return p.join(downloadsDir.path, 'CWSadmixControl');
+      final path = p.join(downloadsDir.path, 'CWSadmixControl');
+      _exportRootPathCache = path;
+      return path;
     }
 
-    return p.join(await rootPath, 'exports');
+    final path = p.join(await rootPath, 'exports');
+    _exportRootPathCache = path;
+    return path;
   }
 
   Future<Directory> get rootDir async => Directory(await rootPath);

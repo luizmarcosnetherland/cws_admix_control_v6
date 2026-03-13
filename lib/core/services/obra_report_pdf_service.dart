@@ -15,6 +15,8 @@ import 'local_storage_service.dart';
 class ObraReportPdfService {
   final LocalStorageService _storage = LocalStorageService();
   static const _lancamentoCardWidth = 168.0;
+  static Future<_PdfLogos>? _logosFuture;
+  static Future<_PdfFonts>? _fontsFuture;
 
   Future<String> buildReportPdf({
     required Obra obra,
@@ -366,30 +368,34 @@ class ObraReportPdfService {
   }
 
   Future<_PdfLogos> _loadLogos() async {
-    Future<pw.MemoryImage?> load(String asset) async {
-      try {
-        final bytes = await rootBundle.load(asset);
-        return pw.MemoryImage(bytes.buffer.asUint8List());
-      } catch (_) {
-        return null;
+    return _logosFuture ??= () async {
+      Future<pw.MemoryImage?> load(String asset) async {
+        try {
+          final bytes = await rootBundle.load(asset);
+          return pw.MemoryImage(bytes.buffer.asUint8List());
+        } catch (_) {
+          return null;
+        }
       }
-    }
 
-    return _PdfLogos(
-      netherland: await load('assets/logos/netherland.png'),
-      cws: await load('assets/logos/cwsadmix.jpg'),
-    );
+      return _PdfLogos(
+        netherland: await load('assets/logos/netherland.png'),
+        cws: await load('assets/logos/cwsadmix.jpg'),
+      );
+    }();
   }
 
   Future<_PdfFonts> _loadFonts() async {
-    final regularBytes = await rootBundle.load(
-      'assets/fonts/Roboto-Regular.ttf',
-    );
-    final boldBytes = await rootBundle.load('assets/fonts/Roboto-Bold.ttf');
-    return _PdfFonts(
-      regular: pw.Font.ttf(regularBytes),
-      bold: pw.Font.ttf(boldBytes),
-    );
+    return _fontsFuture ??= () async {
+      final regularBytes = await rootBundle.load(
+        'assets/fonts/Roboto-Regular.ttf',
+      );
+      final boldBytes = await rootBundle.load('assets/fonts/Roboto-Bold.ttf');
+      return _PdfFonts(
+        regular: pw.Font.ttf(regularBytes),
+        bold: pw.Font.ttf(boldBytes),
+      );
+    }();
   }
 
   String _safeFile(String value) {

@@ -15,6 +15,7 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
   static const _cotacaoWhatsapp = '5541999731741';
   final _volumeCtrl = TextEditingController(text: '10');
   final _cementCtrl = TextEditingController(text: '350');
+  late final Listenable _inputsListenable;
 
   double get volume =>
       double.tryParse(_volumeCtrl.text.replaceAll(',', '.')) ?? 0.0;
@@ -134,6 +135,12 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _inputsListenable = Listenable.merge([_volumeCtrl, _cementCtrl]);
+  }
+
+  @override
   void dispose() {
     _volumeCtrl.dispose();
     _cementCtrl.dispose();
@@ -193,37 +200,45 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
             ),
           ),
           const SizedBox(height: 16),
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Resultado',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          AnimatedBuilder(
+            animation: _inputsListenable,
+            builder: (context, _) {
+              return Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Resultado',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _resultLine(
+                        'Dosagem aplicada',
+                        '${fmt(dosageKgM3, casas: 1)} kg/m³',
+                      ),
+                      _resultLine(
+                        'Quantidade necessária',
+                        '${fmt(totalKg, casas: 1)} kg',
+                      ),
+                      _resultLine('Sacos de 6,4 kg', '$bags'),
+                      _resultLine(
+                        'Quantidade para compra',
+                        '${fmt(providedKg, casas: 1)} kg',
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  _resultLine(
-                    'Dosagem aplicada',
-                    '${fmt(dosageKgM3, casas: 1)} kg/m³',
-                  ),
-                  _resultLine(
-                    'Quantidade necessária',
-                    '${fmt(totalKg, casas: 1)} kg',
-                  ),
-                  _resultLine('Sacos de 6,4 kg', '$bags'),
-                  _resultLine(
-                    'Quantidade para compra',
-                    '${fmt(providedKg, casas: 1)} kg',
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 16),
           FilledButton.icon(
@@ -256,7 +271,6 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
           labelText: label,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        onChanged: (_) => setState(() {}),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
@@ -67,22 +68,29 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
   String? _filtroBetoneira; // null = todas
   final TextEditingController _buscaCtrl = TextEditingController();
   bool _filtrosExpandidos = false;
+  Timer? _buscaDebounce;
 
   // Ordenação
   _Ordenacao _ordenacao = _Ordenacao.dataDesc;
+  List<String> _opcoesConcreteiraCache = const [];
+  List<String> _opcoesBetoneiraCache = const [];
 
   @override
   void initState() {
     super.initState();
     _obraAtual = widget.obra;
     _buscaCtrl.addListener(() {
-      if (mounted) setState(_aplicarFiltros);
+      _buscaDebounce?.cancel();
+      _buscaDebounce = Timer(const Duration(milliseconds: 180), () {
+        if (mounted) setState(_aplicarFiltros);
+      });
     });
     _carregar();
   }
 
   @override
   void dispose() {
+    _buscaDebounce?.cancel();
     _buscaCtrl.dispose();
     super.dispose();
   }
@@ -158,27 +166,9 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
     }
   }
 
-  List<String> _opcoesConcreteira() {
-    final set = <String>{};
-    for (final l in _base) {
-      final v = l.concreteira.trim();
-      if (v.isNotEmpty) set.add(v);
-    }
-    final list = set.toList()
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    return list;
-  }
+  List<String> _opcoesConcreteira() => _opcoesConcreteiraCache;
 
-  List<String> _opcoesBetoneira() {
-    final set = <String>{};
-    for (final l in _base) {
-      final v = l.caminhao.trim();
-      if (v.isNotEmpty) set.add(v);
-    }
-    final list = set.toList()
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    return list;
-  }
+  List<String> _opcoesBetoneira() => _opcoesBetoneiraCache;
 
   String _norm(String s) => s.toLowerCase().trim();
 
@@ -293,10 +283,18 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
       if (!mounted) return;
       setState(() {
         _base = lista;
+        _opcoesConcreteiraCache = _buildFilterOptions(
+          lista,
+          selector: (l) => l.concreteira,
+        );
+        _opcoesBetoneiraCache = _buildFilterOptions(
+          lista,
+          selector: (l) => l.caminhao,
+        );
 
         // Se o filtro selecionado sumiu no período, reseta.
-        final concs = _opcoesConcreteira().map(_norm).toSet();
-        final bets = _opcoesBetoneira().map(_norm).toSet();
+        final concs = _opcoesConcreteiraCache.map(_norm).toSet();
+        final bets = _opcoesBetoneiraCache.map(_norm).toSet();
 
         if (_filtroConcreteira != null &&
             !concs.contains(_norm(_filtroConcreteira!))) {
@@ -317,6 +315,26 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         SnackBar(content: Text('Erro ao carregar lançamentos: $e')),
       );
     }
+  }
+
+  List<String> _buildFilterOptions(
+    List<Lancamento> lancamentos, {
+    required String Function(Lancamento lancamento) selector,
+  }) {
+    final values = <String>{};
+    for (final lancamento in lancamentos) {
+      final value = selector(lancamento).trim();
+      if (value.isNotEmpty) values.add(value);
+    }
+    final list = values.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return list;
+  }
+
+  Rect? _shareOrigin() {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return null;
+    return box.localToGlobal(Offset.zero) & box.size;
   }
 
   Future<void> _editarObra() async {
@@ -352,10 +370,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
       if (!mounted) return;
 
       if (Platform.isIOS) {
-        final box = context.findRenderObject() as RenderBox?;
-        final origin = box == null
-            ? null
-            : box.localToGlobal(Offset.zero) & box.size;
+        final origin = _shareOrigin();
         await Share.shareXFiles(
           [XFile(path)],
           subject: 'Relatório CSV da obra ${_obraAtual.nome}',
@@ -366,10 +381,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
       }
 
       if (Platform.isAndroid) {
-        final box = context.findRenderObject() as RenderBox?;
-        final origin = box == null
-            ? null
-            : box.localToGlobal(Offset.zero) & box.size;
+        final origin = _shareOrigin();
         await Share.shareXFiles(
           [XFile(path)],
           subject: 'Relatório CSV da obra ${_obraAtual.nome}',
@@ -400,10 +412,6 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
 
   Future<void> _compartilharPdfWhatsapp() async {
     try {
-      final box = context.findRenderObject() as RenderBox?;
-      final origin = box == null
-          ? null
-          : box.localToGlobal(Offset.zero) & box.size;
       await _obraPdf.shareReportPdf(
         obra: _obraAtual,
         lancamentos: _filtrado,
@@ -412,7 +420,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         concreteira: _filtroConcreteira,
         betoneira: _filtroBetoneira,
         busca: _buscaCtrl.text.trim(),
-        sharePositionOrigin: origin,
+        sharePositionOrigin: _shareOrigin(),
       );
     } catch (e) {
       if (!mounted) return;
@@ -437,10 +445,6 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
     }
 
     try {
-      final box = context.findRenderObject() as RenderBox?;
-      final origin = box == null
-          ? null
-          : box.localToGlobal(Offset.zero) & box.size;
       final csvPath = await _csv.exportLancamentosToDownloads(
         obra: _obraAtual,
         lancamentos: _filtrado,
@@ -460,7 +464,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         subject: assunto,
         body: body,
         attachmentPaths: [csvPath],
-        sharePositionOrigin: origin,
+        sharePositionOrigin: _shareOrigin(),
       );
 
       if (!mounted) return;

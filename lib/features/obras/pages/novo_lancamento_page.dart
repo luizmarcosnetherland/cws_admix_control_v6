@@ -46,6 +46,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
   List<String> _fotoPaths = [];
 
   late final DateTime _dataHora;
+  late final Listenable _previewListenable;
   bool _saving = false;
   bool _pickingFotos = false;
 
@@ -62,31 +63,20 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     _concreteiraCtrl.text = l?.concreteira ?? '';
     _notaFiscalCtrl.text = l?.notaFiscal ?? '';
 
-    _volumeCtrl.text = l != null
-        ? l.volumeM3.toStringAsFixed(1).replaceAll('.', ',')
-        : '';
-    _dosagemCtrl.text = l != null
-        ? l.dosagemKgM3.toStringAsFixed(1).replaceAll('.', ',')
-        : '0,8';
-    _cwsAdicionadoCtrl.text = l?.cwsAdicionadoKg == null
-        ? ''
-        : l!.cwsAdicionadoKg!.toStringAsFixed(1).replaceAll('.', ',');
-    _slumpAntesCtrl.text = l?.slumpAntes == null
-        ? ''
-        : l!.slumpAntes!.toStringAsFixed(1).replaceAll('.', ',');
-    _slumpDepoisCtrl.text = l?.slumpDepois == null
-        ? ''
-        : l!.slumpDepois!.toStringAsFixed(1).replaceAll('.', ',');
-    _tempoMisturaCtrl.text = l?.tempoMisturaMin == null
-        ? ''
-        : l!.tempoMisturaMin!.toStringAsFixed(1).replaceAll('.', ',');
+    _volumeCtrl.text = _formatInitialDecimal(l?.volumeM3);
+    _dosagemCtrl.text = _formatInitialDecimal(l?.dosagemKgM3, fallback: '0,8');
+    _cwsAdicionadoCtrl.text = _formatInitialDecimal(l?.cwsAdicionadoKg);
+    _slumpAntesCtrl.text = _formatInitialDecimal(l?.slumpAntes);
+    _slumpDepoisCtrl.text = _formatInitialDecimal(l?.slumpDepois);
+    _tempoMisturaCtrl.text = _formatInitialDecimal(l?.tempoMisturaMin);
 
     _obsCtrl.text = l?.observacoes ?? '';
     _fotoPaths = List<String>.from(l?.fotoPaths ?? const []);
-
-    _volumeCtrl.addListener(_recalc);
-    _dosagemCtrl.addListener(_recalc);
-    _cwsAdicionadoCtrl.addListener(_recalc);
+    _previewListenable = Listenable.merge([
+      _volumeCtrl,
+      _dosagemCtrl,
+      _cwsAdicionadoCtrl,
+    ]);
   }
 
   @override
@@ -104,14 +94,15 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     super.dispose();
   }
 
-  void _recalc() {
-    if (mounted) setState(() {});
-  }
-
   double? _parseNumero(String raw) {
     final t = raw.trim().replaceAll(',', '.');
     if (t.isEmpty) return null;
     return double.tryParse(t);
+  }
+
+  String _formatInitialDecimal(double? value, {String fallback = ''}) {
+    if (value == null) return fallback;
+    return value.toStringAsFixed(1).replaceAll('.', ',');
   }
 
   String _fmtNum(double v, {int casas = 1}) {
@@ -297,22 +288,70 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     });
   }
 
+  Widget _previewCards() {
+    return AnimatedBuilder(
+      animation: _previewListenable,
+      builder: (context, _) {
+        final cwsAddPreview = _parseNumero(_cwsAdicionadoCtrl.text);
+        final cwsPreview = _cwsPreview;
+        int? dosagemOk;
+        if (cwsAddPreview != null && _volumePreview > 0 && _dosagemPreview > 0) {
+          final diff = (cwsAddPreview - cwsPreview).abs();
+          final tol2pct = cwsPreview * 0.02;
+          final tol = tol2pct < 0.2 ? 0.2 : tol2pct;
+          dosagemOk = diff <= tol ? 1 : 0;
+        }
+
+        return Column(
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calculate_outlined),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'CWS total: ${_fmtNum(cwsPreview, casas: 1)} kg',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (cwsAddPreview != null) ...[
+              const SizedBox(height: 12),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.fact_check_outlined),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'CWS adicionado: ${_fmtNum(cwsAddPreview, casas: 1)} kg',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      if (dosagemOk != null)
+                        Text(dosagemOk == 1 ? '✅' : '⚠️'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final titulo = _isEdicao ? 'Editar Lançamento' : 'Novo Lançamento';
-
-    final cwsAddPreview = _parseNumero(_cwsAdicionadoCtrl.text);
-
-    int? dosagemOk;
-    if (cwsAddPreview != null && _volumePreview > 0 && _dosagemPreview > 0) {
-      final esperado = _cwsPreview;
-      final diff = (cwsAddPreview - esperado).abs();
-
-      final tol2pct = esperado * 0.02;
-      final tol = tol2pct < 0.2 ? 0.2 : tol2pct;
-
-      dosagemOk = diff <= tol ? 1 : 0;
-    }
     return Scaffold(
       appBar: AppBar(
         title: Text(titulo),
@@ -421,44 +460,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
               ),
               const SizedBox(height: 12),
 
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calculate_outlined),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'CWS total: ${_fmtNum(_cwsPreview, casas: 1)} kg',
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (cwsAddPreview != null)
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.fact_check_outlined),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'CWS adicionado: ${_fmtNum(cwsAddPreview, casas: 1)} kg',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                        if (dosagemOk != null)
-                          Text(dosagemOk == 1 ? '✅' : '⚠️'),
-                      ],
-                    ),
-                  ),
-                ),
+              _previewCards(),
               const SizedBox(height: 12),
 
               // Extras de campo

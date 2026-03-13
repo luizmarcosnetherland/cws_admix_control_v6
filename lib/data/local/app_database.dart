@@ -9,14 +9,13 @@ class AppDatabase {
   static const _dbVersion = 11;
 
   Database? _database;
+  bool _schemaEnsured = false;
 
   Future<Database> get database async {
     if (_database != null) {
-      await _ensureSchema(_database!);
       return _database!;
     }
     _database = await _open();
-    await _ensureSchema(_database!);
     return _database!;
   }
 
@@ -33,8 +32,7 @@ class AppDatabase {
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onOpen: (db) async {
-        await _ensureLancamentosColumns(db);
-        await _ensureObrasColumns(db);
+        await _ensureSchema(db);
       },
     );
   }
@@ -45,8 +43,10 @@ class AppDatabase {
   }
 
   Future<void> _ensureSchema(Database db) async {
+    if (_schemaEnsured) return;
     await _ensureLancamentosColumns(db);
     await _ensureObrasColumns(db);
+    _schemaEnsured = true;
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
