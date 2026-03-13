@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'features/obras/pages/obras_page.dart';
 import 'cws_calculator_page.dart';
@@ -248,21 +250,26 @@ class _SplashScreen extends StatelessWidget {
     );
   }
 }
+
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   void _openObras(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const ObrasPage(),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const ObrasPage()));
   }
 
   void _openCalculator(BuildContext context) {
     Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => const CwsCalculatorPage()));
+  }
+
+  void _openLiteraturaTecnica(BuildContext context) {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const LiteraturaTecnicaPage()));
   }
 
   Widget _menuButton({
@@ -342,6 +349,218 @@ class HomePage extends StatelessWidget {
                 'Cadastre sua obra, controle sua concretagem e gere relatórios locais em PDF ou CSV.',
             icon: Icons.apartment,
             onTap: () => _openObras(context),
+          ),
+          _menuButton(
+            title: 'Literatura técnica',
+            subtitle:
+                'Acesse ficha técnica e orientações para consulta rápida em campo.',
+            icon: Icons.menu_book_outlined,
+            onTap: () => _openLiteraturaTecnica(context),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class LiteraturaTecnicaPage extends StatelessWidget {
+  const LiteraturaTecnicaPage({super.key});
+
+  static final Uri _fichaTecnicaUri = Uri.parse(
+    'https://www.dropbox.com/scl/fi/j2117a1w06m2uzhc1gn5q/FICHA-T-CNICA-2026-CWS-ADMIX.pdf?rlkey=ovs9bsshjftzfjc0odzqa23sw&dl=0',
+  );
+  static final Uri _curaConcretoUri = Uri.parse(
+    'https://www.dropbox.com/scl/fi/gi2pe03e12cftq4pqziu3/Orienta-o-t-cnica-cura-do-concreto.pdf?rlkey=ob3mkm7dafohjy8s7a2wfj2bl&dl=0',
+  );
+  static final Uri _whatsAppUri = Uri.parse(
+    'https://wa.me/5541999731741?text=Ol%C3%A1%2C%20gostaria%20de%20solicitar%20a%20FDS%20do%20CWS%20Admix.',
+  );
+  static final Uri _emailUri = Uri.parse(
+    'mailto:luizmarcos@netherland.com.br?subject=Solicita%C3%A7%C3%A3o%20de%20FDS%20CWS%20Admix',
+  );
+
+  Future<void> _abrirLink(
+    BuildContext context, {
+    required Uri uri,
+    required String label,
+  }) async {
+    if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Nao foi possivel abrir "$label".')));
+  }
+
+  TextSpan _linkSpan(
+    BuildContext context, {
+    required String label,
+    required Uri uri,
+  }) {
+    return TextSpan(
+      text: label,
+      style: const TextStyle(
+        color: Color(0xFF355C96),
+        decoration: TextDecoration.underline,
+        fontWeight: FontWeight.w600,
+      ),
+      recognizer: (TapGestureRecognizer()
+        ..onTap = () {
+          _abrirLink(context, uri: uri, label: label);
+        }),
+    );
+  }
+
+  Widget _docCard(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        leading: CircleAvatar(
+          backgroundColor: const Color(0xFFD8E3F8),
+          child: Icon(icon, color: const Color(0xFF1E3A5F)),
+        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(subtitle),
+        ),
+        trailing: const Icon(Icons.open_in_new),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3F5F7),
+      appBar: AppBar(title: const Text('Literatura técnica')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Materiais de apoio',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Abra os documentos técnicos abaixo para consulta rápida durante visitas e acompanhamento de obra.',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          _docCard(
+            context,
+            title: 'Ficha técnica CWS Admix',
+            subtitle:
+                'Informações técnicas, instruções para uso, armazenamento e suporte.',
+            icon: Icons.description_outlined,
+            onTap: () => _abrirLink(
+              context,
+              uri: _fichaTecnicaUri,
+              label: 'Ficha técnica CWS Admix',
+            ),
+          ),
+          _docCard(
+            context,
+            title: 'Orientação técnica para a cura do concreto',
+            subtitle: 'Boas práticas e orientações de aplicação.',
+            icon: Icons.fact_check_outlined,
+            onTap: () => _abrirLink(
+              context,
+              uri: _curaConcretoUri,
+              label: 'Orientação técnica para a cura do concreto',
+            ),
+          ),
+          const SizedBox(height: 10),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const CircleAvatar(
+                        backgroundColor: Color(0xFFD8E3F8),
+                        child: Icon(
+                          Icons.support_agent_outlined,
+                          color: Color(0xFF1E3A5F),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'FDS CWS Admix',
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text.rich(
+                              TextSpan(
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.6,
+                                      ),
+                                    ),
+                                children: [
+                                  const TextSpan(
+                                    text:
+                                        'FDS disponível sob demanda. Solicite via ',
+                                  ),
+                                  _linkSpan(
+                                    context,
+                                    label: 'WhatsApp',
+                                    uri: _whatsAppUri,
+                                  ),
+                                  const TextSpan(text: ' ou '),
+                                  _linkSpan(
+                                    context,
+                                    label: 'email',
+                                    uri: _emailUri,
+                                  ),
+                                  const TextSpan(text: '.'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
