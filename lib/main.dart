@@ -272,6 +272,12 @@ class HomePage extends StatelessWidget {
     ).push(MaterialPageRoute(builder: (_) => const LiteraturaTecnicaPage()));
   }
 
+  void _openAbout(BuildContext context) {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const AboutPage()));
+  }
+
   Widget _menuButton({
     required String title,
     required String subtitle,
@@ -297,18 +303,18 @@ class HomePage extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: SizedBox(
-        height: 128,
+        height: 141,
         child: Center(
           child: Opacity(
-            opacity: 1,
+            opacity: 0.9,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset('assets/logos/netherland.png', height: 56),
-                const SizedBox(width: 20),
-                Container(width: 1, height: 44, color: const Color(0xFF1E3A5F)),
-                const SizedBox(width: 20),
-                Image.asset('assets/logos/cwsadmix.jpg', height: 56),
+                Image.asset('assets/logos/netherland.png', height: 62),
+                const SizedBox(width: 22),
+                Container(width: 1, height: 48, color: const Color(0xFF1E3A5F)),
+                const SizedBox(width: 22),
+                Image.asset('assets/logos/cwsadmix.jpg', height: 62),
               ],
             ),
           ),
@@ -379,6 +385,11 @@ class HomePage extends StatelessWidget {
         title: const Text('Dashboard'),
         actions: [
           IconButton(
+            tooltip: 'Sobre',
+            icon: const Icon(Icons.info_outline),
+            onPressed: () => _openAbout(context),
+          ),
+          IconButton(
             tooltip: 'Obras',
             icon: const Icon(Icons.apartment),
             onPressed: () => _openObras(context),
@@ -413,6 +424,146 @@ class HomePage extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           _literaturaBanner(),
+        ],
+      ),
+    );
+  }
+}
+
+class AboutPage extends StatelessWidget {
+  const AboutPage({super.key});
+
+  static final Uri _supportEmailUri = Uri.parse(
+    'mailto:netherland@netherland.com.br?subject=Suporte%20-%20CWS%20Admix%20Control',
+  );
+
+  Future<void> _openSupportEmail(BuildContext context) async {
+    if (await launchUrl(_supportEmailUri)) return;
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Nao foi possivel abrir o email de suporte.')),
+    );
+  }
+
+  Widget _infoTile({
+    required IconData icon,
+    required String title,
+    required String value,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        backgroundColor: const Color(0xFFD8E3F8),
+        child: Icon(icon, color: const Color(0xFF1E3A5F)),
+      ),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text(value),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3F5F7),
+      appBar: AppBar(title: const Text('Sobre')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Image.asset('assets/logos/netherland.png', height: 32),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'CWS Admix Control',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1E3A5F),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Sistema para controle e acompanhamento operacional de obras e concretos aditivados com CWS Admix.',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                children: [
+                  _infoTile(
+                    icon: Icons.verified_outlined,
+                    title: 'Versao',
+                    value: '1.0.0 (build 1)',
+                  ),
+                  const Divider(height: 18),
+                  _infoTile(
+                    icon: Icons.business_outlined,
+                    title: 'Copyright',
+                    value: '2026 Netherland Engenharia e Comercio Ltda.',
+                  ),
+                  const Divider(height: 18),
+                  _infoTile(
+                    icon: Icons.support_agent_outlined,
+                    title: 'Suporte',
+                    value: 'netherland@netherland.com.br',
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _openSupportEmail(context),
+                          icon: const Icon(Icons.email_outlined),
+                          label: const Text('Enviar email'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => showLicensePage(
+                            context: context,
+                            applicationName: 'CWS Admix Control',
+                            applicationVersion: '1.0.0 (build 1)',
+                          ),
+                          child: const Text('Ver licencas'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
