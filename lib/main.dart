@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:printing/printing.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -102,6 +104,11 @@ class _AppWatermarkBackground extends StatelessWidget {
 }
 
 class AppGate extends StatefulWidget {
+  static const String _previewPage = String.fromEnvironment(
+    'SCREENSHOT_PAGE',
+    defaultValue: '',
+  );
+
   const AppGate({super.key});
 
   @override
@@ -132,6 +139,10 @@ class _AppGateState extends State<AppGate> {
 
   @override
   Widget build(BuildContext context) {
+    if (AppGate._previewPage.isNotEmpty) {
+      return _previewPage(AppGate._previewPage);
+    }
+
     return Stack(
       children: [
         const HomePage(),
@@ -146,6 +157,22 @@ class _AppGateState extends State<AppGate> {
         ),
       ],
     );
+  }
+
+  Widget _previewPage(String previewPage) {
+    switch (previewPage) {
+      case 'calculator':
+        return const CwsCalculatorPage();
+      case 'obras':
+        return const ObrasPage();
+      case 'literatura':
+        return const LiteraturaTecnicaPage();
+      case 'about':
+        return const AboutPage();
+      case 'dashboard':
+      default:
+        return const HomePage();
+    }
   }
 }
 
@@ -441,7 +468,9 @@ class AboutPage extends StatelessWidget {
     if (await launchUrl(_supportEmailUri)) return;
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Nao foi possivel abrir o email de suporte.')),
+      const SnackBar(
+        content: Text('Nao foi possivel abrir o email de suporte.'),
+      ),
     );
   }
 
@@ -519,7 +548,7 @@ class AboutPage extends StatelessWidget {
                   _infoTile(
                     icon: Icons.verified_outlined,
                     title: 'Versao',
-                    value: '1.0.0 (build 1)',
+                    value: '1.0.1 (build 2)',
                   ),
                   const Divider(height: 18),
                   _infoTile(
@@ -553,7 +582,7 @@ class AboutPage extends StatelessWidget {
                           onPressed: () => showLicensePage(
                             context: context,
                             applicationName: 'CWS Admix Control',
-                            applicationVersion: '1.0.0 (build 1)',
+                            applicationVersion: '1.0.1 (build 2)',
                           ),
                           child: const Text('Ver licencas'),
                         ),
@@ -573,12 +602,10 @@ class AboutPage extends StatelessWidget {
 class LiteraturaTecnicaPage extends StatelessWidget {
   const LiteraturaTecnicaPage({super.key});
 
-  static final Uri _fichaTecnicaUri = Uri.parse(
-    'https://www.dropbox.com/scl/fi/j2117a1w06m2uzhc1gn5q/FICHA-T-CNICA-2026-CWS-ADMIX.pdf?rlkey=ovs9bsshjftzfjc0odzqa23sw&dl=0',
-  );
-  static final Uri _curaConcretoUri = Uri.parse(
-    'https://www.dropbox.com/scl/fi/gi2pe03e12cftq4pqziu3/Orienta-o-t-cnica-cura-do-concreto.pdf?rlkey=ob3mkm7dafohjy8s7a2wfj2bl&dl=0',
-  );
+  static const String _fichaTecnicaAsset =
+      'assets/docs/ficha_tecnica_cws_admix_2026.pdf';
+  static const String _curaConcretoAsset =
+      'assets/docs/orientacao_tecnica_cura_do_concreto.pdf';
   static final Uri _whatsAppUri = Uri.parse(
     'https://wa.me/5541999731741?text=Ol%C3%A1%2C%20gostaria%20de%20solicitar%20a%20FDS%20do%20CWS%20Admix.',
   );
@@ -623,26 +650,82 @@ class LiteraturaTecnicaPage extends StatelessWidget {
     required String title,
     required String subtitle,
     required IconData icon,
-    required VoidCallback onTap,
+    required VoidCallback primaryAction,
+    required String primaryLabel,
   }) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFFD8E3F8),
-          child: Icon(icon, color: const Color(0xFF1E3A5F)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  backgroundColor: const Color(0xFFD8E3F8),
+                  child: Icon(icon, color: const Color(0xFF1E3A5F)),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(subtitle),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                FilledButton.icon(
+                  onPressed: primaryAction,
+                  icon: const Icon(Icons.open_in_new),
+                  label: Text(primaryLabel),
+                ),
+              ],
+            ),
+          ],
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(subtitle),
-        ),
-        trailing: const Icon(Icons.open_in_new),
-        onTap: onTap,
       ),
     );
+  }
+
+  Future<void> _abrirPdf(
+    BuildContext context, {
+    required String assetPath,
+    required String title,
+  }) async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final pdfBytes = await rootBundle.load(assetPath);
+      if (!context.mounted) return;
+      await navigator.push(
+        MaterialPageRoute<void>(
+          builder: (_) => DocumentoPdfPage(
+            title: title,
+            bytes: pdfBytes.buffer.asUint8List(),
+          ),
+        ),
+      );
+    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Nao foi possivel abrir "$title".')),
+      );
+    }
   }
 
   @override
@@ -669,7 +752,7 @@ class LiteraturaTecnicaPage extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Abra os documentos técnicos abaixo para consulta rápida durante visitas e acompanhamento de obra.',
+                    'Abra os documentos tecnicos abaixo para consulta rapida durante visitas e acompanhamento de obra.',
                   ),
                 ],
               ),
@@ -680,23 +763,25 @@ class LiteraturaTecnicaPage extends StatelessWidget {
             context,
             title: 'Ficha técnica CWS Admix',
             subtitle:
-                'Informações técnicas, instruções para uso, armazenamento e suporte.',
+                'Informacoes tecnicas, instrucoes para uso, armazenamento e suporte.',
             icon: Icons.description_outlined,
-            onTap: () => _abrirLink(
+            primaryLabel: 'Abrir documento',
+            primaryAction: () => _abrirPdf(
               context,
-              uri: _fichaTecnicaUri,
-              label: 'Ficha técnica CWS Admix',
+              assetPath: _fichaTecnicaAsset,
+              title: 'Ficha técnica CWS Admix',
             ),
           ),
           _docCard(
             context,
             title: 'Orientação técnica para a cura do concreto',
-            subtitle: 'Boas práticas e orientações de aplicação.',
+            subtitle: 'Boas praticas e orientacoes de aplicacao.',
             icon: Icons.fact_check_outlined,
-            onTap: () => _abrirLink(
+            primaryLabel: 'Abrir documento',
+            primaryAction: () => _abrirPdf(
               context,
-              uri: _curaConcretoUri,
-              label: 'Orientação técnica para a cura do concreto',
+              assetPath: _curaConcretoAsset,
+              title: 'Orientação técnica para a cura do concreto',
             ),
           ),
           const SizedBox(height: 10),
@@ -777,10 +862,34 @@ class LiteraturaTecnicaPage extends StatelessWidget {
             subtitle:
                 'Maiores informações, outros produtos da Netherland, videos e obras executadas.',
             icon: Icons.language_outlined,
-            onTap: () =>
+            primaryLabel: 'Abrir site',
+            primaryAction: () =>
                 _abrirLink(context, uri: _siteUri, label: 'Site Netherland'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class DocumentoPdfPage extends StatelessWidget {
+  final String title;
+  final Uint8List bytes;
+
+  const DocumentoPdfPage({super.key, required this.title, required this.bytes});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: PdfPreview(
+        build: (_) async => bytes,
+        canChangePageFormat: false,
+        canChangeOrientation: false,
+        canDebug: false,
+        allowPrinting: false,
+        allowSharing: true,
+        pdfFileName: title,
       ),
     );
   }
