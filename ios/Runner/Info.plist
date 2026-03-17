@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Selecione fotos do lançamento para incluir no relatório da obra.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Use a camera para registrar fotos do lancamento e anexar ao relatorio da obra.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Usamos sua localizacao para registrar a posicao da obra no cadastro.</string>
 	<key>UIApplicationSceneManifest</key>

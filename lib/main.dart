@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:printing/printing.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
@@ -42,6 +43,11 @@ Future<void> _configureDatabaseFactory() async {
     case TargetPlatform.fuchsia:
       return;
   }
+}
+
+Future<String> _loadAppVersionLabel() async {
+  final packageInfo = await PackageInfo.fromPlatform();
+  return '${packageInfo.version} (build ${packageInfo.buildNumber})';
 }
 
 class NetherlandApp extends StatelessWidget {
@@ -176,8 +182,21 @@ class _AppGateState extends State<AppGate> {
   }
 }
 
-class _SplashScreen extends StatelessWidget {
+class _SplashScreen extends StatefulWidget {
   const _SplashScreen();
+
+  @override
+  State<_SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<_SplashScreen> {
+  late final Future<String> _versionLabelFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _versionLabelFuture = _loadAppVersionLabel();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -192,87 +211,113 @@ class _SplashScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5F7),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: Image.asset(
-                      'assets/logos/netherland.png',
-                      height: 96,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  const SizedBox(width: 18),
-                  Container(
-                    width: 1,
-                    height: 72,
-                    color: const Color(0xFF1E3A5F),
-                  ),
-                  const SizedBox(width: 18),
-                  Flexible(
-                    child: Image.asset(
-                      'assets/logos/cwsadmix.jpg',
-                      height: 96,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 28),
-              Wrap(
-                alignment: WrapAlignment.center,
-                crossAxisAlignment: WrapCrossAlignment.end,
-                spacing: 6,
-                runSpacing: 4,
-                children: [
-                  const Text('Netherland Admix', style: titleStyle),
-                  TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0, end: 1),
-                    duration: const Duration(milliseconds: 1100),
-                    curve: Curves.easeOutCubic,
-                    builder: (context, value, child) {
-                      return Opacity(
-                        opacity: value.clamp(0.0, 1.0),
-                        child: Transform.translate(
-                          offset: Offset(18 * (1 - value), 0),
-                          child: SizedBox(
-                            width: 116,
-                            child: ClipRect(
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                widthFactor: value.clamp(0.0, 1.0),
-                                child: Padding(
-                                  padding: const EdgeInsets.only(right: 10),
+      body: FutureBuilder<String>(
+        future: _versionLabelFuture,
+        builder: (context, snapshot) {
+          final versionLabel = snapshot.data ?? 'Carregando...';
+
+          return Center(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxWidth < 390;
+                final logoHeight = isCompact ? 78.0 : 96.0;
+                final dividerHeight = isCompact ? 58.0 : 72.0;
+                final spacing = isCompact ? 14.0 : 18.0;
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Image.asset(
+                              'assets/logos/netherland.png',
+                              height: logoHeight,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                          SizedBox(width: spacing),
+                          Container(
+                            width: 1,
+                            height: dividerHeight,
+                            color: const Color(0xFF1E3A5F),
+                          ),
+                          SizedBox(width: spacing),
+                          Flexible(
+                            child: Image.asset(
+                              'assets/logos/cwsadmix.jpg',
+                              height: logoHeight,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: isCompact ? 24 : 28),
+                      const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Netherland\nAdmix',
+                          style: titleStyle,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: 1),
+                        duration: const Duration(milliseconds: 1100),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, value, child) {
+                          final clampedValue = value.clamp(0.0, 1.0);
+
+                          return Opacity(
+                            opacity: clampedValue,
+                            child: Transform.translate(
+                              offset: Offset(18 * (1 - clampedValue), 0),
+                              child: ClipRect(
+                                child: Align(
+                                  alignment: Alignment.center,
+                                  widthFactor: clampedValue,
                                   child: child,
                                 ),
                               ),
                             ),
+                          );
+                        },
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            'Control',
+                            softWrap: false,
+                            style: GoogleFonts.caveat(
+                              fontSize: isCompact ? 34 : 36,
+                              fontWeight: FontWeight.w700,
+                              fontStyle: FontStyle.italic,
+                              color: brandBlue,
+                              height: 0.9,
+                            ),
                           ),
                         ),
-                      );
-                    },
-                    child: Text(
-                      'Control',
-                      style: GoogleFonts.caveat(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w700,
-                        fontStyle: FontStyle.italic,
-                        color: brandBlue,
-                        height: 0.9,
                       ),
-                    ),
+                      const SizedBox(height: 18),
+                      Text(
+                        versionLabel,
+                        style: TextStyle(
+                          fontSize: isCompact ? 12 : 13,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
+                          color: brandBlue.withValues(alpha: 0.75),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ],
-          ),
-        ),
+                );
+              },
+            ),
+          );
+        },
       ),
     );
   }
@@ -457,12 +502,29 @@ class HomePage extends StatelessWidget {
   }
 }
 
-class AboutPage extends StatelessWidget {
+class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
+
+  @override
+  State<AboutPage> createState() => _AboutPageState();
+}
+
+class _AboutPageState extends State<AboutPage> {
+  late final Future<String> _versionLabelFuture;
 
   static final Uri _supportEmailUri = Uri.parse(
     'mailto:netherland@netherland.com.br?subject=Suporte%20-%20CWS%20Admix%20Control',
   );
+
+  @override
+  void initState() {
+    super.initState();
+    _versionLabelFuture = _loadVersionLabel();
+  }
+
+  Future<String> _loadVersionLabel() async {
+    return _loadAppVersionLabel();
+  }
 
   Future<void> _openSupportEmail(BuildContext context) async {
     if (await launchUrl(_supportEmailUri)) return;
@@ -498,102 +560,114 @@ class AboutPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5F7),
       appBar: AppBar(title: const Text('Sobre')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+      body: FutureBuilder<String>(
+        future: _versionLabelFuture,
+        builder: (context, snapshot) {
+          final versionLabel = snapshot.data ?? 'Carregando...';
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Image.asset('assets/logos/netherland.png', height: 32),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'CWS Admix Control',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF1E3A5F),
+                      Row(
+                        children: [
+                          Image.asset(
+                            'assets/logos/netherland.png',
+                            height: 32,
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  const Text(
-                    'Sistema para controle e acompanhamento operacional de obras e concretos aditivados com CWS Admix.',
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                children: [
-                  _infoTile(
-                    icon: Icons.verified_outlined,
-                    title: 'Versao',
-                    value: '1.0.1 (build 2)',
-                  ),
-                  const Divider(height: 18),
-                  _infoTile(
-                    icon: Icons.business_outlined,
-                    title: 'Copyright',
-                    value: '2026 Netherland Engenharia e Comercio Ltda.',
-                  ),
-                  const Divider(height: 18),
-                  _infoTile(
-                    icon: Icons.support_agent_outlined,
-                    title: 'Suporte',
-                    value: 'netherland@netherland.com.br',
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _openSupportEmail(context),
-                          icon: const Icon(Icons.email_outlined),
-                          label: const Text('Enviar email'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextButton(
-                          onPressed: () => showLicensePage(
-                            context: context,
-                            applicationName: 'CWS Admix Control',
-                            applicationVersion: '1.0.1 (build 2)',
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'CWS Admix Control',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF1E3A5F),
+                              ),
+                            ),
                           ),
-                          child: const Text('Ver licencas'),
-                        ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'Sistema para controle e acompanhamento operacional de obras e concretos aditivados com CWS Admix.',
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-        ],
+              const SizedBox(height: 10),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    children: [
+                      _infoTile(
+                        icon: Icons.verified_outlined,
+                        title: 'Versao',
+                        value: versionLabel,
+                      ),
+                      const Divider(height: 18),
+                      _infoTile(
+                        icon: Icons.business_outlined,
+                        title: 'Copyright',
+                        value: '2026 Netherland Engenharia e Comercio Ltda.',
+                      ),
+                      const Divider(height: 18),
+                      _infoTile(
+                        icon: Icons.support_agent_outlined,
+                        title: 'Suporte',
+                        value: 'netherland@netherland.com.br',
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _openSupportEmail(context),
+                              icon: const Icon(Icons.email_outlined),
+                              label: const Text('Enviar email'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: snapshot.hasData
+                                  ? () => showLicensePage(
+                                      context: context,
+                                      applicationName: 'CWS Admix Control',
+                                      applicationVersion: versionLabel,
+                                    )
+                                  : null,
+                              child: const Text('Ver licencas'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
