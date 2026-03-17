@@ -41,3 +41,23 @@ Escopo sugerido:
 Observacoes:
 - pode evoluir depois para armazenamento em nuvem ou sincronizacao corporativa
 - vale considerar retencao de arquivos, espaco local e estrategia de backup
+
+### 3. Secao com videos sobre o funcionamento do CWS Admix
+
+Objetivo:
+Adicionar uma secao no app com videos explicativos para apresentar o funcionamento do CWS Admix e apoiar o uso tecnico/comercial em campo.
+
+Beneficios:
+- facilita entendimento rapido do produto e da tecnologia
+- reforca treinamento de equipes, clientes e especificadores
+- amplia o valor do app como ferramenta de apoio tecnico
+
+Escopo sugerido:
+- criar uma area dedicada para videos institucionais e tecnicos
+- organizar os videos por tema, por exemplo funcionamento, aplicacao, beneficios e boas praticas
+- permitir abertura simples no app ou via link externo
+- avaliar suporte a miniaturas, titulos curtos e breve descricao de cada video
+
+Observacoes:
+- ideal usar links gerenciaveis para facilitar atualizacao sem depender de nova versao do app
+- vale alinhar quais videos serao institucionais e quais terao foco tecnico/comercial
