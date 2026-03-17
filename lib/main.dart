@@ -216,7 +216,7 @@ class _SplashScreenState extends State<_SplashScreen> {
         builder: (context, snapshot) {
           final versionLabel = snapshot.data ?? 'Carregando...';
 
-          return Center(
+          return SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final isCompact = constraints.maxWidth < 390;
@@ -227,8 +227,8 @@ class _SplashScreenState extends State<_SplashScreen> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      const Spacer(flex: 3),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -259,7 +259,7 @@ class _SplashScreenState extends State<_SplashScreen> {
                       const FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          'Netherland\nAdmix',
+                          'Netherland Admix',
                           style: titleStyle,
                           textAlign: TextAlign.center,
                         ),
@@ -292,7 +292,7 @@ class _SplashScreenState extends State<_SplashScreen> {
                             'Control',
                             softWrap: false,
                             style: GoogleFonts.caveat(
-                              fontSize: isCompact ? 34 : 36,
+                              fontSize: isCompact ? 31 : 32.5,
                               fontWeight: FontWeight.w700,
                               fontStyle: FontStyle.italic,
                               color: brandBlue,
@@ -301,14 +301,17 @@ class _SplashScreenState extends State<_SplashScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 18),
-                      Text(
-                        versionLabel,
-                        style: TextStyle(
-                          fontSize: isCompact ? 12 : 13,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.2,
-                          color: brandBlue.withValues(alpha: 0.75),
+                      const Spacer(flex: 2),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        child: Text(
+                          versionLabel,
+                          style: TextStyle(
+                            fontSize: isCompact ? 12 : 13,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
+                            color: brandBlue.withValues(alpha: 0.75),
+                          ),
                         ),
                       ),
                     ],

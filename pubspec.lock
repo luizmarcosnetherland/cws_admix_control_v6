@@ -534,20 +534,18 @@ packages:
     source: hosted
     version: "2.0.0"
   native_toolchain_c:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: native_toolchain_c
-      sha256: "89e83885ba09da5fdf2cdacc8002a712ca238c28b7f717910b34bcd27b0d03ac"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/native_toolchain_c"
+      relative: true
+    source: path
     version: "0.17.4"
   objective_c:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: objective_c
-      sha256: "100a1c87616ab6ed41ec263b083c0ef3261ee6cd1dc3b0f35f8ddfa4f996fe52"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/objective_c"
+      relative: true
+    source: path
     version: "9.3.0"
   package_info_plus:
     dependency: "direct main"
@@ -803,12 +801,11 @@ packages:
     source: hosted
     version: "2.4.0"
   sqlite3:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: sqlite3
-      sha256: f8f8ba7f9454f2761d4b416e030c4528ebc45e9290798d848f4dc08890c42a7c
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/sqlite3"
+      relative: true
+    source: path
     version: "3.1.7"
   stack_trace:
     dependency: transitive

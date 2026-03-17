@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.1+4
+version: 1.0.1+5
 
 environment:
   sdk: ^3.10.8
@@ -67,6 +67,19 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+dependency_overrides:
+  native_toolchain_c:
+    path: third_party/native_toolchain_c
+  objective_c:
+    path: third_party/objective_c
+  sqlite3:
+    path: third_party/sqlite3
+
+hooks:
+  user_defines:
+    sqlite3:
+      source: system
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
