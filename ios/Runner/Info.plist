@@ -26,12 +26,18 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>comgooglemaps</string>
+	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Selecione fotos do lançamento para incluir no relatório da obra.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Use a camera para registrar fotos do lancamento e anexar ao relatorio da obra.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Usamos sua localizacao para registrar a posicao da obra no cadastro.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Usamos sua localizacao para registrar a posicao da obra no cadastro quando voce estiver utilizando o app.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

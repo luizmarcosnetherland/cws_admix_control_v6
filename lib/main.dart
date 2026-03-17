@@ -223,12 +223,15 @@ class _SplashScreenState extends State<_SplashScreen> {
                 final logoHeight = isCompact ? 78.0 : 96.0;
                 final dividerHeight = isCompact ? 58.0 : 72.0;
                 final spacing = isCompact ? 14.0 : 18.0;
+                final topSpacing = isCompact
+                    ? constraints.maxHeight * 0.22
+                    : constraints.maxHeight * 0.18;
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(
                     children: [
-                      const Spacer(flex: 3),
+                      SizedBox(height: topSpacing.clamp(96.0, 180.0)),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -276,27 +279,24 @@ class _SplashScreenState extends State<_SplashScreen> {
                             opacity: clampedValue,
                             child: Transform.translate(
                               offset: Offset(18 * (1 - clampedValue), 0),
-                              child: ClipRect(
-                                child: Align(
-                                  alignment: Alignment.center,
-                                  widthFactor: clampedValue,
-                                  child: child,
-                                ),
-                              ),
+                              child: child,
                             ),
                           );
                         },
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
-                          child: Text(
-                            'Control',
-                            softWrap: false,
-                            style: GoogleFonts.caveat(
-                              fontSize: isCompact ? 31 : 32.5,
-                              fontWeight: FontWeight.w700,
-                              fontStyle: FontStyle.italic,
-                              color: brandBlue,
-                              height: 0.9,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Text(
+                              'Control',
+                              softWrap: false,
+                              style: GoogleFonts.caveat(
+                                fontSize: isCompact ? 29 : 31,
+                                fontWeight: FontWeight.w700,
+                                fontStyle: FontStyle.italic,
+                                color: brandBlue,
+                                height: 1.0,
+                              ),
                             ),
                           ),
                         ),

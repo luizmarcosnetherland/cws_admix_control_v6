@@ -107,6 +107,41 @@ class _ObrasPageState extends State<ObrasPage> {
     await _carregarTudo();
   }
 
+  Future<void> _excluir(Obra obra) async {
+    if (obra.id == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir obra'),
+        content: Text(
+          'Deseja excluir permanentemente a obra "${obra.nome}" e todos os seus lancamentos?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    await _repo.excluirObra(obra.id!);
+    if (!mounted) return;
+    await _carregarTudo();
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Obra "${obra.nome}" excluida.')));
+  }
+
   Future<void> _abrirDetalhe(Obra obra) async {
     await Navigator.of(
       context,
@@ -174,6 +209,7 @@ class _ObrasPageState extends State<ObrasPage> {
                 if (value == 'abrir') await _abrirDetalhe(obra);
                 if (value == 'arquivar') await _arquivar(obra);
                 if (value == 'restaurar') await _restaurar(obra);
+                if (value == 'excluir') await _excluir(obra);
               },
               itemBuilder: (_) => [
                 const PopupMenuItem(value: 'abrir', child: Text('Abrir')),
@@ -187,6 +223,7 @@ class _ObrasPageState extends State<ObrasPage> {
                     value: 'restaurar',
                     child: Text('Restaurar'),
                   ),
+                const PopupMenuItem(value: 'excluir', child: Text('Excluir')),
               ],
             ),
             onTap: () => _abrirDetalhe(obra),

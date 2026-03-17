@@ -114,4 +114,13 @@ class ObraRepository {
       whereArgs: [id],
     );
   }
+
+  Future<void> excluirObra(int id) async {
+    final db = await _db.database;
+
+    await db.transaction((txn) async {
+      await txn.delete('lancamentos', where: 'obra_id = ?', whereArgs: [id]);
+      await txn.delete('obras', where: 'id = ?', whereArgs: [id]);
+    });
+  }
 }

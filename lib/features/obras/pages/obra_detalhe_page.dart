@@ -374,7 +374,8 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         await Share.shareXFiles(
           [XFile(path)],
           subject: 'Relatório CSV da obra ${_obraAtual.nome}',
-          text: 'Relatório CSV da obra ${_obraAtual.nome}',
+          text:
+              'Relatório CSV da obra ${_obraAtual.nome}. Toque em "Salvar em Arquivos" para escolher onde guardar.',
           sharePositionOrigin: origin,
         );
         if (!mounted) return;
@@ -397,11 +398,15 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         if (!mounted) return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('CSV exportado (${_filtrado.length} linhas): $path'),
-        ),
-      );
+      final message = Platform.isIOS
+          ? 'CSV pronto para exportacao (${_filtrado.length} linhas). Use "Salvar em Arquivos".'
+          : Platform.isAndroid
+          ? 'CSV pronto para compartilhar (${_filtrado.length} linhas).'
+          : 'CSV exportado (${_filtrado.length} linhas): $path';
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

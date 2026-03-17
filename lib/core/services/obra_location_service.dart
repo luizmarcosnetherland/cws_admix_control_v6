@@ -96,14 +96,39 @@ class ObraLocationService {
     final encodedLabel = Uri.encodeComponent(
       label?.trim().isNotEmpty == true ? label!.trim() : 'Obra',
     );
-    final uri = Platform.isIOS
-        ? Uri.parse(
-            'https://maps.apple.com/?ll=$latitude,$longitude&q=$encodedLabel',
-          )
-        : Uri.parse(
-            'geo:$latitude,$longitude?q=$latitude,$longitude($encodedLabel)',
-          );
+    if (Platform.isIOS) {
+      final googleMapsUri = Uri.parse(
+        'comgooglemaps://?q=$latitude,$longitude&center=$latitude,$longitude',
+      );
+      if (await canLaunchUrl(googleMapsUri)) {
+        if (await launchUrl(
+          googleMapsUri,
+          mode: LaunchMode.externalApplication,
+        )) {
+          return;
+        }
+      }
 
+      final appleMapsUri = Uri.parse(
+        'https://maps.apple.com/?ll=$latitude,$longitude&q=$encodedLabel',
+      );
+      if (await launchUrl(appleMapsUri, mode: LaunchMode.externalApplication)) {
+        return;
+      }
+
+      final webFallback = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude',
+      );
+      if (await launchUrl(webFallback, mode: LaunchMode.externalApplication)) {
+        return;
+      }
+
+      throw Exception('Nao foi possivel abrir o app de mapas.');
+    }
+
+    final uri = Uri.parse(
+      'geo:$latitude,$longitude?q=$latitude,$longitude($encodedLabel)',
+    );
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       final fallback = Uri.parse(
         'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude',
