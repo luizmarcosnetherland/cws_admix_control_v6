@@ -4,6 +4,20 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+enum ObraLocationSettingsTarget { app, deviceLocation }
+
+class ObraLocationException implements Exception {
+  final String message;
+  final ObraLocationSettingsTarget? settingsTarget;
+
+  const ObraLocationException(this.message, {this.settingsTarget});
+
+  bool get canOpenSettings => settingsTarget != null;
+
+  @override
+  String toString() => message;
+}
+
 class ObraLocationResult {
   final double latitude;
   final double longitude;
@@ -20,7 +34,10 @@ class ObraLocationService {
   Future<ObraLocationResult> obterLocalizacaoAtual() async {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      throw Exception('Ative a localizacao do aparelho para continuar.');
+      throw const ObraLocationException(
+        'Ative a localizacao do aparelho para continuar.',
+        settingsTarget: ObraLocationSettingsTarget.deviceLocation,
+      );
     }
 
     var permission = await Geolocator.checkPermission();
@@ -29,12 +46,13 @@ class ObraLocationService {
     }
 
     if (permission == LocationPermission.denied) {
-      throw Exception('Permissao de localizacao negada.');
+      throw const ObraLocationException('Permissao de localizacao negada.');
     }
 
     if (permission == LocationPermission.deniedForever) {
-      throw Exception(
+      throw const ObraLocationException(
         'Permissao de localizacao negada permanentemente. Libere nas configuracoes do aparelho.',
+        settingsTarget: ObraLocationSettingsTarget.app,
       );
     }
 
@@ -86,6 +104,15 @@ class ObraLocationService {
 
   String coordenadasLabel(double latitude, double longitude) {
     return '${latitude.toStringAsFixed(6)}, ${longitude.toStringAsFixed(6)}';
+  }
+
+  Future<bool> abrirConfiguracoes(ObraLocationSettingsTarget target) {
+    switch (target) {
+      case ObraLocationSettingsTarget.app:
+        return Geolocator.openAppSettings();
+      case ObraLocationSettingsTarget.deviceLocation:
+        return Geolocator.openLocationSettings();
+    }
   }
 
   Future<void> abrirNoMapa({

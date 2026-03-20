@@ -48,6 +48,43 @@ class _NovaObraPageState extends State<NovaObraPage> {
     return _locationService.coordenadasLabel(latitude, longitude);
   }
 
+  Future<void> _mostrarModalErroLocalizacao(
+    ObraLocationException exception,
+  ) async {
+    final settingsTarget = exception.settingsTarget;
+    final abriuConfiguracao = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Permissao de localizacao'),
+          content: Text(exception.message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Fechar'),
+            ),
+            if (settingsTarget != null)
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Abrir configuracoes'),
+              ),
+          ],
+        );
+      },
+    );
+
+    if (abriuConfiguracao != true || settingsTarget == null || !mounted) return;
+
+    final opened = await _locationService.abrirConfiguracoes(settingsTarget);
+    if (!mounted || opened) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Nao foi possivel abrir as configuracoes do aparelho.'),
+      ),
+    );
+  }
+
   Future<void> _usarLocalizacaoAtual() async {
     if (_loadingLocation || _saving) return;
     setState(() => _loadingLocation = true);
@@ -60,6 +97,15 @@ class _NovaObraPageState extends State<NovaObraPage> {
         _longitude = result.longitude;
         _localizacaoCtrl.text = result.descricao;
       });
+    } on ObraLocationException catch (e) {
+      if (!mounted) return;
+      if (e.canOpenSettings) {
+        await _mostrarModalErroLocalizacao(e);
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao obter localizacao: ${e.message}')),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -188,12 +234,14 @@ class _NovaObraPageState extends State<NovaObraPage> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _emailEngenheiroCtrl,
-                decoration: _dec('E-mail do engenheiro'),
+                decoration: _dec('E-mail do engenheiro *'),
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
                   final v = (value ?? '').trim();
-                  if (v.isEmpty) return null;
+                  if (v.isEmpty) {
+                    return 'Informe o e-mail do engenheiro';
+                  }
                   final ok = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v);
                   return ok ? null : 'Informe um e-mail válido';
                 },
