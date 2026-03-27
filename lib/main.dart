@@ -353,22 +353,188 @@ class HomePage extends StatelessWidget {
     ).push(MaterialPageRoute(builder: (_) => const AboutPage()));
   }
 
+  Widget _quickAccessIntro() {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(4, 0, 4, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Acessos rápidos',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.2,
+              color: Color(0xFF1E3A5F),
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Toque em um card para abrir a área desejada.',
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.35,
+              color: Color(0xFF5A6878),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _menuButton({
+    required BuildContext context,
     required String title,
     required String subtitle,
     required IconData icon,
+    required Color accentColor,
     required VoidCallback onTap,
-    Widget? trailing,
   }) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: ListTile(
-        leading: CircleAvatar(child: Icon(icon)),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: Text(subtitle),
-        trailing: trailing,
-        onTap: onTap,
+    const surfaceColor = Color(0xFFFFFFFF);
+    const textColor = Color(0xFF1C2430);
+    const subtitleColor = Color(0xFF556273);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Semantics(
+        button: true,
+        label: '$title. $subtitle',
+        hint: 'Clique ou toque para acessar',
+        child: Material(
+          color: surfaceColor,
+          elevation: 2,
+          shadowColor: const Color(0xFF1E3A5F).withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(22),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Ink(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: accentColor.withValues(alpha: 0.15)),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [surfaceColor, accentColor.withValues(alpha: 0.07)],
+                ),
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    top: -14,
+                    right: -12,
+                    child: IgnorePointer(
+                      child: Container(
+                        width: 92,
+                        height: 92,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: accentColor.withValues(alpha: 0.08),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(18),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    accentColor.withValues(alpha: 0.15),
+                                    accentColor.withValues(alpha: 0.26),
+                                  ],
+                                ),
+                              ),
+                              child: Icon(icon, size: 28, color: accentColor),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: accentColor,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Abrir',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  SizedBox(width: 4),
+                                  Icon(
+                                    Icons.arrow_forward_rounded,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: textColor,
+                                letterSpacing: 0.1,
+                              ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          subtitle,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: subtitleColor, height: 1.4),
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.touch_app_rounded,
+                              size: 16,
+                              color: accentColor,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Clique ou toque para acessar',
+                                style: Theme.of(context).textTheme.labelLarge
+                                    ?.copyWith(
+                                      color: accentColor,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -475,29 +641,36 @@ class HomePage extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _brandingWatermark(),
-          const SizedBox(height: 10),
+          const SizedBox(height: 18),
+          _quickAccessIntro(),
           _menuButton(
+            context: context,
             title: 'Calculadora CWS',
             subtitle:
                 'Calcule a quantidade de aditivo para sua concretagem e solicite uma cotação.',
             icon: Icons.calculate,
+            accentColor: const Color(0xFF2B63A7),
             onTap: () => _openCalculator(context),
           ),
           _menuButton(
+            context: context,
             title: 'Obras',
             subtitle:
                 'Cadastre sua obra, controle sua concretagem e gere relatórios locais em PDF ou CSV.',
             icon: Icons.apartment,
+            accentColor: const Color(0xFF1B7A73),
             onTap: () => _openObras(context),
           ),
           _menuButton(
+            context: context,
             title: 'Literatura técnica',
             subtitle:
                 'Acesse ficha técnica e orientações para consulta rápida em campo.',
             icon: Icons.menu_book_outlined,
+            accentColor: const Color(0xFF9A621A),
             onTap: () => _openLiteraturaTecnica(context),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           _literaturaBanner(),
         ],
       ),

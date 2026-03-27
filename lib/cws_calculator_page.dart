@@ -34,15 +34,15 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
       ).format(value);
 
   String get _mensagemCotacao => [
-        'Olá, gostaria de solicitar uma cotação do CWS Admix.',
-        '',
-        'Volume de concreto: ${fmt(volume, casas: 1)} m³',
-        'Consumo de cimento: ${fmt(cementKgM3, casas: 1)} kg/m³',
-        'Dosagem aplicada: ${fmt(dosageKgM3, casas: 1)} kg/m³',
-        'Quantidade necessária: ${fmt(totalKg, casas: 1)} kg',
-        'Sacos de 6,4 kg: $bags',
-        'Quantidade para compra: ${fmt(providedKg, casas: 1)} kg',
-      ].join('\n');
+    'Olá, gostaria de solicitar uma cotação do CWS Admix.',
+    '',
+    'Volume de concreto: ${fmt(volume, casas: 1)} m³',
+    'Consumo de cimento: ${fmt(cementKgM3, casas: 1)} kg/m³',
+    'Dosagem aplicada: ${fmt(dosageKgM3, casas: 1)} kg/m³',
+    'Quantidade necessária: ${fmt(totalKg, casas: 1)} kg',
+    'Sacos de 6,4 kg: $bags',
+    'Quantidade para compra: ${fmt(providedKg, casas: 1)} kg',
+  ].join('\n');
 
   Future<void> _solicitarCotacaoEmail() async {
     try {
@@ -124,7 +124,9 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
               if (!context.mounted) return;
               Navigator.of(context).pop();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Dados copiados para a área de transferência.')),
+                const SnackBar(
+                  content: Text('Dados copiados para a área de transferência.'),
+                ),
               );
             },
             child: const Text('Copiar'),
@@ -150,9 +152,6 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
   @override
   Widget build(BuildContext context) {
     final blue = const Color(0xFF1E3A5F);
-    final regra = cementKgM3 > 450
-        ? 'Para consumos acima de 450 kg/m³, usar 1,00 kg de CWS Admix por m³.'
-        : 'Para consumos até 450 kg/m³, usar 0,80 kg de CWS Admix por m³.';
 
     return Scaffold(
       appBar: AppBar(
@@ -179,7 +178,7 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    regra,
+                    'Ajuste o volume de concreto da sua concretagem e veja quanto CWS Admix será necessário.',
                     style: TextStyle(
                       color: Colors.black.withValues(alpha: 0.68),
                     ),
