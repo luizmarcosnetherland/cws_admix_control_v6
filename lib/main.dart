@@ -353,13 +353,13 @@ class HomePage extends StatelessWidget {
     ).push(MaterialPageRoute(builder: (_) => const AboutPage()));
   }
 
-  Widget _quickAccessIntro() {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(4, 0, 4, 12),
+  Widget _quickAccessIntro({bool compact = false}) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(4, 0, 4, compact ? 8 : 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Acessos rápidos',
             style: TextStyle(
               fontSize: 14,
@@ -368,13 +368,13 @@ class HomePage extends StatelessWidget {
               color: Color(0xFF1E3A5F),
             ),
           ),
-          SizedBox(height: 4),
+          SizedBox(height: compact ? 2 : 4),
           Text(
             'Toque em um card para abrir a área desejada.',
             style: TextStyle(
               fontSize: 13,
-              height: 1.35,
-              color: Color(0xFF5A6878),
+              height: compact ? 1.25 : 1.35,
+              color: const Color(0xFF5A6878),
             ),
           ),
         ],
@@ -389,17 +389,18 @@ class HomePage extends StatelessWidget {
     required IconData icon,
     required Color accentColor,
     required VoidCallback onTap,
+    bool compact = false,
   }) {
     const surfaceColor = Color(0xFFFFFFFF);
     const textColor = Color(0xFF1C2430);
     const subtitleColor = Color(0xFF556273);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: EdgeInsets.only(bottom: compact ? 10 : 12),
       child: Semantics(
         button: true,
         label: '$title. $subtitle',
-        hint: 'Clique ou toque para acessar',
+        hint: 'Toque para abrir',
         child: Material(
           color: surfaceColor,
           elevation: 2,
@@ -435,7 +436,7 @@ class HomePage extends StatelessWidget {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(18),
+                    padding: EdgeInsets.all(compact ? 14 : 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -443,8 +444,8 @@ class HomePage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
-                              width: 56,
-                              height: 56,
+                              width: compact ? 52 : 56,
+                              height: compact ? 52 : 56,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(18),
                                 gradient: LinearGradient(
@@ -460,37 +461,21 @@ class HomePage extends StatelessWidget {
                             ),
                             const Spacer(),
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
+                              width: compact ? 38 : 40,
+                              height: compact ? 38 : 40,
                               decoration: BoxDecoration(
                                 color: accentColor,
-                                borderRadius: BorderRadius.circular(999),
+                                shape: BoxShape.circle,
                               ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'Abrir',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  SizedBox(width: 4),
-                                  Icon(
-                                    Icons.arrow_forward_rounded,
-                                    size: 16,
-                                    color: Colors.white,
-                                  ),
-                                ],
+                              child: const Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 18,
+                                color: Colors.white,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: compact ? 10 : 12),
                         Text(
                           title,
                           style: Theme.of(context).textTheme.titleMedium
@@ -500,32 +485,14 @@ class HomePage extends StatelessWidget {
                                 letterSpacing: 0.1,
                               ),
                         ),
-                        const SizedBox(height: 6),
+                        SizedBox(height: compact ? 3 : 4),
                         Text(
                           subtitle,
                           style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: subtitleColor, height: 1.4),
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.touch_app_rounded,
-                              size: 16,
-                              color: accentColor,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'Clique ou toque para acessar',
-                                style: Theme.of(context).textTheme.labelLarge
-                                    ?.copyWith(
-                                      color: accentColor,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                              ?.copyWith(
+                                color: subtitleColor,
+                                height: compact ? 1.22 : 1.3,
                               ),
-                            ),
-                          ],
                         ),
                       ],
                     ),
@@ -539,23 +506,32 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _brandingWatermark() {
+  Widget _brandingWatermark({bool compact = false}) {
+    final cardHeight = compact ? 118.0 : 141.0;
+    final logoHeight = compact ? 56.0 : 62.0;
+    final dividerHeight = compact ? 42.0 : 48.0;
+    final horizontalSpacing = compact ? 18.0 : 22.0;
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: SizedBox(
-        height: 141,
+        height: cardHeight,
         child: Center(
           child: Opacity(
             opacity: 0.9,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset('assets/logos/netherland.png', height: 62),
-                const SizedBox(width: 22),
-                Container(width: 1, height: 48, color: const Color(0xFF1E3A5F)),
-                const SizedBox(width: 22),
-                Image.asset('assets/logos/cwsadmix.jpg', height: 62),
+                Image.asset('assets/logos/netherland.png', height: logoHeight),
+                SizedBox(width: horizontalSpacing),
+                Container(
+                  width: 1,
+                  height: dividerHeight,
+                  color: const Color(0xFF1E3A5F),
+                ),
+                SizedBox(width: horizontalSpacing),
+                Image.asset('assets/logos/cwsadmix.jpg', height: logoHeight),
               ],
             ),
           ),
@@ -620,6 +596,8 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCompactDashboard = MediaQuery.sizeOf(context).height < 860;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5F7),
       appBar: AppBar(
@@ -638,11 +616,11 @@ class HomePage extends StatelessWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(16, isCompactDashboard ? 8 : 16, 16, 16),
         children: [
-          _brandingWatermark(),
-          const SizedBox(height: 18),
-          _quickAccessIntro(),
+          _brandingWatermark(compact: isCompactDashboard),
+          SizedBox(height: isCompactDashboard ? 12 : 18),
+          _quickAccessIntro(compact: isCompactDashboard),
           _menuButton(
             context: context,
             title: 'Calculadora CWS',
@@ -651,6 +629,7 @@ class HomePage extends StatelessWidget {
             icon: Icons.calculate,
             accentColor: const Color(0xFF2B63A7),
             onTap: () => _openCalculator(context),
+            compact: isCompactDashboard,
           ),
           _menuButton(
             context: context,
@@ -660,6 +639,7 @@ class HomePage extends StatelessWidget {
             icon: Icons.apartment,
             accentColor: const Color(0xFF1B7A73),
             onTap: () => _openObras(context),
+            compact: isCompactDashboard,
           ),
           _menuButton(
             context: context,
@@ -669,6 +649,7 @@ class HomePage extends StatelessWidget {
             icon: Icons.menu_book_outlined,
             accentColor: const Color(0xFF9A621A),
             onTap: () => _openLiteraturaTecnica(context),
+            compact: isCompactDashboard,
           ),
           const SizedBox(height: 4),
           _literaturaBanner(),
