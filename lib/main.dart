@@ -70,7 +70,20 @@ class NetherlandApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.transparent,
       ),
       builder: (context, child) {
-        return _AppWatermarkBackground(child: child ?? const SizedBox.shrink());
+        return Actions(
+          actions: <Type, Action<Intent>>{
+            EditableTextTapOutsideIntent:
+                CallbackAction<EditableTextTapOutsideIntent>(
+                  onInvoke: (intent) {
+                    intent.focusNode.unfocus();
+                    return null;
+                  },
+                ),
+          },
+          child: _AppWatermarkBackground(
+            child: child ?? const SizedBox.shrink(),
+          ),
+        );
       },
       home: const AppGate(),
     );

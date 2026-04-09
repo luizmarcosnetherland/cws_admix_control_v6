@@ -23,15 +23,15 @@ class LancamentoRepository {
   }) async {
     final db = await _db.database;
 
-    final where = <String>['obra_id = ?'];
+    final where = <String>['l.obra_id = ?'];
     final args = <Object>[obraId];
 
     if (inicio != null) {
-      where.add('data_hora >= ?');
+      where.add('l.data_hora >= ?');
       args.add(inicio.toIso8601String());
     }
     if (fimExclusivo != null) {
-      where.add('data_hora < ?');
+      where.add('l.data_hora < ?');
       args.add(fimExclusivo.toIso8601String());
     }
 
@@ -247,24 +247,24 @@ class LancamentoRepository {
   }) async {
     final db = await _db.database;
 
-    final where = <String>['obra_id = ?'];
+    final where = <String>['l.obra_id = ?'];
     final args = <Object>[obraId];
 
     if (inicio != null) {
-      where.add('data_hora >= ?');
+      where.add('l.data_hora >= ?');
       args.add(inicio.toIso8601String());
     }
     if (fimExclusivo != null) {
-      where.add('data_hora < ?');
+      where.add('l.data_hora < ?');
       args.add(fimExclusivo.toIso8601String());
     }
 
     final rows = await db.rawQuery('''
       SELECT
         COUNT(*) AS qtd,
-        COALESCE(SUM(volume_m3), 0) AS volume_total,
-        COALESCE(SUM(cws_total_kg), 0) AS cws_total
-      FROM lancamentos
+        COALESCE(SUM(l.volume_m3), 0) AS volume_total,
+        COALESCE(SUM(l.cws_total_kg), 0) AS cws_total
+      FROM lancamentos l
       WHERE ${where.join(' AND ')}
     ''', args);
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:keyboard_actions/keyboard_actions.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class CwsCalculatorPage extends StatefulWidget {
@@ -20,6 +21,8 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
   final _estadoCtrl = TextEditingController();
   final _empresaCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
+  final _volumeFocusNode = FocusNode();
+  final _cementFocusNode = FocusNode();
   late final Listenable _inputsListenable;
 
   double get volume =>
@@ -167,7 +170,33 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
     _estadoCtrl.dispose();
     _empresaCtrl.dispose();
     _emailCtrl.dispose();
+    _volumeFocusNode.dispose();
+    _cementFocusNode.dispose();
     super.dispose();
+  }
+
+  void _dismissKeyboard() {
+    FocusScope.of(context).unfocus();
+  }
+
+  KeyboardActionsConfig _keyboardActionsConfig() {
+    KeyboardActionsItem item(FocusNode node) {
+      return KeyboardActionsItem(
+        focusNode: node,
+        toolbarButtons: [
+          (focusNode) => TextButton(
+            onPressed: focusNode.unfocus,
+            child: const Text('Enter'),
+          ),
+        ],
+      );
+    }
+
+    return KeyboardActionsConfig(
+      keyboardActionsPlatform: KeyboardActionsPlatform.ALL,
+      nextFocus: false,
+      actions: [item(_volumeFocusNode), item(_cementFocusNode)],
+    );
   }
 
   @override
@@ -180,118 +209,154 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
         backgroundColor: blue,
         foregroundColor: Colors.white,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Cálculo de produto por volume de concreto',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Ajuste o volume de concreto da sua concretagem e veja quanto CWS Admix será necessário.',
-                    style: TextStyle(
-                      color: Colors.black.withValues(alpha: 0.68),
+      body: KeyboardActions(
+        config: _keyboardActionsConfig(),
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Cálculo de produto por volume de concreto',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 18),
-                  _field(
-                    _volumeCtrl,
-                    'Volume de concreto (m³)',
-                    keyboard: TextInputType.number,
-                  ),
-                  _field(
-                    _cementCtrl,
-                    'Consumo de cimento (kg/m³)',
-                    keyboard: TextInputType.number,
-                  ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'Dados para cotacao',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 12),
-                  _field(
-                    _enderecoEntregaCtrl,
-                    'Endereco de entrega',
-                    keyboard: TextInputType.streetAddress,
-                  ),
-                  _field(_cidadeCtrl, 'Cidade', keyboard: TextInputType.text),
-                  _field(_estadoCtrl, 'Estado', keyboard: TextInputType.text),
-                  _field(_empresaCtrl, 'Empresa', keyboard: TextInputType.text),
-                  _field(
-                    _emailCtrl,
-                    'E-mail',
-                    keyboard: TextInputType.emailAddress,
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Text(
+                      'Ajuste o volume de concreto da sua concretagem e veja quanto CWS Admix será necessário.',
+                      style: TextStyle(
+                        color: Colors.black.withValues(alpha: 0.68),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _field(
+                      _volumeCtrl,
+                      'Volume de concreto (m³)',
+                      keyboard: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      focusNode: _volumeFocusNode,
+                      textInputAction: TextInputAction.done,
+                    ),
+                    _field(
+                      _cementCtrl,
+                      'Consumo de cimento (kg/m³)',
+                      keyboard: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      focusNode: _cementFocusNode,
+                      textInputAction: TextInputAction.done,
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          AnimatedBuilder(
-            animation: _inputsListenable,
-            builder: (context, _) {
-              return Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Resultado',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _resultLine(
-                        'Dosagem aplicada',
-                        '${fmt(dosageKgM3, casas: 1)} kg/m³',
-                      ),
-                      _resultLine(
-                        'Quantidade necessária',
-                        '${fmt(totalKg, casas: 1)} kg',
-                      ),
-                      _resultLine('Sacos de 6,4 kg', '$bags'),
-                      _resultLine(
-                        'Quantidade para compra',
-                        '${fmt(providedKg, casas: 1)} kg',
-                      ),
-                    ],
+            const SizedBox(height: 16),
+            AnimatedBuilder(
+              animation: _inputsListenable,
+              builder: (context, _) {
+                return Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
                   ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Resultado',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _resultLine(
+                          'Dosagem aplicada',
+                          '${fmt(dosageKgM3, casas: 1)} kg/m³',
+                        ),
+                        _resultLine(
+                          'Quantidade necessária',
+                          '${fmt(totalKg, casas: 1)} kg',
+                        ),
+                        _resultLine('Sacos de 6,4 kg', '$bags'),
+                        _resultLine(
+                          'Quantidade para compra',
+                          '${fmt(providedKg, casas: 1)} kg',
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Dados para cotacao',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _field(
+                      _enderecoEntregaCtrl,
+                      'Endereco de entrega',
+                      keyboard: TextInputType.streetAddress,
+                    ),
+                    _field(_cidadeCtrl, 'Cidade', keyboard: TextInputType.text),
+                    _field(_estadoCtrl, 'Estado', keyboard: TextInputType.text),
+                    _field(
+                      _empresaCtrl,
+                      'Empresa',
+                      keyboard: TextInputType.text,
+                    ),
+                    _field(
+                      _emailCtrl,
+                      'E-mail',
+                      keyboard: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.done,
+                    ),
+                  ],
                 ),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: _solicitarCotacaoEmail,
-            icon: const Icon(Icons.email_outlined),
-            label: const Text('Solicitar cotação por e-mail'),
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: _solicitarCotacaoWhatsapp,
-            icon: const Icon(Icons.chat_outlined),
-            label: const Text('Solicitar cotação por WhatsApp'),
-          ),
-        ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: _solicitarCotacaoEmail,
+              icon: const Icon(Icons.email_outlined),
+              label: const Text('Solicitar cotação por e-mail'),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _solicitarCotacaoWhatsapp,
+              icon: const Icon(Icons.chat_outlined),
+              label: const Text('Solicitar cotação por WhatsApp'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -300,12 +365,18 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
     TextEditingController ctrl,
     String label, {
     required TextInputType keyboard,
+    FocusNode? focusNode,
+    TextInputAction textInputAction = TextInputAction.next,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextField(
         controller: ctrl,
+        focusNode: focusNode,
         keyboardType: keyboard,
+        textInputAction: textInputAction,
+        onSubmitted: (_) => _dismissKeyboard(),
+        onTapOutside: (_) => _dismissKeyboard(),
         decoration: InputDecoration(
           labelText: label,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),

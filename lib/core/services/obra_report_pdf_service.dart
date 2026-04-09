@@ -8,6 +8,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 
+import '../../data/models/concretagem_model.dart';
 import '../../data/models/lancamento_model.dart';
 import '../../data/models/obra_model.dart';
 import 'local_storage_service.dart';
@@ -15,12 +16,14 @@ import 'local_storage_service.dart';
 class ObraReportPdfService {
   final LocalStorageService _storage = LocalStorageService();
   static const _lancamentoCardWidth = 255.0;
+  static const _concretagemCardWidth = 255.0;
   static Future<_PdfLogos>? _logosFuture;
   static Future<_PdfFonts>? _fontsFuture;
 
   Future<String> buildReportPdf({
     required Obra obra,
     required List<Lancamento> lancamentos,
+    List<Concretagem> concretagens = const [],
   }) async {
     if (kIsWeb) {
       throw UnsupportedError(
@@ -31,6 +34,7 @@ class ObraReportPdfService {
     final bytes = await buildReportPdfBytes(
       obra: obra,
       lancamentos: lancamentos,
+      concretagens: concretagens,
     );
 
     await _storage.ensureBaseStructure();
@@ -45,10 +49,22 @@ class ObraReportPdfService {
   Future<Uint8List> buildReportPdfBytes({
     required Obra obra,
     required List<Lancamento> lancamentos,
+    List<Concretagem> concretagens = const [],
   }) async {
     final doc = pw.Document();
     final logos = await _loadLogos();
     final fonts = await _loadFonts();
+    final concretagensNormalizadas = _normalizarConcretagens(
+      concretagens,
+      lancamentos,
+    );
+    final lancamentosPorConcretagem = _groupLancamentosByConcretagem(
+      lancamentos,
+    );
+    final concretagemCards = _buildConcretagemCards(
+      concretagensNormalizadas,
+      lancamentosPorConcretagem,
+    );
     final lancamentoCards = await _buildLancamentoCards(lancamentos);
     final generatedAt = DateTime.now();
     final generatedAtLabel = DateFormat(
@@ -135,6 +151,7 @@ class ObraReportPdfService {
               pw.Flexible(
                 flex: 2,
                 child: _infoCard('Resumo', [
+                  _kv('Concretagens', '${concretagensNormalizadas.length}'),
                   _kv('Lancamentos', '${lancamentos.length}'),
                   _kv('Volume total', '${_fmtNum(volumeTotal, 1)} m³'),
                   _kv('CWS total', '${_fmtNum(cwsTotal, 1)} kg'),
@@ -152,8 +169,17 @@ class ObraReportPdfService {
             ],
           ),
           pw.SizedBox(height: 12),
+          _sectionTitle('Concretagens'),
+          if (concretagemCards.isEmpty)
+            _emptySectionCard('Nenhuma concretagem cadastrada.')
+          else
+            pw.Wrap(spacing: 8, runSpacing: 8, children: concretagemCards),
+          pw.SizedBox(height: 12),
           _sectionTitle('Lançamentos'),
-          pw.Wrap(spacing: 8, runSpacing: 8, children: lancamentoCards),
+          if (lancamentoCards.isEmpty)
+            _emptySectionCard('Nenhum lançamento cadastrado.')
+          else
+            pw.Wrap(spacing: 8, runSpacing: 8, children: lancamentoCards),
         ],
       ),
     );
@@ -163,6 +189,7 @@ class ObraReportPdfService {
   Future<void> shareReportPdf({
     required Obra obra,
     required List<Lancamento> lancamentos,
+    List<Concretagem> concretagens = const [],
     Rect? sharePositionOrigin,
   }) async {
     final filename =
@@ -172,6 +199,7 @@ class ObraReportPdfService {
       final bytes = await buildReportPdfBytes(
         obra: obra,
         lancamentos: lancamentos,
+        concretagens: concretagens,
       );
 
       await Share.shareXFiles(
@@ -183,7 +211,11 @@ class ObraReportPdfService {
       return;
     }
 
-    final path = await buildReportPdf(obra: obra, lancamentos: lancamentos);
+    final path = await buildReportPdf(
+      obra: obra,
+      lancamentos: lancamentos,
+      concretagens: concretagens,
+    );
 
     await Share.shareXFiles(
       [XFile(path, name: filename)],
@@ -241,6 +273,144 @@ class ObraReportPdfService {
     );
   }
 
+  pw.Widget _emptySectionCard(String text) {
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Text(_pdfSafe(text), style: const pw.TextStyle(fontSize: 10)),
+    );
+  }
+
+  Map<int, List<Lancamento>> _groupLancamentosByConcretagem(
+    List<Lancamento> lancamentos,
+  ) {
+    final grouped = <int, List<Lancamento>>{};
+    for (final lancamento in lancamentos) {
+      grouped.putIfAbsent(lancamento.concretagemId, () => []).add(lancamento);
+    }
+    return grouped;
+  }
+
+  List<Concretagem> _normalizarConcretagens(
+    List<Concretagem> concretagens,
+    List<Lancamento> lancamentos,
+  ) {
+    final origem = concretagens.isNotEmpty
+        ? concretagens
+        : _concretagensDerivadasDosLancamentos(lancamentos);
+    final normalizadas = List<Concretagem>.from(origem);
+    normalizadas.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return normalizadas;
+  }
+
+  List<Concretagem> _concretagensDerivadasDosLancamentos(
+    List<Lancamento> lancamentos,
+  ) {
+    final derivadas = <int, Concretagem>{};
+    for (final lancamento in lancamentos) {
+      derivadas.putIfAbsent(
+        lancamento.concretagemId,
+        () => Concretagem(
+          id: lancamento.concretagemId,
+          obraId: lancamento.obraId,
+          estruturaConcretada: lancamento.estruturaConcretada,
+          concreteira: lancamento.concreteira,
+          controleTecnologico: lancamento.controleTecnologico,
+          empresaTecnologiaConcreto: lancamento.empresaTecnologiaConcreto,
+          createdAt: lancamento.createdAt,
+          updatedAt: lancamento.updatedAt,
+        ),
+      );
+    }
+    return derivadas.values.toList(growable: false);
+  }
+
+  List<pw.Widget> _buildConcretagemCards(
+    List<Concretagem> concretagens,
+    Map<int, List<Lancamento>> lancamentosPorConcretagem,
+  ) {
+    return concretagens
+        .map((concretagem) {
+          final lancamentos =
+              lancamentosPorConcretagem[concretagem.id] ?? const [];
+          final volumeTotal = lancamentos.fold<double>(
+            0,
+            (total, item) => total + item.volumeM3,
+          );
+          final cwsTotal = lancamentos.fold<double>(
+            0,
+            (total, item) => total + item.cwsTotalKg,
+          );
+          final ultimoLancamento = lancamentos.isEmpty
+              ? null
+              : lancamentos
+                    .map((item) => item.dataHora)
+                    .reduce((a, b) => a.isAfter(b) ? a : b);
+
+          return pw.SizedBox(
+            width: _concretagemCardWidth,
+            child: pw.Container(
+              padding: const pw.EdgeInsets.all(8),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    _pdfSafe(
+                      concretagem.estruturaConcretada.trim().isEmpty
+                          ? 'Estrutura nao informada'
+                          : concretagem.estruturaConcretada.trim(),
+                    ),
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Text(
+                    'Concreteira: ${_fallbackNaoInformada(concretagem.concreteira)}',
+                    style: const pw.TextStyle(fontSize: 9),
+                  ),
+                  pw.Text(
+                    'Controle tecnologico: ${_controleTecnologicoLabel(concretagem.controleTecnologico)}',
+                    style: const pw.TextStyle(fontSize: 9),
+                  ),
+                  pw.Text(
+                    'Empresa tecnologia do concreto: ${_empresaTecnologiaLabelConcretagem(concretagem)}',
+                    style: const pw.TextStyle(fontSize: 9),
+                  ),
+                  pw.Text(
+                    'Lancamentos: ${lancamentos.length}',
+                    style: const pw.TextStyle(fontSize: 9),
+                  ),
+                  pw.Text(
+                    'Volume total: ${_fmtNum(volumeTotal, 1)} m³',
+                    style: const pw.TextStyle(fontSize: 9),
+                  ),
+                  pw.Text(
+                    'CWS total: ${_fmtNum(cwsTotal, 1)} kg',
+                    style: const pw.TextStyle(fontSize: 9),
+                  ),
+                  if (ultimoLancamento != null)
+                    pw.Text(
+                      'Ultimo lancamento: ${DateFormat('dd/MM/yyyy HH:mm', 'pt_BR').format(ultimoLancamento)}',
+                      style: const pw.TextStyle(fontSize: 9),
+                    ),
+                ],
+              ),
+            ),
+          );
+        })
+        .toList(growable: false);
+  }
+
   Future<List<pw.Widget>> _buildLancamentoCards(
     List<Lancamento> lancamentos,
   ) async {
@@ -281,11 +451,7 @@ class ObraReportPdfService {
   ) {
     final linhas = <String>[
       'Data/hora: ${DateFormat('dd/MM/yyyy HH:mm', 'pt_BR').format(l.dataHora)}',
-      'Estrutura: ${_fallbackNaoInformada(l.estruturaConcretada)}',
       'Betoneira: ${_fallback(l.caminhao)}',
-      'Concreteira: ${_fallbackNaoInformada(l.concreteira)}',
-      'Controle tecnologico: ${_controleTecnologicoLabel(l.controleTecnologico)}',
-      'Empresa tecnologia do concreto: ${_empresaTecnologiaLabel(l)}',
       'NF: ${_fallback(l.notaFiscal)}',
       'Volume: ${_fmtNum(l.volumeM3, 1)} m³',
       'Dosagem: ${_fmtNum(l.dosagemKgM3, 1)} kg/m³',
@@ -421,11 +587,11 @@ class ObraReportPdfService {
     return value.trim().toLowerCase() == 'sim' ? 'Sim' : 'nao informado';
   }
 
-  String _empresaTecnologiaLabel(Lancamento lancamento) {
-    if (lancamento.controleTecnologico.trim().toLowerCase() != 'sim') {
+  String _empresaTecnologiaLabelConcretagem(Concretagem concretagem) {
+    if (concretagem.controleTecnologico.trim().toLowerCase() != 'sim') {
       return 'nao informada';
     }
-    return _fallbackNaoInformada(lancamento.empresaTecnologiaConcreto);
+    return _fallbackNaoInformada(concretagem.empresaTecnologiaConcreto);
   }
 
   String _fmtNum(double value, int casas) {

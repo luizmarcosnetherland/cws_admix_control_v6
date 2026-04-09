@@ -447,9 +447,11 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
 
   Future<void> _compartilharPdfWhatsapp() async {
     try {
+      final concretagens = _concretagensVisiveis();
       await _obraPdf.shareReportPdf(
         obra: _obraAtual,
         lancamentos: _filtrado,
+        concretagens: concretagens,
         sharePositionOrigin: _shareOrigin(),
       );
     } catch (e) {
@@ -475,9 +477,11 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
     }
 
     try {
+      final concretagens = _concretagensVisiveis();
       final pdfPath = await _obraPdf.buildReportPdf(
         obra: _obraAtual,
         lancamentos: _filtrado,
+        concretagens: concretagens,
       );
       final assunto = 'Relatório da obra ${_obraAtual.nome}';
       final body = [
