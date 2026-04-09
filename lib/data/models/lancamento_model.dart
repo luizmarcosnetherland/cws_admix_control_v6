@@ -3,6 +3,7 @@ import 'dart:convert';
 class Lancamento {
   final int? id;
   final int obraId;
+  final int concretagemId;
   final DateTime dataHora;
 
   /// Vamos usar como "Betoneira (nº/placa)" na UI, mantendo o nome antigo no banco.
@@ -31,6 +32,7 @@ class Lancamento {
   const Lancamento({
     this.id,
     required this.obraId,
+    required this.concretagemId,
     required this.dataHora,
     required this.caminhao,
     this.estruturaConcretada = '',
@@ -55,6 +57,7 @@ class Lancamento {
   Lancamento copyWith({
     int? id,
     int? obraId,
+    int? concretagemId,
     DateTime? dataHora,
     String? caminhao,
     String? estruturaConcretada,
@@ -78,6 +81,7 @@ class Lancamento {
     return Lancamento(
       id: id ?? this.id,
       obraId: obraId ?? this.obraId,
+      concretagemId: concretagemId ?? this.concretagemId,
       dataHora: dataHora ?? this.dataHora,
       caminhao: caminhao ?? this.caminhao,
       estruturaConcretada: estruturaConcretada ?? this.estruturaConcretada,
@@ -105,6 +109,7 @@ class Lancamento {
     return {
       'id': id,
       'obra_id': obraId,
+      'concretagem_id': concretagemId,
       'data_hora': dataHora.toIso8601String(),
       'caminhao': caminhao,
       'estrutura_concretada': estruturaConcretada,
@@ -131,6 +136,7 @@ class Lancamento {
     return Lancamento(
       id: map['id'] as int?,
       obraId: map['obra_id'] as int,
+      concretagemId: map['concretagem_id'] as int,
       dataHora: DateTime.parse(map['data_hora'] as String),
       caminhao: (map['caminhao'] ?? '') as String,
       estruturaConcretada: (map['estrutura_concretada'] ?? '') as String,

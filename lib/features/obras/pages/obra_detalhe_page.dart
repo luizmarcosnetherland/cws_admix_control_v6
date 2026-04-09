@@ -8,11 +8,14 @@ import '../../../core/services/csv_export_service.dart';
 import '../../../core/services/email_compose_service.dart';
 import '../../../core/services/obra_location_service.dart';
 import '../../../core/services/obra_report_pdf_service.dart';
+import '../../../data/models/concretagem_model.dart';
 import '../../../data/models/lancamento_model.dart';
 import '../../../data/models/obra_model.dart';
+import '../../../data/repositories/concretagem_repository.dart';
 import '../../../data/repositories/lancamento_repository.dart';
+import 'concretagem_detalhe_page.dart';
 import 'editar_obra_page.dart';
-import 'novo_lancamento_page.dart';
+import 'nova_concretagem_page.dart';
 
 enum _PeriodoFiltro { todos, hoje, ultimos7, ultimos30, personalizado }
 
@@ -38,6 +41,7 @@ class ObraDetalhePage extends StatefulWidget {
 
 class _ObraDetalhePageState extends State<ObraDetalhePage> {
   final _repo = LancamentoRepository();
+  final _concretagemRepo = ConcretagemRepository();
   final CsvExportService _csv = CsvExportService();
   final EmailComposeService _email = EmailComposeService();
   final ObraReportPdfService _obraPdf = ObraReportPdfService();
@@ -52,6 +56,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
 
   // Resultado final (período + filtros extras + ordenação)
   List<Lancamento> _filtrado = [];
+  List<Concretagem> _concretagens = [];
 
   ResumoLancamentosObra _resumo = const ResumoLancamentosObra(
     quantidade: 0,
@@ -281,14 +286,19 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         inicio: inicio,
         fimExclusivo: fimExclusivo,
       );
+      final concretagens = await _concretagemRepo.listarPorObra(_obraAtual.id!);
 
       if (!mounted) return;
       setState(() {
         _base = lista;
-        _opcoesConcreteiraCache = _buildFilterOptions(
-          lista,
-          selector: (l) => l.concreteira,
-        );
+        _concretagens = concretagens;
+        _opcoesConcreteiraCache =
+            concretagens
+                .map((item) => item.concreteira.trim())
+                .where((item) => item.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
         _opcoesBetoneiraCache = _buildFilterOptions(
           lista,
           selector: (l) => l.caminhao,
@@ -331,6 +341,24 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
     final list = values.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return list;
+  }
+
+  Map<int, List<Lancamento>> _lancamentosPorConcretagem() {
+    final grouped = <int, List<Lancamento>>{};
+    for (final lancamento in _filtrado) {
+      grouped.putIfAbsent(lancamento.concretagemId, () => []).add(lancamento);
+    }
+    return grouped;
+  }
+
+  List<Concretagem> _concretagensVisiveis() {
+    final grouped = _lancamentosPorConcretagem();
+    final possuiRestricao =
+        _periodo != _PeriodoFiltro.todos || _temFiltrosExtras;
+    if (!possuiRestricao) return _concretagens;
+    return _concretagens
+        .where((concretagem) => grouped.containsKey(concretagem.id))
+        .toList();
   }
 
   Rect? _shareOrigin() {
@@ -524,61 +552,31 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
     await _carregar();
   }
 
-  Future<void> _excluirLancamento(Lancamento l) async {
-    if (l.id == null) return;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Excluir lançamento'),
-        content: Text(
-          'Deseja excluir o lançamento da betoneira "${l.caminhao}"?\n\n'
-          'Volume: ${_fmtNum(l.volumeM3, casas: 1)} m³ | CWS: ${_fmtNum(l.cwsTotalKg, casas: 1)} kg',
+  Future<void> _abrirConcretagem(Concretagem concretagem) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ConcretagemDetalhePage(
+          obraNome: _obraAtual.nome,
+          concretagem: concretagem,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir'),
-          ),
-        ],
       ),
     );
-
-    if (confirmed != true) return;
-
-    try {
-      await _repo.excluirLancamento(l.id!);
-      if (!mounted) return;
-      await _carregar();
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Lançamento excluído.')));
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao excluir lançamento: $e')));
-    }
+    await _carregar();
   }
 
-  Future<void> _abrirNovoLancamento() async {
-    final created = await Navigator.of(context).push<bool>(
+  Future<void> _abrirNovaConcretagem() async {
+    final concretagem = await Navigator.of(context).push<Concretagem>(
       MaterialPageRoute(
-        builder: (_) => NovoLancamentoPage(
+        builder: (_) => NovaConcretagemPage(
           obraId: _obraAtual.id!,
           obraNome: _obraAtual.nome,
         ),
       ),
     );
 
-    if (created == true) {
-      await _carregar();
-    }
+    if (concretagem == null) return;
+    if (!mounted) return;
+    await _abrirConcretagem(concretagem);
   }
 
   String _fmtDataHora(DateTime dt) {
@@ -915,17 +913,20 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
     );
   }
 
-  Widget _listaLancamentos() {
-    if (_filtrado.isEmpty) {
+  Widget _listaConcretagens() {
+    final grouped = _lancamentosPorConcretagem();
+    final concretagens = _concretagensVisiveis();
+
+    if (concretagens.isEmpty) {
       return Card(
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: Column(
             children: const [
-              Icon(Icons.local_shipping_outlined, size: 30),
+              Icon(Icons.foundation_outlined, size: 30),
               SizedBox(height: 8),
               Text(
-                'Nenhum lançamento com os filtros atuais.',
+                'Nenhuma concretagem com os filtros atuais.',
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
               SizedBox(height: 4),
@@ -942,89 +943,56 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _filtrado.length,
+      itemCount: concretagens.length,
       separatorBuilder: (_, index) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
-        final l = _filtrado[index];
-        final status = l.dosagemDeAcordo == null
-            ? ''
-            : (l.dosagemDeAcordo == 1 ? '✅' : '⚠️');
+        final concretagem = concretagens[index];
+        final lancamentos = grouped[concretagem.id] ?? const <Lancamento>[];
+        final volume = lancamentos.fold<double>(
+          0,
+          (total, item) => total + item.volumeM3,
+        );
+        final cws = lancamentos.fold<double>(
+          0,
+          (total, item) => total + item.cwsTotalKg,
+        );
+        final ultimoLancamento = lancamentos.isEmpty
+            ? null
+            : lancamentos
+                  .map((item) => item.dataHora)
+                  .reduce((a, b) => a.isAfter(b) ? a : b);
+        final controle =
+            concretagem.controleTecnologico.trim().toLowerCase() == 'sim'
+            ? 'Sim'
+            : 'Não informado';
         return Card(
           child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.local_shipping)),
+            leading: const CircleAvatar(child: Icon(Icons.foundation_outlined)),
             title: Text(
-              l.caminhao.isEmpty ? 'Betoneira sem identificação' : l.caminhao,
+              concretagem.estruturaConcretada.trim().isEmpty
+                  ? 'Estrutura não informada'
+                  : concretagem.estruturaConcretada,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_fmtDataHora(l.dataHora)),
-                if (l.estruturaConcretada.isNotEmpty)
-                  Text('Estrutura: ${l.estruturaConcretada}'),
-                if (l.concreteira.isNotEmpty)
-                  Text('Concreteira: ${l.concreteira}'),
-                if (l.controleTecnologico.trim().toLowerCase() == 'sim')
-                  Text('Controle tecnologico: Sim'),
-                if (l.empresaTecnologiaConcreto.isNotEmpty)
-                  Text('Empresa tecnologia: ${l.empresaTecnologiaConcreto}'),
-                if (l.notaFiscal.isNotEmpty) Text('NF: ${l.notaFiscal}'),
-                if (l.slumpAntes != null)
-                  Text('Slump antes: ${_fmtNum(l.slumpAntes!, casas: 1)} cm'),
-                if (l.slumpDepois != null)
-                  Text('Slump depois: ${_fmtNum(l.slumpDepois!, casas: 1)} cm'),
-                if (l.tempoMisturaMin != null)
-                  Text('Mistura: ${_fmtNum(l.tempoMisturaMin!, casas: 1)} min'),
-                Text('Volume: ${_fmtNum(l.volumeM3, casas: 1)} m³'),
-                Text('Dosagem: ${_fmtNum(l.dosagemKgM3, casas: 1)} kg/m³'),
-                Text('CWS: ${_fmtNum(l.cwsTotalKg, casas: 1)} kg'),
-                if (l.cwsAdicionadoKg != null)
-                  Text(
-                    'CWS adicionado: ${_fmtNum(l.cwsAdicionadoKg!, casas: 1)} kg',
-                  ),
-                if (l.observacoes.isNotEmpty) Text('Obs.: ${l.observacoes}'),
-                if (l.fotoPaths.isNotEmpty)
-                  Text('Fotos anexas: ${l.fotoPaths.length}'),
-              ],
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (status.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: Text(status, style: const TextStyle(fontSize: 18)),
-                  ),
-                PopupMenuButton<String>(
-                  onSelected: (value) async {
-                    if (value == 'editar') {
-                      final updated = await Navigator.of(context).push<bool>(
-                        MaterialPageRoute(
-                          builder: (_) => NovoLancamentoPage(
-                            obraId: _obraAtual.id!,
-                            obraNome: _obraAtual.nome,
-                            lancamento: l,
-                          ),
-                        ),
-                      );
-
-                      if (updated == true) {
-                        await _carregar();
-                      }
-                      return;
-                    }
-
-                    if (value == 'excluir') {
-                      await _excluirLancamento(l);
-                    }
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'editar', child: Text('Editar')),
-                    PopupMenuItem(value: 'excluir', child: Text('Excluir')),
-                  ],
+                Text(
+                  'Concreteira: ${concretagem.concreteira.trim().isEmpty ? 'não informada' : concretagem.concreteira}',
                 ),
+                Text('Controle tecnológico: $controle'),
+                Text(
+                  'Empresa tecnologia: ${concretagem.controleTecnologico.trim().toLowerCase() == 'sim' && concretagem.empresaTecnologiaConcreto.trim().isNotEmpty ? concretagem.empresaTecnologiaConcreto : 'não informada'}',
+                ),
+                Text('Lançamentos: ${lancamentos.length}'),
+                Text('Volume: ${_fmtNum(volume, casas: 1)} m³'),
+                Text('CWS: ${_fmtNum(cws, casas: 1)} kg'),
+                if (ultimoLancamento != null)
+                  Text('Último lançamento: ${_fmtDataHora(ultimoLancamento)}'),
               ],
             ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _abrirConcretagem(concretagem),
           ),
         );
       },
@@ -1073,7 +1041,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
                     const SizedBox(height: 10),
                     _filtrosExtras(),
                     const SizedBox(height: 10),
-                    _listaLancamentos(),
+                    _listaConcretagens(),
                     const SizedBox(height: 128),
                   ],
                 ),
@@ -1084,7 +1052,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         child: SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            onPressed: _abrirNovoLancamento,
+            onPressed: _abrirNovaConcretagem,
             icon: const Icon(Icons.add),
             label: const Text('Nova Concretagem'),
           ),

@@ -6,7 +6,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static const _dbName = 'cws_admix_control.db';
-  static const _dbVersion = 12;
+  static const _dbVersion = 13;
 
   Database? _database;
   bool _schemaEnsured = false;
@@ -39,12 +39,15 @@ class AppDatabase {
 
   Future<void> _onCreate(Database db, int version) async {
     await _createObrasTable(db);
+    await _createConcretagensTable(db);
     await _createLancamentosTable(db);
   }
 
   Future<void> _ensureSchema(Database db) async {
     if (_schemaEnsured) return;
+    await _createConcretagensTable(db);
     await _ensureLancamentosColumns(db);
+    await _migrateLancamentosToConcretagens(db);
     await _ensureObrasColumns(db);
     _schemaEnsured = true;
   }
@@ -112,6 +115,7 @@ class AppDatabase {
       CREATE TABLE IF NOT EXISTS lancamentos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         obra_id INTEGER NOT NULL,
+        concretagem_id INTEGER NOT NULL,
         data_hora TEXT NOT NULL,
         caminhao TEXT NOT NULL,
         estrutura_concretada TEXT NOT NULL DEFAULT '',
@@ -131,6 +135,7 @@ class AppDatabase {
         foto_paths TEXT NOT NULL DEFAULT '[]',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
+        FOREIGN KEY (concretagem_id) REFERENCES concretagens(id) ON DELETE CASCADE,
         FOREIGN KEY (obra_id) REFERENCES obras(id) ON DELETE RESTRICT
       )
     ''');
@@ -138,10 +143,39 @@ class AppDatabase {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_lancamentos_obra_data ON lancamentos (obra_id, data_hora DESC)',
     );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_lancamentos_concretagem_data ON lancamentos (concretagem_id, data_hora DESC)',
+    );
+  }
+
+  Future<void> _createConcretagensTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS concretagens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        obra_id INTEGER NOT NULL,
+        estrutura_concretada TEXT NOT NULL DEFAULT '',
+        concreteira TEXT NOT NULL DEFAULT '',
+        controle_tecnologico TEXT NOT NULL DEFAULT '',
+        empresa_tecnologia_concreto TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (obra_id) REFERENCES obras(id) ON DELETE RESTRICT
+      )
+    ''');
+
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_concretagens_obra_created_at ON concretagens (obra_id, created_at DESC)',
+    );
   }
 
   Future<void> _ensureLancamentosColumns(Database db) async {
     final names = await _tableColumnNames(db, 'lancamentos');
+
+    if (!names.contains('concretagem_id')) {
+      await db.execute(
+        'ALTER TABLE lancamentos ADD COLUMN concretagem_id INTEGER',
+      );
+    }
 
     if (!names.contains('cws_adicionado_kg')) {
       await db.execute(
@@ -173,6 +207,50 @@ class AppDatabase {
         "ALTER TABLE lancamentos ADD COLUMN empresa_tecnologia_concreto TEXT NOT NULL DEFAULT ''",
       );
     }
+  }
+
+  Future<void> _migrateLancamentosToConcretagens(Database db) async {
+    final names = await _tableColumnNames(db, 'lancamentos');
+    if (!names.contains('concretagem_id')) return;
+
+    final pendentes = await db.query(
+      'lancamentos',
+      columns: [
+        'id',
+        'obra_id',
+        'estrutura_concretada',
+        'concreteira',
+        'controle_tecnologico',
+        'empresa_tecnologia_concreto',
+        'created_at',
+        'updated_at',
+      ],
+      where: 'concretagem_id IS NULL',
+      orderBy: 'id ASC',
+    );
+    if (pendentes.isEmpty) return;
+
+    await db.transaction((txn) async {
+      for (final row in pendentes) {
+        final concretagemId = await txn.insert('concretagens', {
+          'obra_id': row['obra_id'],
+          'estrutura_concretada': row['estrutura_concretada'] ?? '',
+          'concreteira': row['concreteira'] ?? '',
+          'controle_tecnologico': row['controle_tecnologico'] ?? '',
+          'empresa_tecnologia_concreto':
+              row['empresa_tecnologia_concreto'] ?? '',
+          'created_at': row['created_at'],
+          'updated_at': row['updated_at'],
+        });
+
+        await txn.update(
+          'lancamentos',
+          {'concretagem_id': concretagemId},
+          where: 'id = ?',
+          whereArgs: [row['id']],
+        );
+      }
+    });
   }
 
   Future<void> _ensureObrasColumns(Database db) async {

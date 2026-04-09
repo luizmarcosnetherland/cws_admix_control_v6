@@ -113,7 +113,8 @@ class ObraReportPdfService {
           pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Expanded(
+              pw.Flexible(
+                flex: 3,
                 child: _infoCard('Obra', [
                   _kv('Cliente', _fallback(obra.cliente)),
                   _kv('Local', _fallback(obra.local)),
@@ -131,7 +132,8 @@ class ObraReportPdfService {
                 ]),
               ),
               pw.SizedBox(width: 12),
-              pw.Expanded(
+              pw.Flexible(
+                flex: 2,
                 child: _infoCard('Resumo', [
                   _kv('Lancamentos', '${lancamentos.length}'),
                   _kv('Volume total', '${_fmtNum(volumeTotal, 1)} m³'),

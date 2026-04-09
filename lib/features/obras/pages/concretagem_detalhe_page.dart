@@ -1,0 +1,341 @@
+import 'package:flutter/material.dart';
+
+import '../../../data/models/concretagem_model.dart';
+import '../../../data/models/lancamento_model.dart';
+import '../../../data/repositories/lancamento_repository.dart';
+import 'nova_concretagem_page.dart';
+import 'novo_lancamento_page.dart';
+
+class ConcretagemDetalhePage extends StatefulWidget {
+  final String obraNome;
+  final Concretagem concretagem;
+
+  const ConcretagemDetalhePage({
+    super.key,
+    required this.obraNome,
+    required this.concretagem,
+  });
+
+  @override
+  State<ConcretagemDetalhePage> createState() => _ConcretagemDetalhePageState();
+}
+
+class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
+  final _repo = LancamentoRepository();
+
+  late Concretagem _concretagemAtual;
+  bool _loading = true;
+  List<Lancamento> _lancamentos = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _concretagemAtual = widget.concretagem;
+    _carregar();
+  }
+
+  Future<void> _carregar() async {
+    setState(() => _loading = true);
+    try {
+      final lista = await _repo.listarPorConcretagem(_concretagemAtual.id!);
+      if (!mounted) return;
+      setState(() {
+        _lancamentos = lista;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao carregar lançamentos: $e')),
+      );
+    }
+  }
+
+  Future<void> _abrirNovoLancamento() async {
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => NovoLancamentoPage(
+          obraNome: widget.obraNome,
+          concretagem: _concretagemAtual,
+        ),
+      ),
+    );
+
+    if (created == true) {
+      await _carregar();
+    }
+  }
+
+  Future<void> _editarConcretagem() async {
+    final updated = await Navigator.of(context).push<Concretagem>(
+      MaterialPageRoute(
+        builder: (_) => NovaConcretagemPage(
+          obraId: _concretagemAtual.obraId,
+          obraNome: widget.obraNome,
+          concretagem: _concretagemAtual,
+        ),
+      ),
+    );
+    if (updated == null) return;
+    setState(() => _concretagemAtual = updated);
+    await _carregar();
+  }
+
+  Future<void> _editarLancamento(Lancamento lancamento) async {
+    final updated = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => NovoLancamentoPage(
+          obraNome: widget.obraNome,
+          concretagem: _concretagemAtual,
+          lancamento: lancamento,
+        ),
+      ),
+    );
+    if (updated == true) {
+      await _carregar();
+    }
+  }
+
+  Future<void> _excluirLancamento(Lancamento lancamento) async {
+    if (lancamento.id == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir lançamento'),
+        content: Text(
+          'Deseja excluir o lançamento da betoneira "${lancamento.caminhao}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await _repo.excluirLancamento(lancamento.id!);
+      if (!mounted) return;
+      await _carregar();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao excluir lançamento: $e')));
+    }
+  }
+
+  String _fmtNum(double value, {int casas = 1}) {
+    return value.toStringAsFixed(casas).replaceAll('.', ',');
+  }
+
+  String _fmtDataHora(DateTime dt) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(dt.day)}/${two(dt.month)}/${dt.year} ${two(dt.hour)}:${two(dt.minute)}';
+  }
+
+  String _fallbackNaoInformado(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? 'não informada' : trimmed;
+  }
+
+  String _controleTecnologicoLabel() {
+    if (_concretagemAtual.controleTecnologico.trim().toLowerCase() == 'sim') {
+      return 'Sim';
+    }
+    return 'não informado';
+  }
+
+  double get _volumeTotal =>
+      _lancamentos.fold(0.0, (total, item) => total + item.volumeM3);
+
+  double get _cwsTotal =>
+      _lancamentos.fold(0.0, (total, item) => total + item.cwsTotalKg);
+
+  Widget _resumoCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.obraNome,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Estrutura: ${_fallbackNaoInformado(_concretagemAtual.estruturaConcretada)}',
+            ),
+            Text(
+              'Concreteira: ${_fallbackNaoInformado(_concretagemAtual.concreteira)}',
+            ),
+            Text('Controle tecnológico: ${_controleTecnologicoLabel()}'),
+            Text(
+              'Empresa de tecnologia do concreto: ${_concretagemAtual.controleTecnologico.trim().toLowerCase() == 'sim' ? _fallbackNaoInformado(_concretagemAtual.empresaTecnologiaConcreto) : 'não informada'}',
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _tag('Lançamentos: ${_lancamentos.length}'),
+                _tag('Volume: ${_fmtNum(_volumeTotal)} m³'),
+                _tag('CWS: ${_fmtNum(_cwsTotal)} kg'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _tag(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(text),
+    );
+  }
+
+  Widget _listaLancamentos() {
+    if (_lancamentos.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            children: const [
+              Icon(Icons.local_shipping_outlined, size: 30),
+              SizedBox(height: 8),
+              Text(
+                'Nenhum lançamento cadastrado nesta concretagem.',
+                style: TextStyle(fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _lancamentos.length,
+      separatorBuilder: (_, index) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final l = _lancamentos[index];
+        final status = l.dosagemDeAcordo == null
+            ? ''
+            : (l.dosagemDeAcordo == 1 ? '✅' : '⚠️');
+        return Card(
+          child: ListTile(
+            leading: const CircleAvatar(child: Icon(Icons.local_shipping)),
+            title: Text(
+              l.caminhao.isEmpty ? 'Betoneira sem identificação' : l.caminhao,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_fmtDataHora(l.dataHora)),
+                if (l.notaFiscal.isNotEmpty) Text('NF: ${l.notaFiscal}'),
+                Text('Volume: ${_fmtNum(l.volumeM3)} m³'),
+                Text('Dosagem: ${_fmtNum(l.dosagemKgM3)} kg/m³'),
+                Text('CWS: ${_fmtNum(l.cwsTotalKg)} kg'),
+                if (l.cwsAdicionadoKg != null)
+                  Text('CWS adicionado: ${_fmtNum(l.cwsAdicionadoKg!)} kg'),
+                if (l.slumpAntes != null)
+                  Text('Slump antes: ${_fmtNum(l.slumpAntes!)} cm'),
+                if (l.slumpDepois != null)
+                  Text('Slump depois: ${_fmtNum(l.slumpDepois!)} cm'),
+                if (l.tempoMisturaMin != null)
+                  Text('Mistura: ${_fmtNum(l.tempoMisturaMin!)} min'),
+                if (l.observacoes.isNotEmpty) Text('Obs.: ${l.observacoes}'),
+                if (l.fotoPaths.isNotEmpty)
+                  Text('Fotos anexas: ${l.fotoPaths.length}'),
+              ],
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (status.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Text(status, style: const TextStyle(fontSize: 18)),
+                  ),
+                PopupMenuButton<String>(
+                  onSelected: (value) async {
+                    if (value == 'editar') {
+                      await _editarLancamento(l);
+                    }
+                    if (value == 'excluir') {
+                      await _excluirLancamento(l);
+                    }
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'editar', child: Text('Editar')),
+                    PopupMenuItem(value: 'excluir', child: Text('Excluir')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Concretagem'),
+        actions: [
+          IconButton(
+            tooltip: 'Editar concretagem',
+            onPressed: _editarConcretagem,
+            icon: const Icon(Icons.edit),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _carregar,
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : ListView(
+                  padding: const EdgeInsets.all(12),
+                  children: [
+                    _resumoCard(),
+                    const SizedBox(height: 10),
+                    _listaLancamentos(),
+                    const SizedBox(height: 128),
+                  ],
+                ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        child: SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: _abrirNovoLancamento,
+            icon: const Icon(Icons.add),
+            label: const Text('Adicionar Lançamento'),
+          ),
+        ),
+      ),
+    );
+  }
+}

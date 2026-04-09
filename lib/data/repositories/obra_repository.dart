@@ -120,6 +120,7 @@ class ObraRepository {
 
     await db.transaction((txn) async {
       await txn.delete('lancamentos', where: 'obra_id = ?', whereArgs: [id]);
+      await txn.delete('concretagens', where: 'obra_id = ?', whereArgs: [id]);
       await txn.delete('obras', where: 'id = ?', whereArgs: [id]);
     });
   }

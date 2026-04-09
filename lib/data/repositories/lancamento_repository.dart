@@ -35,11 +35,74 @@ class LancamentoRepository {
       args.add(fimExclusivo.toIso8601String());
     }
 
-    final rows = await db.query(
-      'lancamentos',
-      where: where.join(' AND '),
-      whereArgs: args,
-      orderBy: 'data_hora DESC',
+    final rows = await db.rawQuery('''
+      SELECT
+        l.id,
+        l.obra_id,
+        l.concretagem_id,
+        l.data_hora,
+        l.caminhao,
+        COALESCE(c.estrutura_concretada, l.estrutura_concretada, '') AS estrutura_concretada,
+        COALESCE(c.concreteira, l.concreteira, '') AS concreteira,
+        COALESCE(c.controle_tecnologico, l.controle_tecnologico, '') AS controle_tecnologico,
+        COALESCE(c.empresa_tecnologia_concreto, l.empresa_tecnologia_concreto, '') AS empresa_tecnologia_concreto,
+        l.volume_m3,
+        l.dosagem_kg_m3,
+        l.cws_total_kg,
+        l.cws_adicionado_kg,
+        l.dosagem_de_acordo,
+        l.nota_fiscal,
+        l.slump_antes,
+        l.slump_depois,
+        l.tempo_mistura_min,
+        l.observacoes,
+        l.foto_paths,
+        l.created_at,
+        l.updated_at
+      FROM lancamentos l
+      LEFT JOIN concretagens c ON c.id = l.concretagem_id
+      WHERE ${where.join(' AND ')}
+      ORDER BY l.data_hora DESC
+    ''', args);
+
+    return rows
+        .map((e) => Lancamento.fromMap(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  Future<List<Lancamento>> listarPorConcretagem(int concretagemId) async {
+    final db = await _db.database;
+    final rows = await db.rawQuery(
+      '''
+      SELECT
+        l.id,
+        l.obra_id,
+        l.concretagem_id,
+        l.data_hora,
+        l.caminhao,
+        COALESCE(c.estrutura_concretada, l.estrutura_concretada, '') AS estrutura_concretada,
+        COALESCE(c.concreteira, l.concreteira, '') AS concreteira,
+        COALESCE(c.controle_tecnologico, l.controle_tecnologico, '') AS controle_tecnologico,
+        COALESCE(c.empresa_tecnologia_concreto, l.empresa_tecnologia_concreto, '') AS empresa_tecnologia_concreto,
+        l.volume_m3,
+        l.dosagem_kg_m3,
+        l.cws_total_kg,
+        l.cws_adicionado_kg,
+        l.dosagem_de_acordo,
+        l.nota_fiscal,
+        l.slump_antes,
+        l.slump_depois,
+        l.tempo_mistura_min,
+        l.observacoes,
+        l.foto_paths,
+        l.created_at,
+        l.updated_at
+      FROM lancamentos l
+      LEFT JOIN concretagens c ON c.id = l.concretagem_id
+      WHERE l.concretagem_id = ?
+      ORDER BY l.data_hora DESC
+    ''',
+      [concretagemId],
     );
 
     return rows
@@ -49,6 +112,7 @@ class LancamentoRepository {
 
   Future<int> criarLancamento({
     required int obraId,
+    required int concretagemId,
     required DateTime dataHora,
     required String caminhao,
     String estruturaConcretada = '',
@@ -67,6 +131,15 @@ class LancamentoRepository {
   }) async {
     final db = await _db.database;
     final now = DateTime.now();
+    final concretagem = await db.query(
+      'concretagens',
+      where: 'id = ?',
+      whereArgs: [concretagemId],
+      limit: 1,
+    );
+    final concretagemMap = concretagem.isEmpty
+        ? const <String, Object?>{}
+        : Map<String, Object?>.from(concretagem.first);
 
     final volume = _round1(volumeM3);
     final dosagem = _round1(dosagemKgM3);
@@ -80,12 +153,23 @@ class LancamentoRepository {
     );
     final lancamento = Lancamento(
       obraId: obraId,
+      concretagemId: concretagemId,
       dataHora: dataHora,
       caminhao: caminhao.trim(),
-      estruturaConcretada: estruturaConcretada.trim(),
-      concreteira: concreteira.trim(),
-      controleTecnologico: controleTecnologico.trim(),
-      empresaTecnologiaConcreto: empresaTecnologiaConcreto.trim(),
+      estruturaConcretada:
+          ((concretagemMap['estrutura_concretada'] as String?) ??
+                  estruturaConcretada)
+              .trim(),
+      concreteira: ((concretagemMap['concreteira'] as String?) ?? concreteira)
+          .trim(),
+      controleTecnologico:
+          ((concretagemMap['controle_tecnologico'] as String?) ??
+                  controleTecnologico)
+              .trim(),
+      empresaTecnologiaConcreto:
+          ((concretagemMap['empresa_tecnologia_concreto'] as String?) ??
+                  empresaTecnologiaConcreto)
+              .trim(),
       volumeM3: volume,
       dosagemKgM3: dosagem,
       cwsTotalKg: cwsTotal,

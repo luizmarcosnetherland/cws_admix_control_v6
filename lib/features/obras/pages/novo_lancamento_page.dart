@@ -5,18 +5,19 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/services/local_storage_service.dart';
+import '../../../data/models/concretagem_model.dart';
 import '../../../data/models/lancamento_model.dart';
 import '../../../data/repositories/lancamento_repository.dart';
 
 class NovoLancamentoPage extends StatefulWidget {
-  final int obraId;
   final String obraNome;
+  final Concretagem concretagem;
   final Lancamento? lancamento; // null = novo | != null = edição
 
   const NovoLancamentoPage({
     super.key,
-    required this.obraId,
     required this.obraNome,
+    required this.concretagem,
     this.lancamento,
   });
 
@@ -30,10 +31,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
   final _storage = LocalStorageService();
   final _imagePicker = ImagePicker();
 
-  final _estruturaConcretadaCtrl = TextEditingController();
   final _betoneiraCtrl = TextEditingController();
-  final _concreteiraCtrl = TextEditingController();
-  final _empresaTecnologiaCtrl = TextEditingController();
   final _notaFiscalCtrl = TextEditingController();
 
   final _volumeCtrl = TextEditingController();
@@ -51,10 +49,8 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
   late final Listenable _previewListenable;
   bool _saving = false;
   bool _pickingFotos = false;
-  String _controleTecnologico = '';
 
   bool get _isEdicao => widget.lancamento != null;
-  bool get _mostrarEmpresaTecnologia => _controleTecnologico == 'sim';
 
   @override
   void initState() {
@@ -63,12 +59,8 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     final l = widget.lancamento;
     _dataHora = l?.dataHora ?? DateTime.now();
 
-    _estruturaConcretadaCtrl.text = l?.estruturaConcretada ?? '';
     _betoneiraCtrl.text = l?.caminhao ?? '';
-    _concreteiraCtrl.text = l?.concreteira ?? '';
-    _empresaTecnologiaCtrl.text = l?.empresaTecnologiaConcreto ?? '';
     _notaFiscalCtrl.text = l?.notaFiscal ?? '';
-    _controleTecnologico = l?.controleTecnologico ?? '';
 
     _volumeCtrl.text = _formatInitialDecimal(l?.volumeM3);
     _dosagemCtrl.text = _formatInitialDecimal(l?.dosagemKgM3, fallback: '0,8');
@@ -88,10 +80,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
 
   @override
   void dispose() {
-    _estruturaConcretadaCtrl.dispose();
     _betoneiraCtrl.dispose();
-    _concreteiraCtrl.dispose();
-    _empresaTecnologiaCtrl.dispose();
     _notaFiscalCtrl.dispose();
     _volumeCtrl.dispose();
     _dosagemCtrl.dispose();
@@ -147,9 +136,6 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     final slumpDepois = _parseNumero(_slumpDepoisCtrl.text);
     final tempoMistura = _parseNumero(_tempoMisturaCtrl.text);
     final cwsAdicionado = _parseNumero(_cwsAdicionadoCtrl.text);
-    final empresaTecnologia = _mostrarEmpresaTecnologia
-        ? _empresaTecnologiaCtrl.text.trim()
-        : '';
 
     setState(() => _saving = true);
 
@@ -160,10 +146,6 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
           original.copyWith(
             dataHora: _dataHora,
             caminhao: _betoneiraCtrl.text.trim(),
-            estruturaConcretada: _estruturaConcretadaCtrl.text.trim(),
-            concreteira: _concreteiraCtrl.text.trim(),
-            controleTecnologico: _controleTecnologico,
-            empresaTecnologiaConcreto: empresaTecnologia,
             volumeM3: volume,
             dosagemKgM3: dosagem,
             cwsAdicionadoKg: cwsAdicionado,
@@ -177,13 +159,10 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
         );
       } else {
         await _repo.criarLancamento(
-          obraId: widget.obraId,
+          obraId: widget.concretagem.obraId,
+          concretagemId: widget.concretagem.id!,
           dataHora: _dataHora,
           caminhao: _betoneiraCtrl.text,
-          estruturaConcretada: _estruturaConcretadaCtrl.text,
-          concreteira: _concreteiraCtrl.text,
-          controleTecnologico: _controleTecnologico,
-          empresaTecnologiaConcreto: empresaTecnologia,
           volumeM3: volume,
           dosagemKgM3: dosagem,
           cwsAdicionadoKg: cwsAdicionado,
@@ -201,8 +180,8 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
         SnackBar(
           content: Text(
             _isEdicao
-                ? 'Concretagem atualizada com sucesso.'
-                : 'Concretagem salva com sucesso.',
+                ? 'Lançamento atualizado com sucesso.'
+                : 'Lançamento salvo com sucesso.',
           ),
         ),
       );
@@ -214,8 +193,8 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
         SnackBar(
           content: Text(
             _isEdicao
-                ? 'Erro ao atualizar concretagem: $e'
-                : 'Erro ao salvar concretagem: $e',
+                ? 'Erro ao atualizar lançamento: $e'
+                : 'Erro ao salvar lançamento: $e',
           ),
         ),
       );
@@ -280,7 +259,9 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
 
   Future<List<String>> _salvarFotosSelecionadas(List<XFile> picked) async {
     await _storage.ensureBaseStructure();
-    final fotosDir = await _storage.lancamentoPhotosDir(widget.obraId);
+    final fotosDir = await _storage.lancamentoPhotosDir(
+      widget.concretagem.obraId,
+    );
     final savedPaths = <String>[];
 
     for (final foto in picked) {
@@ -291,7 +272,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
       final ext = p.extension(foto.path).toLowerCase();
       final safeExt = ext.isEmpty ? '.jpg' : ext;
       final filename =
-          'obra_${widget.obraId}_${now.microsecondsSinceEpoch}_${savedPaths.length}$safeExt';
+          'obra_${widget.concretagem.obraId}_${now.microsecondsSinceEpoch}_${savedPaths.length}$safeExt';
       final target = File(p.join(fotosDir.path, filename));
       await source.copy(target.path);
       savedPaths.add(target.path);
@@ -370,7 +351,8 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
 
   @override
   Widget build(BuildContext context) {
-    final titulo = _isEdicao ? 'Editar Concretagem' : 'Nova Concretagem';
+    final concretagem = widget.concretagem;
+    final titulo = _isEdicao ? 'Editar Lançamento' : 'Novo Lançamento';
     return Scaffold(
       appBar: AppBar(
         title: Text(titulo),
@@ -405,61 +387,13 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 6),
+                      Text(
+                        'Estrutura: ${concretagem.estruturaConcretada.trim().isEmpty ? 'não informada' : concretagem.estruturaConcretada}',
+                      ),
+                      Text(
+                        'Concreteira: ${concretagem.concreteira.trim().isEmpty ? 'não informada' : concretagem.concreteira}',
+                      ),
                       Text('Data/hora: ${_fmtDataHora(_dataHora)}'),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Dados da concretagem',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _estruturaConcretadaCtrl,
-                        decoration: _dec('Estrutura a ser concretada'),
-                        textInputAction: TextInputAction.next,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _concreteiraCtrl,
-                        decoration: _dec('Concreteira'),
-                        textInputAction: TextInputAction.next,
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: _controleTecnologico,
-                        decoration: _dec('Controle tecnologico?'),
-                        items: const [
-                          DropdownMenuItem(value: '', child: Text('')),
-                          DropdownMenuItem(value: 'sim', child: Text('Sim')),
-                          DropdownMenuItem(value: 'nao', child: Text('Nao')),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            _controleTecnologico = value ?? '';
-                            if (!_mostrarEmpresaTecnologia) {
-                              _empresaTecnologiaCtrl.clear();
-                            }
-                          });
-                        },
-                      ),
-                      if (_mostrarEmpresaTecnologia) ...[
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _empresaTecnologiaCtrl,
-                          decoration: _dec('Empresa de tecnologia do concreto'),
-                          textInputAction: TextInputAction.next,
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -656,7 +590,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                 onPressed: _saving ? null : _salvar,
                 icon: const Icon(Icons.save),
                 label: Text(
-                  _isEdicao ? 'Salvar alteracoes' : 'Salvar concretagem',
+                  _isEdicao ? 'Salvar alterações' : 'Salvar lançamento',
                 ),
               ),
             ],
