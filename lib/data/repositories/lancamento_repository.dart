@@ -51,7 +51,10 @@ class LancamentoRepository {
     required int obraId,
     required DateTime dataHora,
     required String caminhao,
+    String estruturaConcretada = '',
     String concreteira = '',
+    String controleTecnologico = '',
+    String empresaTecnologiaConcreto = '',
     required double volumeM3,
     double dosagemKgM3 = 0.80,
     String observacoes = '',
@@ -68,9 +71,7 @@ class LancamentoRepository {
     final volume = _round1(volumeM3);
     final dosagem = _round1(dosagemKgM3);
     final cwsTotal = _round1(volume * dosagem);
-    final cwsAdd = cwsAdicionadoKg == null
-        ? null
-        : _round1(cwsAdicionadoKg);
+    final cwsAdd = cwsAdicionadoKg == null ? null : _round1(cwsAdicionadoKg);
 
     final dosagemAcordo = _calcDosagemDeAcordo(
       volumeM3: volume,
@@ -81,7 +82,10 @@ class LancamentoRepository {
       obraId: obraId,
       dataHora: dataHora,
       caminhao: caminhao.trim(),
+      estruturaConcretada: estruturaConcretada.trim(),
       concreteira: concreteira.trim(),
+      controleTecnologico: controleTecnologico.trim(),
+      empresaTecnologiaConcreto: empresaTecnologiaConcreto.trim(),
       volumeM3: volume,
       dosagemKgM3: dosagem,
       cwsTotalKg: cwsTotal,

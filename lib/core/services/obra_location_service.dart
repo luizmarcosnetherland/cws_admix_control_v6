@@ -72,10 +72,62 @@ class ObraLocationService {
     );
   }
 
-  Future<String> _resolverDescricao(double latitude, double longitude) async {
+  Future<ObraLocationResult> obterLocalizacaoPorEndereco(
+    String endereco,
+  ) async {
+    final enderecoLimpo = endereco.trim();
+    if (enderecoLimpo.isEmpty) {
+      throw const ObraLocationException(
+        'Informe o endereco da obra para gerar a localizacao.',
+      );
+    }
+
+    try {
+      final locations = await locationFromAddress(enderecoLimpo);
+      if (locations.isEmpty) {
+        throw const ObraLocationException(
+          'Nao foi possivel localizar o endereco informado.',
+        );
+      }
+
+      final location = locations.first;
+      final descricao = await _resolverDescricao(
+        location.latitude,
+        location.longitude,
+        fallbackText: enderecoLimpo,
+      );
+
+      return ObraLocationResult(
+        latitude: location.latitude,
+        longitude: location.longitude,
+        descricao: descricao,
+      );
+    } on NoResultFoundException {
+      throw const ObraLocationException(
+        'Nao foi possivel localizar o endereco informado.',
+      );
+    } catch (e) {
+      if (e is ObraLocationException) rethrow;
+      throw ObraLocationException(
+        'Erro ao gerar localizacao a partir do endereco: $e',
+      );
+    }
+  }
+
+  Future<String> _resolverDescricao(
+    double latitude,
+    double longitude, {
+    String? fallbackText,
+  }) async {
     try {
       final placemarks = await placemarkFromCoordinates(latitude, longitude);
-      if (placemarks.isEmpty) return _fallbackDescricao(latitude, longitude);
+      if (placemarks.isEmpty) {
+        return _fallbackDescricao(
+          latitude,
+          longitude,
+          fallbackText: fallbackText,
+        );
+      }
 
       final p = placemarks.first;
       final parts =
@@ -91,15 +143,32 @@ class ObraLocationService {
               .where((e) => e.isNotEmpty)
               .toList();
 
-      if (parts.isEmpty) return _fallbackDescricao(latitude, longitude);
+      if (parts.isEmpty) {
+        return _fallbackDescricao(
+          latitude,
+          longitude,
+          fallbackText: fallbackText,
+        );
+      }
       return parts.join(', ');
     } catch (_) {
-      return _fallbackDescricao(latitude, longitude);
+      return _fallbackDescricao(
+        latitude,
+        longitude,
+        fallbackText: fallbackText,
+      );
     }
   }
 
-  String _fallbackDescricao(double latitude, double longitude) {
-    return 'Lat ${latitude.toStringAsFixed(6)}, Lon ${longitude.toStringAsFixed(6)}';
+  String _fallbackDescricao(
+    double latitude,
+    double longitude, {
+    String? fallbackText,
+  }) {
+    final prefix = fallbackText?.trim().isNotEmpty == true
+        ? '${fallbackText!.trim()} | '
+        : '';
+    return '${prefix}Lat ${latitude.toStringAsFixed(6)}, Lon ${longitude.toStringAsFixed(6)}';
   }
 
   String coordenadasLabel(double latitude, double longitude) {

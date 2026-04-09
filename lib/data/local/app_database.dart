@@ -6,7 +6,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static const _dbName = 'cws_admix_control.db';
-  static const _dbVersion = 11;
+  static const _dbVersion = 12;
 
   Database? _database;
   bool _schemaEnsured = false;
@@ -114,7 +114,10 @@ class AppDatabase {
         obra_id INTEGER NOT NULL,
         data_hora TEXT NOT NULL,
         caminhao TEXT NOT NULL,
+        estrutura_concretada TEXT NOT NULL DEFAULT '',
         concreteira TEXT NOT NULL DEFAULT '',
+        controle_tecnologico TEXT NOT NULL DEFAULT '',
+        empresa_tecnologia_concreto TEXT NOT NULL DEFAULT '',
         volume_m3 REAL NOT NULL,
         dosagem_kg_m3 REAL NOT NULL DEFAULT 0.80,
         cws_total_kg REAL NOT NULL,
@@ -153,6 +156,21 @@ class AppDatabase {
     if (!names.contains('foto_paths')) {
       await db.execute(
         "ALTER TABLE lancamentos ADD COLUMN foto_paths TEXT NOT NULL DEFAULT '[]'",
+      );
+    }
+    if (!names.contains('estrutura_concretada')) {
+      await db.execute(
+        "ALTER TABLE lancamentos ADD COLUMN estrutura_concretada TEXT NOT NULL DEFAULT ''",
+      );
+    }
+    if (!names.contains('controle_tecnologico')) {
+      await db.execute(
+        "ALTER TABLE lancamentos ADD COLUMN controle_tecnologico TEXT NOT NULL DEFAULT ''",
+      );
+    }
+    if (!names.contains('empresa_tecnologia_concreto')) {
+      await db.execute(
+        "ALTER TABLE lancamentos ADD COLUMN empresa_tecnologia_concreto TEXT NOT NULL DEFAULT ''",
       );
     }
   }

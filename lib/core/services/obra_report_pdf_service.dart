@@ -14,18 +14,13 @@ import 'local_storage_service.dart';
 
 class ObraReportPdfService {
   final LocalStorageService _storage = LocalStorageService();
-  static const _lancamentoCardWidth = 168.0;
+  static const _lancamentoCardWidth = 255.0;
   static Future<_PdfLogos>? _logosFuture;
   static Future<_PdfFonts>? _fontsFuture;
 
   Future<String> buildReportPdf({
     required Obra obra,
     required List<Lancamento> lancamentos,
-    required String periodoLabel,
-    required String ordenacaoLabel,
-    String? concreteira,
-    String? betoneira,
-    String? busca,
   }) async {
     if (kIsWeb) {
       throw UnsupportedError(
@@ -36,11 +31,6 @@ class ObraReportPdfService {
     final bytes = await buildReportPdfBytes(
       obra: obra,
       lancamentos: lancamentos,
-      periodoLabel: periodoLabel,
-      ordenacaoLabel: ordenacaoLabel,
-      concreteira: concreteira,
-      betoneira: betoneira,
-      busca: busca,
     );
 
     await _storage.ensureBaseStructure();
@@ -55,11 +45,6 @@ class ObraReportPdfService {
   Future<Uint8List> buildReportPdfBytes({
     required Obra obra,
     required List<Lancamento> lancamentos,
-    required String periodoLabel,
-    required String ordenacaoLabel,
-    String? concreteira,
-    String? betoneira,
-    String? busca,
   }) async {
     final doc = pw.Document();
     final logos = await _loadLogos();
@@ -125,35 +110,44 @@ class ObraReportPdfService {
             style: const pw.TextStyle(fontSize: 10),
           ),
           pw.Divider(),
-          _sectionTitle('Obra'),
-          _kv('Cliente', _fallback(obra.cliente)),
-          _kv('Local', _fallback(obra.local)),
-          _kv('Localizacao da obra', _fallback(obra.localizacaoDescricao)),
-          if (obra.latitude != null && obra.longitude != null)
-            _kv(
-              'Coordenadas',
-              '${obra.latitude!.toStringAsFixed(6)}, ${obra.longitude!.toStringAsFixed(6)}',
-            ),
-          _kv('Responsável', _fallback(obra.responsavel)),
-          _kv('E-mail engenheiro', _fallback(obra.emailEngenheiro)),
-          pw.SizedBox(height: 10),
-          _sectionTitle('Filtros aplicados'),
-          _kv('Período', _pdfSafe(periodoLabel)),
-          _kv('Ordenação', _pdfSafe(ordenacaoLabel)),
-          if (concreteira != null) _kv('Concreteira', _pdfSafe(concreteira)),
-          if (betoneira != null) _kv('Betoneira', _pdfSafe(betoneira)),
-          if (busca != null && busca.trim().isNotEmpty)
-            _kv('Busca', _pdfSafe(busca.trim())),
-          pw.SizedBox(height: 10),
-          _sectionTitle('Resumo'),
-          _kv('Lançamentos', '${lancamentos.length}'),
-          _kv('Volume total', '${_fmtNum(volumeTotal, 1)} m³'),
-          _kv('CWS total', '${_fmtNum(cwsTotal, 1)} kg'),
-          _kv(
-            'Cura úmida recomendada até',
-            curaUmidaAte == null
-                ? '-'
-                : DateFormat('dd/MM/yyyy', 'pt_BR').format(curaUmidaAte),
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Expanded(
+                child: _infoCard('Obra', [
+                  _kv('Cliente', _fallback(obra.cliente)),
+                  _kv('Local', _fallback(obra.local)),
+                  _kv(
+                    'Localizacao da obra',
+                    _fallback(obra.localizacaoDescricao),
+                  ),
+                  if (obra.latitude != null && obra.longitude != null)
+                    _kv(
+                      'Coordenadas',
+                      '${obra.latitude!.toStringAsFixed(6)}, ${obra.longitude!.toStringAsFixed(6)}',
+                    ),
+                  _kv('Responsavel', _fallback(obra.responsavel)),
+                  _kv('E-mail engenheiro', _fallback(obra.emailEngenheiro)),
+                ]),
+              ),
+              pw.SizedBox(width: 12),
+              pw.Expanded(
+                child: _infoCard('Resumo', [
+                  _kv('Lancamentos', '${lancamentos.length}'),
+                  _kv('Volume total', '${_fmtNum(volumeTotal, 1)} m³'),
+                  _kv('CWS total', '${_fmtNum(cwsTotal, 1)} kg'),
+                  _kv(
+                    'Cura umida recomendada ate',
+                    curaUmidaAte == null
+                        ? '-'
+                        : DateFormat(
+                            'dd/MM/yyyy',
+                            'pt_BR',
+                          ).format(curaUmidaAte),
+                  ),
+                ]),
+              ),
+            ],
           ),
           pw.SizedBox(height: 12),
           _sectionTitle('Lançamentos'),
@@ -167,11 +161,6 @@ class ObraReportPdfService {
   Future<void> shareReportPdf({
     required Obra obra,
     required List<Lancamento> lancamentos,
-    required String periodoLabel,
-    required String ordenacaoLabel,
-    String? concreteira,
-    String? betoneira,
-    String? busca,
     Rect? sharePositionOrigin,
   }) async {
     final filename =
@@ -181,11 +170,6 @@ class ObraReportPdfService {
       final bytes = await buildReportPdfBytes(
         obra: obra,
         lancamentos: lancamentos,
-        periodoLabel: periodoLabel,
-        ordenacaoLabel: ordenacaoLabel,
-        concreteira: concreteira,
-        betoneira: betoneira,
-        busca: busca,
       );
 
       await Share.shareXFiles(
@@ -197,15 +181,7 @@ class ObraReportPdfService {
       return;
     }
 
-    final path = await buildReportPdf(
-      obra: obra,
-      lancamentos: lancamentos,
-      periodoLabel: periodoLabel,
-      ordenacaoLabel: ordenacaoLabel,
-      concreteira: concreteira,
-      betoneira: betoneira,
-      busca: busca,
-    );
+    final path = await buildReportPdf(obra: obra, lancamentos: lancamentos);
 
     await Share.shareXFiles(
       [XFile(path, name: filename)],
@@ -221,6 +197,20 @@ class ObraReportPdfService {
       child: pw.Text(
         title,
         style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+      ),
+    );
+  }
+
+  pw.Widget _infoCard(String title, List<pw.Widget> children) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [_sectionTitle(title), ...children],
       ),
     );
   }
@@ -289,8 +279,11 @@ class ObraReportPdfService {
   ) {
     final linhas = <String>[
       'Data/hora: ${DateFormat('dd/MM/yyyy HH:mm', 'pt_BR').format(l.dataHora)}',
+      'Estrutura: ${_fallbackNaoInformada(l.estruturaConcretada)}',
       'Betoneira: ${_fallback(l.caminhao)}',
-      'Concreteira: ${_fallback(l.concreteira)}',
+      'Concreteira: ${_fallbackNaoInformada(l.concreteira)}',
+      'Controle tecnologico: ${_controleTecnologicoLabel(l.controleTecnologico)}',
+      'Empresa tecnologia do concreto: ${_empresaTecnologiaLabel(l)}',
       'NF: ${_fallback(l.notaFiscal)}',
       'Volume: ${_fmtNum(l.volumeM3, 1)} m³',
       'Dosagem: ${_fmtNum(l.dosagemKgM3, 1)} kg/m³',
@@ -415,6 +408,22 @@ class ObraReportPdfService {
   String _fallback(String value) {
     final trimmed = value.trim();
     return trimmed.isEmpty ? '—' : trimmed;
+  }
+
+  String _fallbackNaoInformada(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? 'nao informada' : trimmed;
+  }
+
+  String _controleTecnologicoLabel(String value) {
+    return value.trim().toLowerCase() == 'sim' ? 'Sim' : 'nao informado';
+  }
+
+  String _empresaTecnologiaLabel(Lancamento lancamento) {
+    if (lancamento.controleTecnologico.trim().toLowerCase() != 'sim') {
+      return 'nao informada';
+    }
+    return _fallbackNaoInformada(lancamento.empresaTecnologiaConcreto);
   }
 
   String _fmtNum(double value, int casas) {

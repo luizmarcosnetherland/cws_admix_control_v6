@@ -13,8 +13,13 @@ class CwsCalculatorPage extends StatefulWidget {
 class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
   static const _cotacaoEmail = 'luizmarcos@netherland.com.br';
   static const _cotacaoWhatsapp = '5541999731741';
-  final _volumeCtrl = TextEditingController(text: '10');
+  final _volumeCtrl = TextEditingController();
   final _cementCtrl = TextEditingController(text: '350');
+  final _enderecoEntregaCtrl = TextEditingController();
+  final _cidadeCtrl = TextEditingController();
+  final _estadoCtrl = TextEditingController();
+  final _empresaCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   late final Listenable _inputsListenable;
 
   double get volume =>
@@ -33,6 +38,11 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
         decimalDigits: casas,
       ).format(value);
 
+  String _campoCotacao(String label, String value) {
+    final texto = value.trim();
+    return '$label: ${texto.isEmpty ? 'Nao informado' : texto}';
+  }
+
   String get _mensagemCotacao => [
     'Olá, gostaria de solicitar uma cotação do CWS Admix.',
     '',
@@ -42,6 +52,12 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
     'Quantidade necessária: ${fmt(totalKg, casas: 1)} kg',
     'Sacos de 6,4 kg: $bags',
     'Quantidade para compra: ${fmt(providedKg, casas: 1)} kg',
+    '',
+    _campoCotacao('Endereco de entrega', _enderecoEntregaCtrl.text),
+    _campoCotacao('Cidade', _cidadeCtrl.text),
+    _campoCotacao('Estado', _estadoCtrl.text),
+    _campoCotacao('Empresa', _empresaCtrl.text),
+    _campoCotacao('E-mail', _emailCtrl.text),
   ].join('\n');
 
   Future<void> _solicitarCotacaoEmail() async {
@@ -146,6 +162,11 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
   void dispose() {
     _volumeCtrl.dispose();
     _cementCtrl.dispose();
+    _enderecoEntregaCtrl.dispose();
+    _cidadeCtrl.dispose();
+    _estadoCtrl.dispose();
+    _empresaCtrl.dispose();
+    _emailCtrl.dispose();
     super.dispose();
   }
 
@@ -193,6 +214,25 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
                     _cementCtrl,
                     'Consumo de cimento (kg/m³)',
                     keyboard: TextInputType.number,
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Dados para cotacao',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 12),
+                  _field(
+                    _enderecoEntregaCtrl,
+                    'Endereco de entrega',
+                    keyboard: TextInputType.streetAddress,
+                  ),
+                  _field(_cidadeCtrl, 'Cidade', keyboard: TextInputType.text),
+                  _field(_estadoCtrl, 'Estado', keyboard: TextInputType.text),
+                  _field(_empresaCtrl, 'Empresa', keyboard: TextInputType.text),
+                  _field(
+                    _emailCtrl,
+                    'E-mail',
+                    keyboard: TextInputType.emailAddress,
                   ),
                 ],
               ),

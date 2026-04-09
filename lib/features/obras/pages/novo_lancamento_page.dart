@@ -30,8 +30,10 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
   final _storage = LocalStorageService();
   final _imagePicker = ImagePicker();
 
+  final _estruturaConcretadaCtrl = TextEditingController();
   final _betoneiraCtrl = TextEditingController();
   final _concreteiraCtrl = TextEditingController();
+  final _empresaTecnologiaCtrl = TextEditingController();
   final _notaFiscalCtrl = TextEditingController();
 
   final _volumeCtrl = TextEditingController();
@@ -49,8 +51,10 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
   late final Listenable _previewListenable;
   bool _saving = false;
   bool _pickingFotos = false;
+  String _controleTecnologico = '';
 
   bool get _isEdicao => widget.lancamento != null;
+  bool get _mostrarEmpresaTecnologia => _controleTecnologico == 'sim';
 
   @override
   void initState() {
@@ -59,9 +63,12 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     final l = widget.lancamento;
     _dataHora = l?.dataHora ?? DateTime.now();
 
+    _estruturaConcretadaCtrl.text = l?.estruturaConcretada ?? '';
     _betoneiraCtrl.text = l?.caminhao ?? '';
     _concreteiraCtrl.text = l?.concreteira ?? '';
+    _empresaTecnologiaCtrl.text = l?.empresaTecnologiaConcreto ?? '';
     _notaFiscalCtrl.text = l?.notaFiscal ?? '';
+    _controleTecnologico = l?.controleTecnologico ?? '';
 
     _volumeCtrl.text = _formatInitialDecimal(l?.volumeM3);
     _dosagemCtrl.text = _formatInitialDecimal(l?.dosagemKgM3, fallback: '0,8');
@@ -81,8 +88,10 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
 
   @override
   void dispose() {
+    _estruturaConcretadaCtrl.dispose();
     _betoneiraCtrl.dispose();
     _concreteiraCtrl.dispose();
+    _empresaTecnologiaCtrl.dispose();
     _notaFiscalCtrl.dispose();
     _volumeCtrl.dispose();
     _dosagemCtrl.dispose();
@@ -138,6 +147,9 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     final slumpDepois = _parseNumero(_slumpDepoisCtrl.text);
     final tempoMistura = _parseNumero(_tempoMisturaCtrl.text);
     final cwsAdicionado = _parseNumero(_cwsAdicionadoCtrl.text);
+    final empresaTecnologia = _mostrarEmpresaTecnologia
+        ? _empresaTecnologiaCtrl.text.trim()
+        : '';
 
     setState(() => _saving = true);
 
@@ -148,7 +160,10 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
           original.copyWith(
             dataHora: _dataHora,
             caminhao: _betoneiraCtrl.text.trim(),
+            estruturaConcretada: _estruturaConcretadaCtrl.text.trim(),
             concreteira: _concreteiraCtrl.text.trim(),
+            controleTecnologico: _controleTecnologico,
+            empresaTecnologiaConcreto: empresaTecnologia,
             volumeM3: volume,
             dosagemKgM3: dosagem,
             cwsAdicionadoKg: cwsAdicionado,
@@ -165,7 +180,10 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
           obraId: widget.obraId,
           dataHora: _dataHora,
           caminhao: _betoneiraCtrl.text,
+          estruturaConcretada: _estruturaConcretadaCtrl.text,
           concreteira: _concreteiraCtrl.text,
+          controleTecnologico: _controleTecnologico,
+          empresaTecnologiaConcreto: empresaTecnologia,
           volumeM3: volume,
           dosagemKgM3: dosagem,
           cwsAdicionadoKg: cwsAdicionado,
@@ -183,8 +201,8 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
         SnackBar(
           content: Text(
             _isEdicao
-                ? 'Lançamento atualizado com sucesso.'
-                : 'Lançamento salvo com sucesso.',
+                ? 'Concretagem atualizada com sucesso.'
+                : 'Concretagem salva com sucesso.',
           ),
         ),
       );
@@ -196,8 +214,8 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
         SnackBar(
           content: Text(
             _isEdicao
-                ? 'Erro ao atualizar lançamento: $e'
-                : 'Erro ao salvar lançamento: $e',
+                ? 'Erro ao atualizar concretagem: $e'
+                : 'Erro ao salvar concretagem: $e',
           ),
         ),
       );
@@ -295,7 +313,9 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
         final cwsAddPreview = _parseNumero(_cwsAdicionadoCtrl.text);
         final cwsPreview = _cwsPreview;
         int? dosagemOk;
-        if (cwsAddPreview != null && _volumePreview > 0 && _dosagemPreview > 0) {
+        if (cwsAddPreview != null &&
+            _volumePreview > 0 &&
+            _dosagemPreview > 0) {
           final diff = (cwsAddPreview - cwsPreview).abs();
           final tol2pct = cwsPreview * 0.02;
           final tol = tol2pct < 0.2 ? 0.2 : tol2pct;
@@ -336,8 +356,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
-                      if (dosagemOk != null)
-                        Text(dosagemOk == 1 ? '✅' : '⚠️'),
+                      if (dosagemOk != null) Text(dosagemOk == 1 ? '✅' : '⚠️'),
                     ],
                   ),
                 ),
@@ -351,7 +370,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
 
   @override
   Widget build(BuildContext context) {
-    final titulo = _isEdicao ? 'Editar Lançamento' : 'Novo Lançamento';
+    final titulo = _isEdicao ? 'Editar Concretagem' : 'Nova Concretagem';
     return Scaffold(
       appBar: AppBar(
         title: Text(titulo),
@@ -393,6 +412,60 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
               ),
               const SizedBox(height: 12),
 
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Dados da concretagem',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _estruturaConcretadaCtrl,
+                        decoration: _dec('Estrutura a ser concretada'),
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _concreteiraCtrl,
+                        decoration: _dec('Concreteira'),
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        initialValue: _controleTecnologico,
+                        decoration: _dec('Controle tecnologico?'),
+                        items: const [
+                          DropdownMenuItem(value: '', child: Text('')),
+                          DropdownMenuItem(value: 'sim', child: Text('Sim')),
+                          DropdownMenuItem(value: 'nao', child: Text('Nao')),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _controleTecnologico = value ?? '';
+                            if (!_mostrarEmpresaTecnologia) {
+                              _empresaTecnologiaCtrl.clear();
+                            }
+                          });
+                        },
+                      ),
+                      if (_mostrarEmpresaTecnologia) ...[
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _empresaTecnologiaCtrl,
+                          decoration: _dec('Empresa de tecnologia do concreto'),
+                          textInputAction: TextInputAction.next,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
               TextFormField(
                 controller: _betoneiraCtrl,
                 decoration: _dec('Betoneira * (nº/placa)'),
@@ -406,13 +479,6 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
               TextFormField(
                 controller: _notaFiscalCtrl,
                 decoration: _dec('Nota fiscal (NF)'),
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 12),
-
-              TextFormField(
-                controller: _concreteiraCtrl,
-                decoration: _dec('Concreteira'),
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 12),
@@ -590,7 +656,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                 onPressed: _saving ? null : _salvar,
                 icon: const Icon(Icons.save),
                 label: Text(
-                  _isEdicao ? 'Salvar alterações' : 'Salvar lançamento',
+                  _isEdicao ? 'Salvar alteracoes' : 'Salvar concretagem',
                 ),
               ),
             ],

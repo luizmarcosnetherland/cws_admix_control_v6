@@ -8,7 +8,10 @@ class Lancamento {
   /// Vamos usar como "Betoneira (nº/placa)" na UI, mantendo o nome antigo no banco.
   final String caminhao;
 
+  final String estruturaConcretada;
   final String concreteira;
+  final String controleTecnologico;
+  final String empresaTecnologiaConcreto;
   final double volumeM3;
   final double dosagemKgM3;
   final double cwsTotalKg;
@@ -30,7 +33,10 @@ class Lancamento {
     required this.obraId,
     required this.dataHora,
     required this.caminhao,
+    this.estruturaConcretada = '',
     this.concreteira = '',
+    this.controleTecnologico = '',
+    this.empresaTecnologiaConcreto = '',
     required this.volumeM3,
     this.dosagemKgM3 = 0.80,
     required this.cwsTotalKg,
@@ -51,7 +57,10 @@ class Lancamento {
     int? obraId,
     DateTime? dataHora,
     String? caminhao,
+    String? estruturaConcretada,
     String? concreteira,
+    String? controleTecnologico,
+    String? empresaTecnologiaConcreto,
     double? volumeM3,
     double? dosagemKgM3,
     double? cwsTotalKg,
@@ -71,7 +80,11 @@ class Lancamento {
       obraId: obraId ?? this.obraId,
       dataHora: dataHora ?? this.dataHora,
       caminhao: caminhao ?? this.caminhao,
+      estruturaConcretada: estruturaConcretada ?? this.estruturaConcretada,
       concreteira: concreteira ?? this.concreteira,
+      controleTecnologico: controleTecnologico ?? this.controleTecnologico,
+      empresaTecnologiaConcreto:
+          empresaTecnologiaConcreto ?? this.empresaTecnologiaConcreto,
       volumeM3: volumeM3 ?? this.volumeM3,
       dosagemKgM3: dosagemKgM3 ?? this.dosagemKgM3,
       cwsTotalKg: cwsTotalKg ?? this.cwsTotalKg,
@@ -94,7 +107,10 @@ class Lancamento {
       'obra_id': obraId,
       'data_hora': dataHora.toIso8601String(),
       'caminhao': caminhao,
+      'estrutura_concretada': estruturaConcretada,
       'concreteira': concreteira,
+      'controle_tecnologico': controleTecnologico,
+      'empresa_tecnologia_concreto': empresaTecnologiaConcreto,
       'volume_m3': volumeM3,
       'dosagem_kg_m3': dosagemKgM3,
       'cws_total_kg': cwsTotalKg,
@@ -117,7 +133,11 @@ class Lancamento {
       obraId: map['obra_id'] as int,
       dataHora: DateTime.parse(map['data_hora'] as String),
       caminhao: (map['caminhao'] ?? '') as String,
+      estruturaConcretada: (map['estrutura_concretada'] ?? '') as String,
       concreteira: (map['concreteira'] ?? '') as String,
+      controleTecnologico: (map['controle_tecnologico'] ?? '') as String,
+      empresaTecnologiaConcreto:
+          (map['empresa_tecnologia_concreto'] ?? '') as String,
       volumeM3: (map['volume_m3'] as num).toDouble(),
       dosagemKgM3: (map['dosagem_kg_m3'] as num).toDouble(),
       cwsTotalKg: (map['cws_total_kg'] as num).toDouble(),

@@ -43,8 +43,11 @@ class CsvExportService {
       'Longitude',
       'Responsável',
       'Data/Hora',
+      'Estrutura concretada',
       'Betoneira (nº/placa)',
       'Concreteira',
+      'Controle tecnologico',
+      'Empresa tecnologia do concreto',
       'NF',
       'Slump antes (cm)',
       'Slump depois (cm)',
@@ -67,8 +70,15 @@ class CsvExportService {
         obra.longitude == null ? '' : _fmtNum(obra.longitude!, casas: 6),
         obra.responsavel,
         _fmtDataHora(l.dataHora),
+        l.estruturaConcretada,
         l.caminhao,
         l.concreteira,
+        l.controleTecnologico.trim().toLowerCase() == 'sim'
+            ? 'Sim'
+            : 'Nao informado',
+        l.controleTecnologico.trim().toLowerCase() == 'sim'
+            ? l.empresaTecnologiaConcreto
+            : 'Nao informada',
         l.notaFiscal,
         l.slumpAntes == null ? '' : _fmtNum(l.slumpAntes!, casas: 1),
         l.slumpDepois == null ? '' : _fmtNum(l.slumpDepois!, casas: 1),

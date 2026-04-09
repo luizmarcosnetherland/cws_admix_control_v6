@@ -176,7 +176,9 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
     if (q.isEmpty) return true;
     final hay = [
       l.caminhao,
+      l.estruturaConcretada,
       l.concreteira,
+      l.empresaTecnologiaConcreto,
       l.notaFiscal,
       l.observacoes,
     ].join(' ');
@@ -420,11 +422,6 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
       await _obraPdf.shareReportPdf(
         obra: _obraAtual,
         lancamentos: _filtrado,
-        periodoLabel: _labelPeriodo(),
-        ordenacaoLabel: _labelOrdenacao(),
-        concreteira: _filtroConcreteira,
-        betoneira: _filtroBetoneira,
-        busca: _buscaCtrl.text.trim(),
         sharePositionOrigin: _shareOrigin(),
       );
     } catch (e) {
@@ -450,14 +447,13 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
     }
 
     try {
-      final csvPath = await _csv.exportLancamentosToDownloads(
+      final pdfPath = await _obraPdf.buildReportPdf(
         obra: _obraAtual,
         lancamentos: _filtrado,
-        exportLabel: _exportLabelAtual(),
       );
       final assunto = 'Relatório da obra ${_obraAtual.nome}';
       final body = [
-        'Segue em anexo o relatório CSV da obra ${_obraAtual.nome}.',
+        'Segue em anexo o relatório em PDF da obra ${_obraAtual.nome}.',
         '',
         'Quantidade de lançamentos: ${_filtrado.length}',
         'Volume total: ${_fmtNum(_resumo.volumeTotalM3, casas: 1)} m3',
@@ -468,7 +464,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         recipients: [emailDestino],
         subject: assunto,
         body: body,
-        attachmentPaths: [csvPath],
+        attachmentPaths: [pdfPath],
         sharePositionOrigin: _shareOrigin(),
       );
 
@@ -934,7 +930,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
               ),
               SizedBox(height: 4),
               Text(
-                'Ajuste o período/filtros ou adicione um novo lançamento.',
+                'Ajuste o período/filtros ou adicione uma nova concretagem.',
                 textAlign: TextAlign.center,
               ),
             ],
@@ -964,8 +960,14 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(_fmtDataHora(l.dataHora)),
+                if (l.estruturaConcretada.isNotEmpty)
+                  Text('Estrutura: ${l.estruturaConcretada}'),
                 if (l.concreteira.isNotEmpty)
                   Text('Concreteira: ${l.concreteira}'),
+                if (l.controleTecnologico.trim().toLowerCase() == 'sim')
+                  Text('Controle tecnologico: Sim'),
+                if (l.empresaTecnologiaConcreto.isNotEmpty)
+                  Text('Empresa tecnologia: ${l.empresaTecnologiaConcreto}'),
                 if (l.notaFiscal.isNotEmpty) Text('NF: ${l.notaFiscal}'),
                 if (l.slumpAntes != null)
                   Text('Slump antes: ${_fmtNum(l.slumpAntes!, casas: 1)} cm'),
@@ -1084,7 +1086,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
           child: FilledButton.icon(
             onPressed: _abrirNovoLancamento,
             icon: const Icon(Icons.add),
-            label: const Text('Novo Lançamento'),
+            label: const Text('Nova Concretagem'),
           ),
         ),
       ),

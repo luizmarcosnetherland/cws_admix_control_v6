@@ -116,6 +116,56 @@ class _NovaObraPageState extends State<NovaObraPage> {
     }
   }
 
+  Future<bool> _gerarLocalizacaoPeloEndereco({bool showFeedback = true}) async {
+    final endereco = _localCtrl.text.trim();
+    if (endereco.isEmpty) {
+      if (showFeedback && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Informe o endereco da obra para gerar a localizacao.',
+            ),
+          ),
+        );
+      }
+      return false;
+    }
+
+    if (_loadingLocation || _saving) return false;
+    setState(() => _loadingLocation = true);
+
+    try {
+      final result = await _locationService.obterLocalizacaoPorEndereco(
+        endereco,
+      );
+      if (!mounted) return false;
+      setState(() {
+        _latitude = result.latitude;
+        _longitude = result.longitude;
+        _localizacaoCtrl.text = result.descricao;
+      });
+      return true;
+    } on ObraLocationException catch (e) {
+      if (!mounted) return false;
+      if (showFeedback) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+      return false;
+    } catch (e) {
+      if (!mounted) return false;
+      if (showFeedback) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao localizar endereco: $e')),
+        );
+      }
+      return false;
+    } finally {
+      if (mounted) setState(() => _loadingLocation = false);
+    }
+  }
+
   void _limparLocalizacao() {
     setState(() {
       _latitude = null;
@@ -128,10 +178,31 @@ class _NovaObraPageState extends State<NovaObraPage> {
     if (_saving) return;
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _saving = true);
-
     try {
       final nome = _nomeCtrl.text.trim();
+      final endereco = _localCtrl.text.trim();
+
+      if (endereco.isNotEmpty &&
+          (_latitude == null ||
+              _longitude == null ||
+              _localizacaoCtrl.text.trim().isEmpty)) {
+        final localizacaoOk = await _gerarLocalizacaoPeloEndereco(
+          showFeedback: false,
+        );
+        if (!localizacaoOk) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Nao foi possivel gerar a localizacao pelo endereco. Revise o endereco ou use a localizacao atual.',
+              ),
+            ),
+          );
+          return;
+        }
+      }
+
+      setState(() => _saving = true);
 
       final existe = await _repo.nomeJaExiste(nome);
       if (existe) {
@@ -222,8 +293,11 @@ class _NovaObraPageState extends State<NovaObraPage> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _localCtrl,
-                decoration: _dec('Local'),
+                decoration: _dec('Endereco da obra'),
                 textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) {
+                  _gerarLocalizacaoPeloEndereco(showFeedback: false);
+                },
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -250,9 +324,10 @@ class _NovaObraPageState extends State<NovaObraPage> {
               TextFormField(
                 controller: _localizacaoCtrl,
                 readOnly: true,
-                decoration: _dec(
-                  'Localizacao da obra',
-                ).copyWith(hintText: 'Use a localizacao atual do aparelho'),
+                decoration: _dec('Localizacao da obra').copyWith(
+                  hintText:
+                      'Gere pelo endereco digitado ou use a localizacao atual',
+                ),
                 minLines: 2,
                 maxLines: 3,
               ),
@@ -278,18 +353,29 @@ class _NovaObraPageState extends State<NovaObraPage> {
                       ),
                     ),
                   ),
-                  if (_localizacaoCtrl.text.trim().isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    IconButton(
-                      tooltip: 'Limpar localizacao',
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
                       onPressed: (_saving || _loadingLocation)
                           ? null
-                          : _limparLocalizacao,
-                      icon: const Icon(Icons.delete_outline),
+                          : () => _gerarLocalizacaoPeloEndereco(),
+                      icon: const Icon(Icons.pin_drop_outlined),
+                      label: const Text('Gerar pelo endereco'),
                     ),
-                  ],
+                  ),
                 ],
               ),
+              if (_localizacaoCtrl.text.trim().isNotEmpty)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    tooltip: 'Limpar localizacao',
+                    onPressed: (_saving || _loadingLocation)
+                        ? null
+                        : _limparLocalizacao,
+                    icon: const Icon(Icons.delete_outline),
+                  ),
+                ),
               if (_coordenadasLabel != null) ...[
                 const SizedBox(height: 6),
                 Text(
