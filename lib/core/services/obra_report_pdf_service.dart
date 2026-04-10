@@ -16,7 +16,6 @@ import 'local_storage_service.dart';
 class ObraReportPdfService {
   final LocalStorageService _storage = LocalStorageService();
   static const _lancamentoCardWidth = 255.0;
-  static const _concretagemCardWidth = 255.0;
   static Future<_PdfLogos>? _logosFuture;
   static Future<_PdfFonts>? _fontsFuture;
 
@@ -61,11 +60,10 @@ class ObraReportPdfService {
     final lancamentosPorConcretagem = _groupLancamentosByConcretagem(
       lancamentos,
     );
-    final concretagemCards = _buildConcretagemCards(
+    final concretagemSections = await _buildConcretagemSections(
       concretagensNormalizadas,
       lancamentosPorConcretagem,
     );
-    final lancamentoCards = await _buildLancamentoCards(lancamentos);
     final generatedAt = DateTime.now();
     final generatedAtLabel = DateFormat(
       'dd/MM/yyyy HH:mm',
@@ -90,6 +88,11 @@ class ObraReportPdfService {
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(24),
         theme: pw.ThemeData.withFont(base: fonts.regular, bold: fonts.bold),
+        header: (_) => _pageHeader(
+          logos: logos,
+          obra: obra,
+          generatedAtLabel: generatedAtLabel,
+        ),
         footer: (context) => pw.Padding(
           padding: const pw.EdgeInsets.only(top: 8),
           child: pw.Row(
@@ -107,25 +110,6 @@ class ObraReportPdfService {
           ),
         ),
         build: (_) => [
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              if (logos.netherland != null)
-                pw.Image(logos.netherland!, height: 34),
-              if (logos.cws != null) pw.Image(logos.cws!, height: 34),
-            ],
-          ),
-          pw.SizedBox(height: 12),
-          pw.Text(
-            'Relatório da obra ${obra.nome}',
-            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
-          ),
-          pw.SizedBox(height: 4),
-          pw.Text(
-            'Gerado em $generatedAtLabel',
-            style: const pw.TextStyle(fontSize: 10),
-          ),
-          pw.Divider(),
           pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
@@ -169,21 +153,49 @@ class ObraReportPdfService {
             ],
           ),
           pw.SizedBox(height: 12),
-          _sectionTitle('Concretagens'),
-          if (concretagemCards.isEmpty)
+          _sectionTitle('Concretagens e lançamentos'),
+          if (concretagemSections.isEmpty)
             _emptySectionCard('Nenhuma concretagem cadastrada.')
           else
-            pw.Wrap(spacing: 8, runSpacing: 8, children: concretagemCards),
-          pw.SizedBox(height: 12),
-          _sectionTitle('Lançamentos'),
-          if (lancamentoCards.isEmpty)
-            _emptySectionCard('Nenhum lançamento cadastrado.')
-          else
-            pw.Wrap(spacing: 8, runSpacing: 8, children: lancamentoCards),
+            ..._withVerticalSpacing(concretagemSections, spacing: 12),
         ],
       ),
     );
     return Uint8List.fromList(await doc.save());
+  }
+
+  pw.Widget _pageHeader({
+    required _PdfLogos logos,
+    required Obra obra,
+    required String generatedAtLabel,
+  }) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            if (logos.netherland != null)
+              pw.Image(logos.netherland!, height: 34)
+            else
+              pw.SizedBox(),
+            if (logos.cws != null) pw.Image(logos.cws!, height: 34),
+          ],
+        ),
+        pw.SizedBox(height: 12),
+        pw.Text(
+          _pdfSafe('Relatório da obra ${obra.nome}'),
+          style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          _pdfSafe('Gerado em $generatedAtLabel'),
+          style: const pw.TextStyle(fontSize: 10),
+        ),
+        pw.Divider(),
+        pw.SizedBox(height: 6),
+      ],
+    );
   }
 
   Future<void> shareReportPdf({
@@ -237,6 +249,7 @@ class ObraReportPdfService {
 
   pw.Widget _infoCard(String title, List<pw.Widget> children) {
     return pw.Container(
+      width: double.infinity,
       padding: const pw.EdgeInsets.all(10),
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.grey300),
@@ -329,86 +342,95 @@ class ObraReportPdfService {
     return derivadas.values.toList(growable: false);
   }
 
-  List<pw.Widget> _buildConcretagemCards(
+  Future<List<pw.Widget>> _buildConcretagemSections(
     List<Concretagem> concretagens,
     Map<int, List<Lancamento>> lancamentosPorConcretagem,
-  ) {
-    return concretagens
-        .map((concretagem) {
-          final lancamentos =
-              lancamentosPorConcretagem[concretagem.id] ?? const [];
-          final volumeTotal = lancamentos.fold<double>(
-            0,
-            (total, item) => total + item.volumeM3,
-          );
-          final cwsTotal = lancamentos.fold<double>(
-            0,
-            (total, item) => total + item.cwsTotalKg,
-          );
-          final ultimoLancamento = lancamentos.isEmpty
-              ? null
-              : lancamentos
-                    .map((item) => item.dataHora)
-                    .reduce((a, b) => a.isAfter(b) ? a : b);
+  ) async {
+    final sections = <pw.Widget>[];
+    for (var index = 0; index < concretagens.length; index++) {
+      final concretagem = concretagens[index];
+      final lancamentos =
+          lancamentosPorConcretagem[concretagem.id] ?? const <Lancamento>[];
+      final lancamentoCards = await _buildLancamentoCards(lancamentos);
 
-          return pw.SizedBox(
-            width: _concretagemCardWidth,
-            child: pw.Container(
-              padding: const pw.EdgeInsets.all(8),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.grey300),
-                borderRadius: pw.BorderRadius.circular(8),
-              ),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text(
-                    _pdfSafe(
-                      concretagem.estruturaConcretada.trim().isEmpty
-                          ? 'Estrutura nao informada'
-                          : concretagem.estruturaConcretada.trim(),
-                    ),
-                    style: pw.TextStyle(
-                      fontSize: 10,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    'Concreteira: ${_fallbackNaoInformada(concretagem.concreteira)}',
-                    style: const pw.TextStyle(fontSize: 9),
-                  ),
-                  pw.Text(
-                    'Controle tecnologico: ${_controleTecnologicoLabel(concretagem.controleTecnologico)}',
-                    style: const pw.TextStyle(fontSize: 9),
-                  ),
-                  pw.Text(
-                    'Empresa tecnologia do concreto: ${_empresaTecnologiaLabelConcretagem(concretagem)}',
-                    style: const pw.TextStyle(fontSize: 9),
-                  ),
-                  pw.Text(
-                    'Lancamentos: ${lancamentos.length}',
-                    style: const pw.TextStyle(fontSize: 9),
-                  ),
-                  pw.Text(
-                    'Volume total: ${_fmtNum(volumeTotal, 1)} m³',
-                    style: const pw.TextStyle(fontSize: 9),
-                  ),
-                  pw.Text(
-                    'CWS total: ${_fmtNum(cwsTotal, 1)} kg',
-                    style: const pw.TextStyle(fontSize: 9),
-                  ),
-                  if (ultimoLancamento != null)
-                    pw.Text(
-                      'Ultimo lancamento: ${DateFormat('dd/MM/yyyy HH:mm', 'pt_BR').format(ultimoLancamento)}',
-                      style: const pw.TextStyle(fontSize: 9),
-                    ),
-                ],
+      sections.add(
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            _buildConcretagemCard(
+              concretagem: concretagem,
+              lancamentos: lancamentos,
+              index: index,
+            ),
+            pw.SizedBox(height: 8),
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 2, bottom: 6),
+              child: pw.Text(
+                'Lançamentos desta concretagem',
+                style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                ),
               ),
             ),
-          );
-        })
-        .toList(growable: false);
+            if (lancamentoCards.isEmpty)
+              _emptySectionCard(
+                'Nenhum lançamento cadastrado nesta concretagem.',
+              )
+            else
+              pw.Wrap(spacing: 8, runSpacing: 8, children: lancamentoCards),
+          ],
+        ),
+      );
+    }
+    return sections;
+  }
+
+  pw.Widget _buildConcretagemCard({
+    required Concretagem concretagem,
+    required List<Lancamento> lancamentos,
+    required int index,
+  }) {
+    final volumeTotal = lancamentos.fold<double>(
+      0,
+      (total, item) => total + item.volumeM3,
+    );
+    final cwsTotal = lancamentos.fold<double>(
+      0,
+      (total, item) => total + item.cwsTotalKg,
+    );
+    final ultimoLancamento = lancamentos.isEmpty
+        ? null
+        : lancamentos
+              .map((item) => item.dataHora)
+              .reduce((a, b) => a.isAfter(b) ? a : b);
+
+    return _infoCard('Concretagem ${index + 1}', [
+      _kv(
+        'Estrutura',
+        concretagem.estruturaConcretada.trim().isEmpty
+            ? 'nao informada'
+            : concretagem.estruturaConcretada.trim(),
+      ),
+      _kv('Concreteira', _fallbackNaoInformada(concretagem.concreteira)),
+      _kv(
+        'Controle tecnologico',
+        _controleTecnologicoLabel(concretagem.controleTecnologico),
+      ),
+      _kv(
+        'Empresa tecnologia',
+        _empresaTecnologiaLabelConcretagem(concretagem),
+      ),
+      _kv('Lancamentos', '${lancamentos.length}'),
+      _kv('Volume total', '${_fmtNum(volumeTotal, 1)} m³'),
+      _kv('CWS total', '${_fmtNum(cwsTotal, 1)} kg'),
+      _kv(
+        'Ultimo lancamento',
+        ultimoLancamento == null
+            ? '-'
+            : DateFormat('dd/MM/yyyy HH:mm', 'pt_BR').format(ultimoLancamento),
+      ),
+    ]);
   }
 
   Future<List<pw.Widget>> _buildLancamentoCards(
@@ -526,6 +548,20 @@ class ObraReportPdfService {
       ),
     );
     return widgets;
+  }
+
+  List<pw.Widget> _withVerticalSpacing(
+    List<pw.Widget> widgets, {
+    required double spacing,
+  }) {
+    final items = <pw.Widget>[];
+    for (var index = 0; index < widgets.length; index++) {
+      if (index > 0) {
+        items.add(pw.SizedBox(height: spacing));
+      }
+      items.add(widgets[index]);
+    }
+    return items;
   }
 
   Future<_PdfLogos> _loadLogos() async {
