@@ -403,13 +403,14 @@ class HomePage extends StatelessWidget {
     required Color accentColor,
     required VoidCallback onTap,
     bool compact = false,
+    double? bottomSpacing,
   }) {
     const surfaceColor = Color(0xFFFFFFFF);
     const textColor = Color(0xFF1C2430);
     const subtitleColor = Color(0xFF556273);
 
     return Padding(
-      padding: EdgeInsets.only(bottom: compact ? 10 : 12),
+      padding: EdgeInsets.only(bottom: bottomSpacing ?? (compact ? 10 : 12)),
       child: Semantics(
         button: true,
         label: '$title. $subtitle',
@@ -516,6 +517,84 @@ class HomePage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _primaryQuickAccessRow({
+    required BuildContext context,
+    required bool compact,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useTwoColumns = constraints.maxWidth >= 360;
+        final rowSpacing = compact ? 10.0 : 12.0;
+        final cardCompact = compact || constraints.maxWidth < 560;
+
+        if (!useTwoColumns) {
+          return Column(
+            children: [
+              _menuButton(
+                context: context,
+                title: 'Calculadora CWS',
+                subtitle:
+                    'Calcule a quantidade de aditivo para sua concretagem e solicite uma cotação.',
+                icon: Icons.calculate,
+                accentColor: const Color(0xFF2B63A7),
+                onTap: () => _openCalculator(context),
+                compact: compact,
+              ),
+              _menuButton(
+                context: context,
+                title: 'Obras',
+                subtitle:
+                    'Cadastre sua obra, controle sua concretagem e gere relatórios locais em PDF ou CSV.',
+                icon: Icons.apartment,
+                accentColor: const Color(0xFF1B7A73),
+                onTap: () => _openObras(context),
+                compact: compact,
+              ),
+            ],
+          );
+        }
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: rowSpacing),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _menuButton(
+                    context: context,
+                    title: 'Calculadora CWS',
+                    subtitle:
+                        'Calcule a quantidade de aditivo para sua concretagem e solicite uma cotação.',
+                    icon: Icons.calculate,
+                    accentColor: const Color(0xFF2B63A7),
+                    onTap: () => _openCalculator(context),
+                    compact: cardCompact,
+                    bottomSpacing: 0,
+                  ),
+                ),
+                SizedBox(width: rowSpacing),
+                Expanded(
+                  child: _menuButton(
+                    context: context,
+                    title: 'Obras',
+                    subtitle:
+                        'Cadastre sua obra, controle sua concretagem e gere relatórios locais em PDF ou CSV.',
+                    icon: Icons.apartment,
+                    accentColor: const Color(0xFF1B7A73),
+                    onTap: () => _openObras(context),
+                    compact: cardCompact,
+                    bottomSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -634,26 +713,7 @@ class HomePage extends StatelessWidget {
           _brandingWatermark(compact: isCompactDashboard),
           SizedBox(height: isCompactDashboard ? 12 : 18),
           _quickAccessIntro(compact: isCompactDashboard),
-          _menuButton(
-            context: context,
-            title: 'Calculadora CWS',
-            subtitle:
-                'Calcule a quantidade de aditivo para sua concretagem e solicite uma cotação.',
-            icon: Icons.calculate,
-            accentColor: const Color(0xFF2B63A7),
-            onTap: () => _openCalculator(context),
-            compact: isCompactDashboard,
-          ),
-          _menuButton(
-            context: context,
-            title: 'Obras',
-            subtitle:
-                'Cadastre sua obra, controle sua concretagem e gere relatórios locais em PDF ou CSV.',
-            icon: Icons.apartment,
-            accentColor: const Color(0xFF1B7A73),
-            onTap: () => _openObras(context),
-            compact: isCompactDashboard,
-          ),
+          _primaryQuickAccessRow(context: context, compact: isCompactDashboard),
           _menuButton(
             context: context,
             title: 'Literatura técnica',
