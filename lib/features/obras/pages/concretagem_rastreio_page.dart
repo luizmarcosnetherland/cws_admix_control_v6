@@ -13,6 +13,8 @@ import '../../../data/repositories/concretagem_repository.dart';
 
 enum _ModoRastreio { spray, navegar }
 
+enum _AcaoSaidaRastreio { cancelar, descartar, salvar }
+
 class ConcretagemRastreioPage extends StatefulWidget {
   final String obraNome;
   final Concretagem concretagem;
@@ -48,6 +50,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
   bool _carregandoAspectRatio = false;
   bool _salvando = false;
   bool _selecionandoPlanta = false;
+  bool _temAlteracoesPendentes = false;
   int? _lancamentoSelecionadoId;
   List<Offset> _activePoints = [];
   double _activeCanvasMinSide = 0;
@@ -149,17 +152,21 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
     }
   }
 
-  Future<void> _persistirRastreio({
+  bool get _podeSalvar =>
+      _temAlteracoesPendentes && !_salvando && _concretagemAtual.id != null;
+
+  Future<bool> _persistirRastreio({
     List<ConcretagemRastreioTraco>? tracos,
     String? plantaPath,
     bool silent = false,
   }) async {
-    if (_concretagemAtual.id == null) return;
+    if (_concretagemAtual.id == null) return false;
 
     final atualizado = _concretagemAtual.copyWith(
       plantaPath: plantaPath ?? _concretagemAtual.plantaPath,
       rastreioTracos: tracos ?? _tracos,
     );
+    var salvou = false;
 
     if (mounted) {
       setState(() => _salvando = true);
@@ -167,10 +174,14 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
 
     try {
       final salvo = await _repo.atualizarConcretagem(atualizado);
-      if (!mounted) return;
-      setState(() => _concretagemAtual = salvo);
+      salvou = true;
+      if (!mounted) return true;
+      setState(() {
+        _concretagemAtual = salvo;
+        _temAlteracoesPendentes = false;
+      });
     } catch (e) {
-      if (!mounted || silent) return;
+      if (!mounted || silent) return false;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao salvar rastreio da planta: $e')),
       );
@@ -178,6 +189,61 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
       if (mounted) {
         setState(() => _salvando = false);
       }
+    }
+
+    return salvou;
+  }
+
+  Future<bool> _salvarAlteracoes({bool showFeedback = true}) async {
+    if (!_temAlteracoesPendentes) return true;
+
+    final salvou = await _persistirRastreio(tracos: _tracos);
+    if (salvou && showFeedback && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Marcações salvas na concretagem.')),
+      );
+    }
+    return salvou;
+  }
+
+  Future<bool> _confirmarSaida() async {
+    if (!_temAlteracoesPendentes) return true;
+
+    final acao = await showDialog<_AcaoSaidaRastreio>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Salvar marcações'),
+        content: const Text(
+          'Há marcações pendentes nesta planta. Deseja salvar antes de sair?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () =>
+                Navigator.of(context).pop(_AcaoSaidaRastreio.cancelar),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.of(context).pop(_AcaoSaidaRastreio.descartar),
+            child: const Text('Sair sem salvar'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(context).pop(_AcaoSaidaRastreio.salvar),
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+
+    switch (acao) {
+      case _AcaoSaidaRastreio.descartar:
+        return true;
+      case _AcaoSaidaRastreio.salvar:
+        return _salvarAlteracoes(showFeedback: false);
+      case _AcaoSaidaRastreio.cancelar:
+      case null:
+        return false;
     }
   }
 
@@ -248,6 +314,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
         );
         _tracos = novosTracos;
         _activePoints = [];
+        _temAlteracoesPendentes = true;
         _modo = _ModoRastreio.spray;
         _viewerController.value = Matrix4.identity();
       });
@@ -321,8 +388,8 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
     setState(() {
       _tracos = novosTracos;
       _activePoints = [];
+      _temAlteracoesPendentes = true;
     });
-    await _persistirRastreio(tracos: novosTracos);
   }
 
   Future<void> _desfazerUltimoTraco() async {
@@ -336,17 +403,16 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
 
     final novosTracos = List<ConcretagemRastreioTraco>.from(_tracos)
       ..removeAt(index);
-    setState(() => _tracos = novosTracos);
-    await _persistirRastreio(tracos: novosTracos);
+    setState(() {
+      _tracos = novosTracos;
+      _temAlteracoesPendentes = true;
+    });
   }
 
   void _mudarModo(_ModoRastreio modo) {
     setState(() {
       _modo = modo;
       _activePoints = [];
-      if (modo == _ModoRastreio.spray) {
-        _viewerController.value = Matrix4.identity();
-      }
     });
   }
 
@@ -399,9 +465,8 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
       _tracos = novosTracos;
       _activeCanvasMinSide = 0;
       _activePoints = [];
+      _temAlteracoesPendentes = true;
     });
-
-    await _persistirRastreio(tracos: novosTracos);
   }
 
   Offset? _toNormalizedOffset(Offset position, Size canvasSize) {
@@ -464,9 +529,9 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
       return 'Cadastre pelo menos um lançamento nesta concretagem para habilitar as marcações.';
     }
     if (_modo == _ModoRastreio.navegar) {
-      return 'Modo navegar ativo: use pinça e arraste para inspecionar a planta.';
+      return 'Modo navegar ativo: use pinça e arraste para ampliar e posicionar a planta. Ao voltar para o spray, esse enquadramento é mantido.';
     }
-    return 'Modo spray ativo: selecione um lançamento e deslize o dedo sobre a planta para marcar a área correspondente.';
+    return 'Modo spray ativo: a planta fica travada no enquadramento atual para não se mover durante a marcação. Use Navegar para ajustar o zoom e depois Salvar para gravar.';
   }
 
   Size _canvasSizeFor(Size viewportSize) {
@@ -508,6 +573,11 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
                 _tag(_temPlanta ? 'Planta salva' : 'Sem planta'),
                 _tag('Lançamentos: ${_lancamentosComId.length}'),
                 _tag('Marcados: ${_lancamentosMarcados.length}'),
+                _tag(
+                  _temAlteracoesPendentes
+                      ? 'Alterações pendentes'
+                      : 'Tudo salvo',
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -664,21 +734,19 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
                       canvasSize,
                     );
 
-                    if (_modo == _ModoRastreio.navegar) {
-                      return InteractiveViewer(
-                        transformationController: _viewerController,
-                        minScale: 1,
-                        maxScale: 6,
-                        boundaryMargin: const EdgeInsets.all(24),
-                        child: SizedBox(
-                          width: viewportSize.width,
-                          height: viewportSize.height,
-                          child: Center(child: canvas),
-                        ),
-                      );
-                    }
-
-                    return Center(child: canvas);
+                    return InteractiveViewer(
+                      transformationController: _viewerController,
+                      minScale: 1,
+                      maxScale: 6,
+                      boundaryMargin: const EdgeInsets.all(24),
+                      panEnabled: _modo == _ModoRastreio.navegar,
+                      scaleEnabled: _modo == _ModoRastreio.navegar,
+                      child: SizedBox(
+                        width: viewportSize.width,
+                        height: viewportSize.height,
+                        child: Center(child: canvas),
+                      ),
+                    );
                   },
                 ),
         ),
@@ -838,21 +906,49 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Rastreio da Planta')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(12),
-          children: [
-            _buildCabecalho(),
-            const SizedBox(height: 10),
-            _buildControles(),
-            const SizedBox(height: 10),
-            _buildCanvas(),
-            const SizedBox(height: 10),
-            _buildLancamentos(),
-            const SizedBox(height: 24),
-          ],
+    return PopScope<void>(
+      canPop: !_temAlteracoesPendentes && !_salvando,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop || _salvando) return;
+        final podeSair = await _confirmarSaida();
+        if (!podeSair || !context.mounted) return;
+        Navigator.of(context).pop();
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Rastreio da Planta')),
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(12),
+            children: [
+              _buildCabecalho(),
+              const SizedBox(height: 10),
+              _buildControles(),
+              const SizedBox(height: 10),
+              _buildCanvas(),
+              const SizedBox(height: 10),
+              _buildLancamentos(),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _podeSalvar ? _salvarAlteracoes : null,
+              icon: _salvando
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.save_outlined),
+              label: Text(
+                _temAlteracoesPendentes ? 'Salvar marcações' : 'Tudo salvo',
+              ),
+            ),
+          ),
         ),
       ),
     );

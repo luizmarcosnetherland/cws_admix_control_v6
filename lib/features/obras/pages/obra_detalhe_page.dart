@@ -5,9 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/services/csv_export_service.dart';
-import '../../../core/services/email_compose_service.dart';
 import '../../../core/services/obra_location_service.dart';
-import '../../../core/services/obra_report_pdf_service.dart';
 import '../../../data/models/concretagem_model.dart';
 import '../../../data/models/lancamento_model.dart';
 import '../../../data/models/obra_model.dart';
@@ -43,8 +41,6 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
   final _repo = LancamentoRepository();
   final _concretagemRepo = ConcretagemRepository();
   final CsvExportService _csv = CsvExportService();
-  final EmailComposeService _email = EmailComposeService();
-  final ObraReportPdfService _obraPdf = ObraReportPdfService();
   final ObraLocationService _locationService = ObraLocationService();
 
   late Obra _obraAtual;
@@ -445,73 +441,6 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
     }
   }
 
-  Future<void> _compartilharPdfWhatsapp() async {
-    try {
-      final concretagens = _concretagensVisiveis();
-      await _obraPdf.shareReportPdf(
-        obra: _obraAtual,
-        lancamentos: _filtrado,
-        concretagens: concretagens,
-        sharePositionOrigin: _shareOrigin(),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao compartilhar PDF: $e')));
-    }
-  }
-
-  Future<void> _enviarEmailEngenheiro() async {
-    final emailDestino = _obraAtual.emailEngenheiro.trim();
-    if (emailDestino.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Cadastre o e-mail do engenheiro na obra antes de enviar.',
-          ),
-        ),
-      );
-      return;
-    }
-
-    try {
-      final concretagens = _concretagensVisiveis();
-      final pdfPath = await _obraPdf.buildReportPdf(
-        obra: _obraAtual,
-        lancamentos: _filtrado,
-        concretagens: concretagens,
-      );
-      final assunto = 'Relatório da obra ${_obraAtual.nome}';
-      final body = [
-        'Segue em anexo o relatório em PDF da obra ${_obraAtual.nome}.',
-        '',
-        'Quantidade de lançamentos: ${_filtrado.length}',
-        'Volume total: ${_fmtNum(_resumo.volumeTotalM3, casas: 1)} m3',
-        'CWS total: ${_fmtNum(_resumo.cwsTotalKg, casas: 1)} kg',
-      ].join('\n');
-
-      await _email.composeEmail(
-        recipients: [emailDestino],
-        subject: assunto,
-        body: body,
-        attachmentPaths: [pdfPath],
-        sharePositionOrigin: _shareOrigin(),
-      );
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('E-mail preparado para $emailDestino')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao enviar e-mail: $e')));
-    }
-  }
-
   Future<void> _selecionarPeriodo(_PeriodoFiltro p) async {
     if (p != _PeriodoFiltro.personalizado) {
       setState(() {
@@ -559,10 +488,8 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
   Future<void> _abrirConcretagem(Concretagem concretagem) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ConcretagemDetalhePage(
-          obraNome: _obraAtual.nome,
-          concretagem: concretagem,
-        ),
+        builder: (_) =>
+            ConcretagemDetalhePage(obra: _obraAtual, concretagem: concretagem),
       ),
     );
     await _carregar();
@@ -1010,19 +937,9 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         title: const Text('Obra'),
         actions: [
           IconButton(
-            tooltip: 'Salvar ou compartilhar PDF',
-            onPressed: _compartilharPdfWhatsapp,
-            icon: const Icon(Icons.picture_as_pdf),
-          ),
-          IconButton(
             tooltip: 'Salvar ou compartilhar CSV',
             onPressed: _exportarCsv,
             icon: const Icon(Icons.table_chart_outlined),
-          ),
-          IconButton(
-            tooltip: 'Enviar e-mail ao engenheiro',
-            onPressed: _enviarEmailEngenheiro,
-            icon: const Icon(Icons.email_outlined),
           ),
           IconButton(
             tooltip: 'Editar obra',

@@ -240,6 +240,274 @@ class ObraReportPdfService {
     );
   }
 
+  Future<String> buildConcretagemReportPdf({
+    required Obra obra,
+    required Concretagem concretagem,
+    required List<Lancamento> lancamentos,
+  }) async {
+    if (kIsWeb) {
+      throw UnsupportedError(
+        'Geracao de arquivo local PDF nao esta disponivel no navegador.',
+      );
+    }
+
+    final bytes = await buildConcretagemReportPdfBytes(
+      obra: obra,
+      concretagem: concretagem,
+      lancamentos: lancamentos,
+    );
+
+    await _storage.ensureBaseStructure();
+    final filePath = await _storage.exportFilePath(
+      _concretagemReportFilename(obra, concretagem),
+    );
+    final file = File(filePath);
+    await file.writeAsBytes(bytes, flush: true);
+    return file.path;
+  }
+
+  Future<Uint8List> buildConcretagemReportPdfBytes({
+    required Obra obra,
+    required Concretagem concretagem,
+    required List<Lancamento> lancamentos,
+  }) async {
+    final doc = pw.Document();
+    final logos = await _loadLogos();
+    final fonts = await _loadFonts();
+    final lancamentosOrdenados = List<Lancamento>.from(lancamentos)
+      ..sort((a, b) => a.dataHora.compareTo(b.dataHora));
+    final lancamentoCards = await _buildLancamentoCards(lancamentosOrdenados);
+    final rastreioPreview = await _loadConcretagemRastreioPreview(
+      concretagem,
+      lancamentosOrdenados,
+    );
+    final generatedAtLabel = DateFormat(
+      'dd/MM/yyyy HH:mm',
+      'pt_BR',
+    ).format(DateTime.now());
+    final volumeTotal = lancamentosOrdenados.fold<double>(
+      0,
+      (total, item) => total + item.volumeM3,
+    );
+    final cwsTotal = lancamentosOrdenados.fold<double>(
+      0,
+      (total, item) => total + item.cwsTotalKg,
+    );
+    final primeiroLancamento = lancamentosOrdenados.isEmpty
+        ? null
+        : lancamentosOrdenados.first.dataHora;
+    final ultimoLancamento = lancamentosOrdenados.isEmpty
+        ? null
+        : lancamentosOrdenados.last.dataHora;
+    final curaUmidaAte = ultimoLancamento?.add(const Duration(days: 7));
+
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        theme: pw.ThemeData.withFont(base: fonts.regular, bold: fonts.bold),
+        header: (_) => _concretagemPageHeader(
+          logos: logos,
+          obra: obra,
+          concretagem: concretagem,
+          generatedAtLabel: generatedAtLabel,
+        ),
+        footer: (context) => pw.Padding(
+          padding: const pw.EdgeInsets.only(top: 8),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'Relatório gerado em $generatedAtLabel',
+                style: const pw.TextStyle(fontSize: 9),
+              ),
+              pw.Text(
+                'Página ${context.pageNumber} de ${context.pagesCount}',
+                style: const pw.TextStyle(fontSize: 9),
+              ),
+            ],
+          ),
+        ),
+        build: (_) => [
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Flexible(
+                flex: 3,
+                child: _infoCard('Obra', [
+                  _kv('Nome', _fallback(obra.nome)),
+                  _kv('Cliente', _fallback(obra.cliente)),
+                  _kv('Local', _fallback(obra.local)),
+                  _kv(
+                    'Localizacao da obra',
+                    _fallback(obra.localizacaoDescricao),
+                  ),
+                  if (obra.latitude != null && obra.longitude != null)
+                    _kv(
+                      'Coordenadas',
+                      '${obra.latitude!.toStringAsFixed(6)}, ${obra.longitude!.toStringAsFixed(6)}',
+                    ),
+                  _kv('Responsavel', _fallback(obra.responsavel)),
+                  _kv('E-mail engenheiro', _fallback(obra.emailEngenheiro)),
+                ]),
+              ),
+              pw.SizedBox(width: 12),
+              pw.Flexible(
+                flex: 2,
+                child: _infoCard('Concretagem', [
+                  _kv(
+                    'Estrutura',
+                    concretagem.estruturaConcretada.trim().isEmpty
+                        ? 'nao informada'
+                        : concretagem.estruturaConcretada.trim(),
+                  ),
+                  _kv(
+                    'Concreteira',
+                    _fallbackNaoInformada(concretagem.concreteira),
+                  ),
+                  _kv(
+                    'Controle tecnologico',
+                    _controleTecnologicoLabel(concretagem.controleTecnologico),
+                  ),
+                  _kv(
+                    'Empresa tecnologia',
+                    _empresaTecnologiaLabelConcretagem(concretagem),
+                  ),
+                  _kv('Lancamentos', '${lancamentosOrdenados.length}'),
+                  _kv('Volume total', '${_fmtNum(volumeTotal, 1)} m³'),
+                  _kv('CWS total', '${_fmtNum(cwsTotal, 1)} kg'),
+                  _kv(
+                    'Primeiro lancamento',
+                    primeiroLancamento == null
+                        ? '-'
+                        : DateFormat(
+                            'dd/MM/yyyy HH:mm',
+                            'pt_BR',
+                          ).format(primeiroLancamento),
+                  ),
+                  _kv(
+                    'Ultimo lancamento',
+                    ultimoLancamento == null
+                        ? '-'
+                        : DateFormat(
+                            'dd/MM/yyyy HH:mm',
+                            'pt_BR',
+                          ).format(ultimoLancamento),
+                  ),
+                  _kv(
+                    'Cura umida recomendada ate',
+                    curaUmidaAte == null
+                        ? '-'
+                        : DateFormat(
+                            'dd/MM/yyyy',
+                            'pt_BR',
+                          ).format(curaUmidaAte),
+                  ),
+                ]),
+              ),
+            ],
+          ),
+          if (rastreioPreview != null) ...[
+            pw.SizedBox(height: 12),
+            _buildConcretagemRastreioBlock(
+              rastreioPreview: rastreioPreview,
+              lancamentos: lancamentosOrdenados,
+            ),
+          ],
+          pw.SizedBox(height: 12),
+          _sectionTitle('Lançamentos da concretagem'),
+          if (lancamentoCards.isEmpty)
+            _emptySectionCard('Nenhum lançamento cadastrado nesta concretagem.')
+          else
+            pw.Wrap(spacing: 8, runSpacing: 8, children: lancamentoCards),
+        ],
+      ),
+    );
+
+    return Uint8List.fromList(await doc.save());
+  }
+
+  Future<void> shareConcretagemReportPdf({
+    required Obra obra,
+    required Concretagem concretagem,
+    required List<Lancamento> lancamentos,
+    ui.Rect? sharePositionOrigin,
+  }) async {
+    final filename = _concretagemReportFilename(obra, concretagem);
+    final assunto =
+        'Relatório da concretagem ${_concretagemReportLabel(concretagem)}';
+    final texto = '$assunto - obra ${obra.nome}';
+
+    if (kIsWeb) {
+      final bytes = await buildConcretagemReportPdfBytes(
+        obra: obra,
+        concretagem: concretagem,
+        lancamentos: lancamentos,
+      );
+
+      await Share.shareXFiles(
+        [XFile.fromData(bytes, mimeType: 'application/pdf', name: filename)],
+        text: texto,
+        subject: assunto,
+        sharePositionOrigin: sharePositionOrigin,
+      );
+      return;
+    }
+
+    final path = await buildConcretagemReportPdf(
+      obra: obra,
+      concretagem: concretagem,
+      lancamentos: lancamentos,
+    );
+
+    await Share.shareXFiles(
+      [XFile(path, name: filename)],
+      text: texto,
+      subject: assunto,
+      sharePositionOrigin: sharePositionOrigin,
+    );
+  }
+
+  pw.Widget _concretagemPageHeader({
+    required _PdfLogos logos,
+    required Obra obra,
+    required Concretagem concretagem,
+    required String generatedAtLabel,
+  }) {
+    final titulo = _concretagemReportLabel(concretagem);
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            if (logos.netherland != null)
+              pw.Image(logos.netherland!, height: 34)
+            else
+              pw.SizedBox(),
+            if (logos.cws != null) pw.Image(logos.cws!, height: 34),
+          ],
+        ),
+        pw.SizedBox(height: 12),
+        pw.Text(
+          _pdfSafe('Relatório da concretagem - $titulo'),
+          style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          _pdfSafe('Obra: ${obra.nome}'),
+          style: const pw.TextStyle(fontSize: 10),
+        ),
+        pw.Text(
+          _pdfSafe('Gerado em $generatedAtLabel'),
+          style: const pw.TextStyle(fontSize: 10),
+        ),
+        pw.Divider(),
+        pw.SizedBox(height: 6),
+      ],
+    );
+  }
+
   pw.Widget _sectionTitle(String title) {
     return pw.Padding(
       padding: const pw.EdgeInsets.only(bottom: 6),
@@ -873,6 +1141,17 @@ class ObraReportPdfService {
     out = out.replaceAll(RegExp(r'[\/\\\:\*\?"<>\|]'), '_');
     out = out.replaceAll(RegExp(r'\s+'), '_');
     return out;
+  }
+
+  String _concretagemReportLabel(Concretagem concretagem) {
+    final estrutura = concretagem.estruturaConcretada.trim();
+    if (estrutura.isNotEmpty) return estrutura;
+    if (concretagem.id != null) return 'Concretagem ${concretagem.id}';
+    return 'Concretagem';
+  }
+
+  String _concretagemReportFilename(Obra obra, Concretagem concretagem) {
+    return 'Relatorio_Concretagem_${_safeFile(obra.nome)}_${_safeFile(_concretagemReportLabel(concretagem))}_${_timestamp()}.pdf';
   }
 
   String _timestamp() {

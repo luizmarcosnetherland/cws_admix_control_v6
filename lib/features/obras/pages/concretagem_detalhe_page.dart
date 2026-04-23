@@ -2,8 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/services/email_compose_service.dart';
+import '../../../core/services/obra_report_pdf_service.dart';
 import '../../../data/models/concretagem_model.dart';
 import '../../../data/models/lancamento_model.dart';
+import '../../../data/models/obra_model.dart';
 import '../../../data/repositories/concretagem_repository.dart';
 import '../../../data/repositories/lancamento_repository.dart';
 import 'concretagem_rastreio_page.dart';
@@ -11,12 +14,12 @@ import 'nova_concretagem_page.dart';
 import 'novo_lancamento_page.dart';
 
 class ConcretagemDetalhePage extends StatefulWidget {
-  final String obraNome;
+  final Obra obra;
   final Concretagem concretagem;
 
   const ConcretagemDetalhePage({
     super.key,
-    required this.obraNome,
+    required this.obra,
     required this.concretagem,
   });
 
@@ -27,9 +30,12 @@ class ConcretagemDetalhePage extends StatefulWidget {
 class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
   final _repo = LancamentoRepository();
   final _concretagemRepo = ConcretagemRepository();
+  final _pdfService = ObraReportPdfService();
+  final _emailService = EmailComposeService();
 
   late Concretagem _concretagemAtual;
   bool _loading = true;
+  bool _processandoRelatorio = false;
   List<Lancamento> _lancamentos = [];
 
   @override
@@ -65,7 +71,7 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
     final created = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => NovoLancamentoPage(
-          obraNome: widget.obraNome,
+          obraNome: widget.obra.nome,
           concretagem: _concretagemAtual,
         ),
       ),
@@ -81,7 +87,7 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
       MaterialPageRoute(
         builder: (_) => NovaConcretagemPage(
           obraId: _concretagemAtual.obraId,
-          obraNome: widget.obraNome,
+          obraNome: widget.obra.nome,
           concretagem: _concretagemAtual,
         ),
       ),
@@ -95,7 +101,7 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
     final updated = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => NovoLancamentoPage(
-          obraNome: widget.obraNome,
+          obraNome: widget.obra.nome,
           concretagem: _concretagemAtual,
           lancamento: lancamento,
         ),
@@ -110,7 +116,7 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => ConcretagemRastreioPage(
-          obraNome: widget.obraNome,
+          obraNome: widget.obra.nome,
           concretagem: _concretagemAtual,
           lancamentos: _lancamentos,
         ),
@@ -184,6 +190,98 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
     return 'não informado';
   }
 
+  String _tituloConcretagem() {
+    final estrutura = _concretagemAtual.estruturaConcretada.trim();
+    if (estrutura.isNotEmpty) return estrutura;
+    if (_concretagemAtual.id != null) {
+      return 'Concretagem ${_concretagemAtual.id}';
+    }
+    return 'Concretagem';
+  }
+
+  Rect? _shareOrigin() {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return null;
+    return box.localToGlobal(Offset.zero) & box.size;
+  }
+
+  Future<void> _compartilharRelatorio() async {
+    if (_processandoRelatorio) return;
+
+    setState(() => _processandoRelatorio = true);
+    try {
+      await _pdfService.shareConcretagemReportPdf(
+        obra: widget.obra,
+        concretagem: _concretagemAtual,
+        lancamentos: _lancamentos,
+        sharePositionOrigin: _shareOrigin(),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao gerar relatório da concretagem: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _processandoRelatorio = false);
+      }
+    }
+  }
+
+  Future<void> _enviarRelatorioPorEmail() async {
+    final emailDestino = widget.obra.emailEngenheiro.trim();
+    if (emailDestino.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Cadastre o e-mail do engenheiro na obra antes de enviar.',
+          ),
+        ),
+      );
+      return;
+    }
+    if (_processandoRelatorio) return;
+
+    setState(() => _processandoRelatorio = true);
+    try {
+      final pdfPath = await _pdfService.buildConcretagemReportPdf(
+        obra: widget.obra,
+        concretagem: _concretagemAtual,
+        lancamentos: _lancamentos,
+      );
+      final assunto = 'Relatório da concretagem ${_tituloConcretagem()}';
+      final body = [
+        'Segue em anexo o relatório da concretagem ${_tituloConcretagem()} da obra ${widget.obra.nome}.',
+        '',
+        'Lançamentos: ${_lancamentos.length}',
+        'Volume total: ${_fmtNum(_volumeTotal, casas: 1)} m3',
+        'CWS total: ${_fmtNum(_cwsTotal, casas: 1)} kg',
+      ].join('\n');
+
+      await _emailService.composeEmail(
+        recipients: [emailDestino],
+        subject: assunto,
+        body: body,
+        attachmentPaths: [pdfPath],
+        sharePositionOrigin: _shareOrigin(),
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('E-mail preparado para $emailDestino')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao enviar relatório por e-mail: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _processandoRelatorio = false);
+      }
+    }
+  }
+
   double get _volumeTotal =>
       _lancamentos.fold(0.0, (total, item) => total + item.volumeM3);
 
@@ -228,7 +326,7 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.obraNome,
+              widget.obra.nome,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
@@ -250,6 +348,37 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
                 _tag('Lançamentos: ${_lancamentos.length}'),
                 _tag('Volume: ${_fmtNum(_volumeTotal)} m³'),
                 _tag('CWS: ${_fmtNum(_cwsTotal)} kg'),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.tonalIcon(
+                  onPressed: _processandoRelatorio
+                      ? null
+                      : _compartilharRelatorio,
+                  icon: _processandoRelatorio
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.picture_as_pdf_outlined),
+                  label: Text(
+                    _processandoRelatorio
+                        ? 'Gerando relatório...'
+                        : 'Relatório da concretagem',
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _processandoRelatorio
+                      ? null
+                      : _enviarRelatorioPorEmail,
+                  icon: const Icon(Icons.email_outlined),
+                  label: const Text('Enviar por e-mail'),
+                ),
               ],
             ),
             const SizedBox(height: 14),
