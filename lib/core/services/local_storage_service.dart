@@ -46,6 +46,8 @@ class LocalStorageService {
       Directory(p.join(await rootPath, 'data', 'snapshots'));
   Future<Directory> get lancamentosPhotosRootDir async =>
       Directory(p.join(await rootPath, 'data', 'lancamentos_fotos'));
+  Future<Directory> get concretagensRastreioRootDir async =>
+      Directory(p.join(await rootPath, 'data', 'concretagens_rastreio'));
 
   Future<String> ensureBaseStructure() async {
     final root = await rootDir;
@@ -53,12 +55,14 @@ class LocalStorageService {
     final data = await dataDir;
     final snapshots = await snapshotsDir;
     final photos = await lancamentosPhotosRootDir;
+    final rastreio = await concretagensRastreioRootDir;
 
     await root.create(recursive: true);
     await exports.create(recursive: true);
     await data.create(recursive: true);
     await snapshots.create(recursive: true);
     await photos.create(recursive: true);
+    await rastreio.create(recursive: true);
     return root.path;
   }
 
@@ -80,6 +84,18 @@ class LocalStorageService {
   Future<Directory> lancamentoPhotosDir(int obraId) async {
     final root = await lancamentosPhotosRootDir;
     final dir = Directory(p.join(root.path, 'obra_$obraId'));
+    await dir.create(recursive: true);
+    return dir;
+  }
+
+  Future<Directory> concretagemRastreioDir(
+    int obraId,
+    int concretagemId,
+  ) async {
+    final root = await concretagensRastreioRootDir;
+    final dir = Directory(
+      p.join(root.path, 'obra_$obraId', 'concretagem_$concretagemId'),
+    );
     await dir.create(recursive: true);
     return dir;
   }

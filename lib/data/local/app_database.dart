@@ -6,7 +6,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static const _dbName = 'cws_admix_control.db';
-  static const _dbVersion = 13;
+  static const _dbVersion = 14;
 
   Database? _database;
   bool _schemaEnsured = false;
@@ -46,6 +46,7 @@ class AppDatabase {
   Future<void> _ensureSchema(Database db) async {
     if (_schemaEnsured) return;
     await _createConcretagensTable(db);
+    await _ensureConcretagensColumns(db);
     await _ensureLancamentosColumns(db);
     await _migrateLancamentosToConcretagens(db);
     await _ensureObrasColumns(db);
@@ -157,6 +158,8 @@ class AppDatabase {
         concreteira TEXT NOT NULL DEFAULT '',
         controle_tecnologico TEXT NOT NULL DEFAULT '',
         empresa_tecnologia_concreto TEXT NOT NULL DEFAULT '',
+        planta_path TEXT NOT NULL DEFAULT '',
+        rastreio_tracos TEXT NOT NULL DEFAULT '[]',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (obra_id) REFERENCES obras(id) ON DELETE RESTRICT
@@ -205,6 +208,21 @@ class AppDatabase {
     if (!names.contains('empresa_tecnologia_concreto')) {
       await db.execute(
         "ALTER TABLE lancamentos ADD COLUMN empresa_tecnologia_concreto TEXT NOT NULL DEFAULT ''",
+      );
+    }
+  }
+
+  Future<void> _ensureConcretagensColumns(Database db) async {
+    final names = await _tableColumnNames(db, 'concretagens');
+
+    if (!names.contains('planta_path')) {
+      await db.execute(
+        "ALTER TABLE concretagens ADD COLUMN planta_path TEXT NOT NULL DEFAULT ''",
+      );
+    }
+    if (!names.contains('rastreio_tracos')) {
+      await db.execute(
+        "ALTER TABLE concretagens ADD COLUMN rastreio_tracos TEXT NOT NULL DEFAULT '[]'",
       );
     }
   }

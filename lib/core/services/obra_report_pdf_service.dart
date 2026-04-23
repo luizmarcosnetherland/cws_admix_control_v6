@@ -1,5 +1,6 @@
 import 'dart:io';
-import 'dart:ui';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -16,6 +17,8 @@ import 'local_storage_service.dart';
 class ObraReportPdfService {
   final LocalStorageService _storage = LocalStorageService();
   static const _lancamentoCardWidth = 255.0;
+  static const _rastreioPreviewMaxHeight = 400.0;
+  static const _rastreioPreviewMaxSidePx = 1800.0;
   static Future<_PdfLogos>? _logosFuture;
   static Future<_PdfFonts>? _fontsFuture;
 
@@ -157,7 +160,7 @@ class ObraReportPdfService {
           if (concretagemSections.isEmpty)
             _emptySectionCard('Nenhuma concretagem cadastrada.')
           else
-            ..._withVerticalSpacing(concretagemSections, spacing: 12),
+            ...concretagemSections,
         ],
       ),
     );
@@ -202,7 +205,7 @@ class ObraReportPdfService {
     required Obra obra,
     required List<Lancamento> lancamentos,
     List<Concretagem> concretagens = const [],
-    Rect? sharePositionOrigin,
+    ui.Rect? sharePositionOrigin,
   }) async {
     final filename =
         'Relatorio_Obra_${_safeFile(obra.nome)}_${_timestamp()}.pdf';
@@ -348,41 +351,54 @@ class ObraReportPdfService {
   ) async {
     final sections = <pw.Widget>[];
     for (var index = 0; index < concretagens.length; index++) {
+      if (index > 0) {
+        sections.add(pw.SizedBox(height: 12));
+      }
+
       final concretagem = concretagens[index];
       final lancamentos =
           lancamentosPorConcretagem[concretagem.id] ?? const <Lancamento>[];
       final lancamentoCards = await _buildLancamentoCards(lancamentos);
+      final rastreioPreview = await _loadConcretagemRastreioPreview(
+        concretagem,
+        lancamentos,
+      );
 
       sections.add(
-        pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            _buildConcretagemCard(
-              concretagem: concretagem,
-              lancamentos: lancamentos,
-              index: index,
-            ),
-            pw.SizedBox(height: 8),
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(left: 2, bottom: 6),
-              child: pw.Text(
-                'Lançamentos desta concretagem',
-                style: pw.TextStyle(
-                  fontSize: 11,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-            ),
-            if (lancamentoCards.isEmpty)
-              _emptySectionCard(
-                'Nenhum lançamento cadastrado nesta concretagem.',
-              )
-            else
-              pw.Wrap(spacing: 8, runSpacing: 8, children: lancamentoCards),
-          ],
+        _buildConcretagemCard(
+          concretagem: concretagem,
+          lancamentos: lancamentos,
+          index: index,
         ),
       );
+      if (rastreioPreview != null) {
+        sections.add(pw.SizedBox(height: 8));
+        sections.add(
+          _buildConcretagemRastreioBlock(
+            rastreioPreview: rastreioPreview,
+            lancamentos: lancamentos,
+          ),
+        );
+      }
+      sections.add(pw.SizedBox(height: 8));
+      sections.add(
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(left: 2, bottom: 6),
+          child: pw.Text(
+            'Lançamentos desta concretagem',
+            style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
+          ),
+        ),
+      );
+      sections.add(
+        lancamentoCards.isEmpty
+            ? _emptySectionCard(
+                'Nenhum lançamento cadastrado nesta concretagem.',
+              )
+            : pw.Wrap(spacing: 8, runSpacing: 8, children: lancamentoCards),
+      );
     }
+
     return sections;
   }
 
@@ -465,6 +481,276 @@ class ObraReportPdfService {
       }
     }
     return fotos;
+  }
+
+  Future<_ConcretagemRastreioPreview?> _loadConcretagemRastreioPreview(
+    Concretagem concretagem,
+    List<Lancamento> lancamentos,
+  ) async {
+    final plantaPath = concretagem.plantaPath.trim();
+    if (plantaPath.isEmpty) return null;
+
+    final file = File(plantaPath);
+    if (!await file.exists()) return null;
+
+    try {
+      final sourceBytes = await file.readAsBytes();
+      if (sourceBytes.isEmpty) return null;
+
+      final idsValidos = lancamentos
+          .map((item) => item.id)
+          .whereType<int>()
+          .toSet();
+      final tracos = concretagem.rastreioTracos
+          .where((item) => idsValidos.contains(item.lancamentoId))
+          .where((item) => item.points.length >= 2)
+          .toList(growable: false);
+
+      final rendered = await _renderConcretagemRastreioPreview(
+        sourceBytes,
+        tracos,
+      );
+      return _ConcretagemRastreioPreview(
+        image: pw.MemoryImage(rendered.bytes),
+        aspectRatio: rendered.aspectRatio,
+        lancamentosMarcados: tracos
+            .map((item) => item.lancamentoId)
+            .toSet()
+            .toList(growable: false),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<_RenderedRastreioPreview> _renderConcretagemRastreioPreview(
+    Uint8List sourceBytes,
+    List<ConcretagemRastreioTraco> tracos,
+  ) async {
+    final codec = await ui.instantiateImageCodec(sourceBytes);
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+    final originalWidth = image.width.toDouble();
+    final originalHeight = image.height == 0 ? 1.0 : image.height.toDouble();
+    final aspectRatio = originalWidth / originalHeight;
+
+    final maxSide = math.max(originalWidth, originalHeight);
+    final scale = maxSide > _rastreioPreviewMaxSidePx
+        ? (_rastreioPreviewMaxSidePx / maxSide)
+        : 1.0;
+    final targetWidth = math.max(1, (originalWidth * scale).round());
+    final targetHeight = math.max(1, (originalHeight * scale).round());
+
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(
+      recorder,
+      ui.Rect.fromLTWH(0, 0, targetWidth.toDouble(), targetHeight.toDouble()),
+    );
+    final targetRect = ui.Rect.fromLTWH(
+      0,
+      0,
+      targetWidth.toDouble(),
+      targetHeight.toDouble(),
+    );
+
+    canvas.drawRect(targetRect, ui.Paint()..color = const ui.Color(0xFFF4F1E8));
+    canvas.drawImageRect(
+      image,
+      ui.Rect.fromLTWH(0, 0, originalWidth, originalHeight),
+      targetRect,
+      ui.Paint(),
+    );
+
+    for (final traco in tracos) {
+      final points = traco.points
+          .map((item) => ui.Offset(item.x * targetWidth, item.y * targetHeight))
+          .toList(growable: false);
+      final brushSize = traco.resolveBrushSize(
+        math.min(targetWidth.toDouble(), targetHeight.toDouble()),
+      );
+      _paintRastreioSpray(
+        canvas,
+        points,
+        _rastreioUiColor(traco.lancamentoId),
+        brushSize,
+      );
+    }
+
+    final picture = recorder.endRecording();
+    final renderedImage = await picture.toImage(targetWidth, targetHeight);
+    final byteData = await renderedImage.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+
+    image.dispose();
+    renderedImage.dispose();
+
+    if (byteData == null) {
+      throw Exception('Falha ao renderizar a planta para o PDF.');
+    }
+
+    return _RenderedRastreioPreview(
+      bytes: byteData.buffer.asUint8List(),
+      aspectRatio: aspectRatio,
+    );
+  }
+
+  void _paintRastreioSpray(
+    ui.Canvas canvas,
+    List<ui.Offset> points,
+    ui.Color color,
+    double brushSize,
+  ) {
+    if (points.length < 2 || brushSize <= 0) return;
+
+    final spacing = brushSize * 0.22;
+    final densified = _densifyRastreioPoints(points, spacing);
+    final blurPaint = ui.Paint()
+      ..style = ui.PaintingStyle.fill
+      ..color = color.withValues(alpha: 0.18)
+      ..maskFilter = ui.MaskFilter.blur(ui.BlurStyle.normal, brushSize * 0.26);
+    final corePaint = ui.Paint()
+      ..style = ui.PaintingStyle.fill
+      ..color = color.withValues(alpha: 0.34);
+
+    for (final point in densified) {
+      canvas.drawCircle(point, brushSize * 0.55, blurPaint);
+      canvas.drawCircle(point, brushSize * 0.18, corePaint);
+    }
+
+    for (final point in points) {
+      canvas.drawCircle(point, brushSize * 0.25, corePaint);
+    }
+  }
+
+  List<ui.Offset> _densifyRastreioPoints(
+    List<ui.Offset> points,
+    double spacing,
+  ) {
+    final output = <ui.Offset>[];
+    for (var index = 0; index < points.length - 1; index++) {
+      final start = points[index];
+      final end = points[index + 1];
+      output.add(start);
+
+      final dx = end.dx - start.dx;
+      final dy = end.dy - start.dy;
+      final distance = math.sqrt((dx * dx) + (dy * dy));
+      if (distance <= spacing) continue;
+
+      final steps = (distance / spacing).floor();
+      for (var step = 1; step < steps; step++) {
+        final t = step / steps;
+        output.add(ui.Offset(start.dx + (dx * t), start.dy + (dy * t)));
+      }
+    }
+    output.add(points.last);
+    return output;
+  }
+
+  pw.Widget _buildConcretagemRastreioBlock({
+    required _ConcretagemRastreioPreview rastreioPreview,
+    required List<Lancamento> lancamentos,
+  }) {
+    final marcados = rastreioPreview.lancamentosMarcados.toSet();
+
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'Planta de rastreio da concretagem',
+            style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            _pdfSafe(
+              marcados.isEmpty
+                  ? 'Planta escaneada sem marcações registradas.'
+                  : 'Planta ampliada com as marcações realizadas nesta concretagem.',
+            ),
+            style: const pw.TextStyle(fontSize: 9.2),
+          ),
+          pw.SizedBox(height: 10),
+          pw.Container(
+            width: double.infinity,
+            height: _rastreioPreviewMaxHeight,
+            padding: const pw.EdgeInsets.all(8),
+            decoration: pw.BoxDecoration(
+              color: PdfColor.fromHex('#F4F1E8'),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            alignment: pw.Alignment.center,
+            child: pw.Image(rastreioPreview.image, fit: pw.BoxFit.contain),
+          ),
+          if (lancamentos.isNotEmpty) ...[
+            pw.SizedBox(height: 10),
+            pw.Text(
+              'Legenda dos lançamentos',
+              style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 6),
+            pw.Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: lancamentos
+                  .where((item) => item.id != null)
+                  .map(
+                    (item) => _buildRastreioLegendaItem(
+                      lancamento: item,
+                      marcado: marcados.contains(item.id),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildRastreioLegendaItem({
+    required Lancamento lancamento,
+    required bool marcado,
+  }) {
+    final id = lancamento.id;
+    final color = id == null || !marcado
+        ? PdfColors.grey500
+        : _rastreioPdfColor(id);
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Row(
+        mainAxisSize: pw.MainAxisSize.min,
+        children: [
+          pw.Container(
+            width: 10,
+            height: 10,
+            decoration: pw.BoxDecoration(
+              color: color,
+              borderRadius: pw.BorderRadius.circular(2),
+            ),
+          ),
+          pw.SizedBox(width: 6),
+          pw.Text(
+            _pdfSafe(
+              '${_legendTitleLancamento(lancamento)}${marcado ? '' : ' - sem marcação'}',
+            ),
+            style: const pw.TextStyle(fontSize: 8.6),
+          ),
+        ],
+      ),
+    );
   }
 
   pw.Widget _lancamentoCardWithPhotos(
@@ -550,20 +836,6 @@ class ObraReportPdfService {
     return widgets;
   }
 
-  List<pw.Widget> _withVerticalSpacing(
-    List<pw.Widget> widgets, {
-    required double spacing,
-  }) {
-    final items = <pw.Widget>[];
-    for (var index = 0; index < widgets.length; index++) {
-      if (index > 0) {
-        items.add(pw.SizedBox(height: spacing));
-      }
-      items.add(widgets[index]);
-    }
-    return items;
-  }
-
   Future<_PdfLogos> _loadLogos() async {
     return _logosFuture ??= () async {
       Future<pw.MemoryImage?> load(String asset) async {
@@ -634,9 +906,44 @@ class ObraReportPdfService {
     return value.toStringAsFixed(casas).replaceAll('.', ',');
   }
 
+  String _legendTitleLancamento(Lancamento lancamento) {
+    final titulo = lancamento.caminhao.trim().isEmpty
+        ? 'Lançamento ${lancamento.id ?? ''}'.trim()
+        : lancamento.caminhao.trim();
+    final dataHora = DateFormat(
+      'dd/MM HH:mm',
+      'pt_BR',
+    ).format(lancamento.dataHora);
+    return '$titulo • $dataHora • ${_fmtNum(lancamento.volumeM3, 1)} m³';
+  }
+
+  ui.Color _rastreioUiColor(int lancamentoId) {
+    final value =
+        _rastreioPalette[lancamentoId.abs() % _rastreioPalette.length];
+    return ui.Color(value);
+  }
+
+  PdfColor _rastreioPdfColor(int lancamentoId) {
+    final value =
+        _rastreioPalette[lancamentoId.abs() % _rastreioPalette.length];
+    final hex = value.toRadixString(16).padLeft(8, '0').substring(2);
+    return PdfColor.fromHex('#$hex');
+  }
+
   String _pdfSafe(String value) {
     return value.replaceAll('→', '->').replaceAll('—', '-');
   }
+
+  static const _rastreioPalette = <int>[
+    0xFFE07A5F,
+    0xFF3D405B,
+    0xFF81B29A,
+    0xFFF2CC8F,
+    0xFF6D597A,
+    0xFF2A9D8F,
+    0xFFC8553D,
+    0xFF4D908E,
+  ];
 }
 
 class _PdfLogos {
@@ -651,4 +958,26 @@ class _PdfFonts {
   final pw.Font bold;
 
   const _PdfFonts({required this.regular, required this.bold});
+}
+
+class _ConcretagemRastreioPreview {
+  final pw.MemoryImage image;
+  final double aspectRatio;
+  final List<int> lancamentosMarcados;
+
+  const _ConcretagemRastreioPreview({
+    required this.image,
+    required this.aspectRatio,
+    required this.lancamentosMarcados,
+  });
+}
+
+class _RenderedRastreioPreview {
+  final Uint8List bytes;
+  final double aspectRatio;
+
+  const _RenderedRastreioPreview({
+    required this.bytes,
+    required this.aspectRatio,
+  });
 }

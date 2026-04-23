@@ -1,8 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../../../data/models/concretagem_model.dart';
 import '../../../data/models/lancamento_model.dart';
+import '../../../data/repositories/concretagem_repository.dart';
 import '../../../data/repositories/lancamento_repository.dart';
+import 'concretagem_rastreio_page.dart';
 import 'nova_concretagem_page.dart';
 import 'novo_lancamento_page.dart';
 
@@ -22,6 +26,7 @@ class ConcretagemDetalhePage extends StatefulWidget {
 
 class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
   final _repo = LancamentoRepository();
+  final _concretagemRepo = ConcretagemRepository();
 
   late Concretagem _concretagemAtual;
   bool _loading = true;
@@ -37,9 +42,13 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
   Future<void> _carregar() async {
     setState(() => _loading = true);
     try {
+      final concretagemAtualizada = _concretagemAtual.id == null
+          ? null
+          : await _concretagemRepo.buscarPorId(_concretagemAtual.id!);
       final lista = await _repo.listarPorConcretagem(_concretagemAtual.id!);
       if (!mounted) return;
       setState(() {
+        _concretagemAtual = concretagemAtualizada ?? _concretagemAtual;
         _lancamentos = lista;
         _loading = false;
       });
@@ -97,6 +106,19 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
     }
   }
 
+  Future<void> _abrirRastreio() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => ConcretagemRastreioPage(
+          obraNome: widget.obraNome,
+          concretagem: _concretagemAtual,
+          lancamentos: _lancamentos,
+        ),
+      ),
+    );
+    await _carregar();
+  }
+
   Future<void> _excluirLancamento(Lancamento lancamento) async {
     if (lancamento.id == null) return;
     final confirmed = await showDialog<bool>(
@@ -122,6 +144,15 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
 
     try {
       await _repo.excluirLancamento(lancamento.id!);
+      final rastreioAtualizado = _concretagemAtual.rastreioTracos
+          .where((item) => item.lancamentoId != lancamento.id)
+          .toList(growable: false);
+      if (rastreioAtualizado.length !=
+          _concretagemAtual.rastreioTracos.length) {
+        _concretagemAtual = await _concretagemRepo.atualizarConcretagem(
+          _concretagemAtual.copyWith(rastreioTracos: rastreioAtualizado),
+        );
+      }
       if (!mounted) return;
       await _carregar();
     } catch (e) {
@@ -159,6 +190,36 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
   double get _cwsTotal =>
       _lancamentos.fold(0.0, (total, item) => total + item.cwsTotalKg);
 
+  bool get _plantaDisponivel {
+    final path = _concretagemAtual.plantaPath.trim();
+    return path.isNotEmpty && File(path).existsSync();
+  }
+
+  Set<int> get _lancamentosMarcados {
+    final ids = _lancamentos.map((item) => item.id).whereType<int>().toSet();
+    return _concretagemAtual.rastreioTracos
+        .map((item) => item.lancamentoId)
+        .where(ids.contains)
+        .toSet();
+  }
+
+  bool _lancamentoTemRastreio(int? lancamentoId) {
+    if (lancamentoId == null) return false;
+    return _concretagemAtual.rastreioTracos.any(
+      (item) => item.lancamentoId == lancamentoId,
+    );
+  }
+
+  String _resumoRastreio() {
+    if (!_plantaDisponivel) {
+      return 'Planta ainda não cadastrada para esta concretagem.';
+    }
+    if (_lancamentos.isEmpty) {
+      return 'Planta salva. Adicione lançamentos para começar as marcações.';
+    }
+    return '${_lancamentosMarcados.length} de ${_lancamentos.length} lançamentos já foram marcados na planta.';
+  }
+
   Widget _resumoCard() {
     return Card(
       child: Padding(
@@ -190,6 +251,56 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
                 _tag('Volume: ${_fmtNum(_volumeTotal)} m³'),
                 _tag('CWS: ${_fmtNum(_cwsTotal)} kg'),
               ],
+            ),
+            const SizedBox(height: 14),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.draw_outlined),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Rastreio na planta',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                if (_plantaDisponivel)
+                  _tag('${_lancamentosMarcados.length}/${_lancamentos.length}'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(_resumoRastreio()),
+            if (_plantaDisponivel) ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  File(_concretagemAtual.plantaPath),
+                  height: 150,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 150,
+                    alignment: Alignment.center,
+                    color: Colors.black.withValues(alpha: 0.04),
+                    child: const Text('Pré-visualização indisponível'),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _abrirRastreio,
+                icon: const Icon(Icons.draw_outlined),
+                label: Text(
+                  _plantaDisponivel
+                      ? 'Abrir rastreio da planta'
+                      : 'Escanear ou importar planta',
+                ),
+              ),
             ),
           ],
         ),
@@ -261,6 +372,8 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
                   Text('Slump depois: ${_fmtNum(l.slumpDepois!)} cm'),
                 if (l.tempoMisturaMin != null)
                   Text('Mistura: ${_fmtNum(l.tempoMisturaMin!)} min'),
+                if (_lancamentoTemRastreio(l.id))
+                  const Text('Rastreio na planta: marcado'),
                 if (l.observacoes.isNotEmpty) Text('Obs.: ${l.observacoes}'),
                 if (l.fotoPaths.isNotEmpty)
                   Text('Fotos anexas: ${l.fotoPaths.length}'),
