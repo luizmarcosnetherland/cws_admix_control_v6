@@ -18,7 +18,7 @@ class ObraReportPdfService {
   final LocalStorageService _storage = LocalStorageService();
   static const _lancamentoCardWidth = 255.0;
   static const _rastreioPreviewMaxHeight = 400.0;
-  static const _rastreioPreviewMaxSidePx = 1800.0;
+  static const _rastreioPreviewMaxSidePx = 1440.0;
   static Future<_PdfLogos>? _logosFuture;
   static Future<_PdfFonts>? _fontsFuture;
 
@@ -407,6 +407,12 @@ class ObraReportPdfService {
               ),
             ],
           ),
+          pw.SizedBox(height: 12),
+          _sectionTitle('Lançamentos da concretagem'),
+          if (lancamentoCards.isEmpty)
+            _emptySectionCard('Nenhum lançamento cadastrado nesta concretagem.')
+          else
+            pw.Wrap(spacing: 8, runSpacing: 8, children: lancamentoCards),
           if (rastreioPreview != null) ...[
             pw.SizedBox(height: 12),
             _buildConcretagemRastreioBlock(
@@ -414,12 +420,6 @@ class ObraReportPdfService {
               lancamentos: lancamentosOrdenados,
             ),
           ],
-          pw.SizedBox(height: 12),
-          _sectionTitle('Lançamentos da concretagem'),
-          if (lancamentoCards.isEmpty)
-            _emptySectionCard('Nenhum lançamento cadastrado nesta concretagem.')
-          else
-            pw.Wrap(spacing: 8, runSpacing: 8, children: lancamentoCards),
         ],
       ),
     );

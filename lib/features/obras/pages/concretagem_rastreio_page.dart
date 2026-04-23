@@ -10,6 +10,8 @@ import '../../../core/services/local_storage_service.dart';
 import '../../../data/models/concretagem_model.dart';
 import '../../../data/models/lancamento_model.dart';
 import '../../../data/repositories/concretagem_repository.dart';
+import '../../../data/repositories/lancamento_repository.dart';
+import 'novo_lancamento_page.dart';
 
 enum _ModoRastreio { spray, navegar }
 
@@ -38,11 +40,13 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
   static const double _maxBrushSize = 40;
 
   final _repo = ConcretagemRepository();
+  final _lancamentoRepo = LancamentoRepository();
   final _storage = LocalStorageService();
   final _picker = ImagePicker();
   final _viewerController = TransformationController();
 
   late Concretagem _concretagemAtual;
+  late List<Lancamento> _lancamentos;
   late List<ConcretagemRastreioTraco> _tracos;
   _ModoRastreio _modo = _ModoRastreio.spray;
   double _brushSize = 18;
@@ -55,9 +59,8 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
   List<Offset> _activePoints = [];
   double _activeCanvasMinSide = 0;
 
-  List<Lancamento> get _lancamentosComId => widget.lancamentos
-      .where((item) => item.id != null)
-      .toList(growable: false);
+  List<Lancamento> get _lancamentosComId =>
+      _lancamentos.where((item) => item.id != null).toList(growable: false);
 
   bool get _temLancamentos => _lancamentosComId.isNotEmpty;
 
@@ -87,12 +90,12 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
   void initState() {
     super.initState();
     _concretagemAtual = widget.concretagem;
+    _lancamentos = _ordenarLancamentos(widget.lancamentos);
     _tracos = _filtrarTracosValidos(widget.concretagem.rastreioTracos);
-    if (_temLancamentos) {
-      _lancamentoSelecionadoId = _lancamentosComId.first.id;
-    }
+    _lancamentoSelecionadoId =
+        _primeiroLancamentoPendenteId() ??
+        (_temLancamentos ? _lancamentosComId.first.id : null);
     if (_tracos.isNotEmpty) {
-      _lancamentoSelecionadoId = _tracos.last.lancamentoId;
       _brushSize = _tracos.last.brushSize
           .clamp(_minBrushSize, _maxBrushSize)
           .toDouble();
@@ -112,14 +115,202 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
     super.dispose();
   }
 
-  List<ConcretagemRastreioTraco> _filtrarTracosValidos(
+  List<Lancamento> _ordenarLancamentos(List<Lancamento> origem) {
+    final ordenados = List<Lancamento>.from(origem);
+    ordenados.sort((a, b) {
+      final byDate = a.dataHora.compareTo(b.dataHora);
+      if (byDate != 0) return byDate;
+      return (a.id ?? 0).compareTo(b.id ?? 0);
+    });
+    return ordenados;
+  }
+
+  List<ConcretagemRastreioTraco> _filtrarTracosValidosParaLancamentos(
     List<ConcretagemRastreioTraco> origem,
+    List<Lancamento> lancamentos,
   ) {
-    final idsValidos = _lancamentosComId.map((item) => item.id!).toSet();
+    final idsValidos = lancamentos
+        .where((item) => item.id != null)
+        .map((item) => item.id!)
+        .toSet();
     return origem
         .where((item) => idsValidos.contains(item.lancamentoId))
         .where((item) => item.points.length >= 2)
         .toList(growable: false);
+  }
+
+  List<ConcretagemRastreioTraco> _filtrarTracosValidos(
+    List<ConcretagemRastreioTraco> origem,
+  ) => _filtrarTracosValidosParaLancamentos(origem, _lancamentos);
+
+  int? _primeiroLancamentoPendenteIdFrom(
+    List<Lancamento> lancamentos,
+    List<ConcretagemRastreioTraco> tracos,
+  ) {
+    final marcados = tracos.map((item) => item.lancamentoId).toSet();
+    for (final item in lancamentos) {
+      final id = item.id;
+      if (id == null || marcados.contains(id)) continue;
+      return id;
+    }
+    return null;
+  }
+
+  int? _primeiroLancamentoPendenteId() {
+    return _primeiroLancamentoPendenteIdFrom(_lancamentosComId, _tracos);
+  }
+
+  int? _resolverSelecaoLancamento({
+    List<Lancamento>? lancamentos,
+    List<ConcretagemRastreioTraco>? tracos,
+    int? preferredId,
+  }) {
+    final itens = (lancamentos ?? _lancamentos)
+        .where((item) => item.id != null)
+        .toList(growable: false);
+    if (itens.isEmpty) return null;
+
+    final idsValidos = itens.map((item) => item.id!).toSet();
+    if (preferredId != null && idsValidos.contains(preferredId)) {
+      return preferredId;
+    }
+
+    return _primeiroLancamentoPendenteIdFrom(itens, tracos ?? _tracos) ??
+        itens.first.id;
+  }
+
+  bool _lancamentoTemMarcacao(int? lancamentoId) {
+    if (lancamentoId == null) return false;
+    return _tracos.any((item) => item.lancamentoId == lancamentoId);
+  }
+
+  int? get _proximoLancamentoPendenteId {
+    final itens = _lancamentosComId;
+    if (itens.isEmpty) return null;
+
+    final marcados = _lancamentosMarcados;
+    final atual = _lancamentoSelecionadoId;
+    final indiceAtual = atual == null
+        ? -1
+        : itens.indexWhere((item) => item.id == atual);
+
+    if (indiceAtual >= 0) {
+      for (var index = indiceAtual + 1; index < itens.length; index++) {
+        final id = itens[index].id;
+        if (id != null && !marcados.contains(id)) return id;
+      }
+    }
+
+    final limite = indiceAtual >= 0 ? indiceAtual : itens.length;
+    for (var index = 0; index < limite; index++) {
+      final id = itens[index].id;
+      if (id != null && !marcados.contains(id)) return id;
+    }
+
+    return null;
+  }
+
+  Future<void> _recarregarLancamentos({int? preferredId}) async {
+    final concretagemId = _concretagemAtual.id;
+    if (concretagemId == null) return;
+
+    final lista = await _lancamentoRepo.listarPorConcretagem(concretagemId);
+    final ordenados = _ordenarLancamentos(lista);
+    final tracosValidos = _filtrarTracosValidosParaLancamentos(
+      _tracos,
+      ordenados,
+    );
+    final removeuTracosInvalidos = tracosValidos.length != _tracos.length;
+    final selecionadoId = _resolverSelecaoLancamento(
+      lancamentos: ordenados,
+      tracos: tracosValidos,
+      preferredId: preferredId,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _lancamentos = ordenados;
+      _tracos = tracosValidos;
+      _lancamentoSelecionadoId = selecionadoId;
+      _activePoints = [];
+    });
+
+    if (removeuTracosInvalidos) {
+      await _persistirRastreio(tracos: tracosValidos, silent: true);
+    }
+  }
+
+  Future<void> _abrirPrimeiroLancamento() async {
+    if (_concretagemAtual.id == null) return;
+
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => NovoLancamentoPage(
+          obraNome: widget.obraNome,
+          concretagem: _concretagemAtual,
+        ),
+      ),
+    );
+
+    if (created != true) return;
+
+    await _recarregarLancamentos();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Primeiro lançamento pronto para ser marcado na planta.'),
+      ),
+    );
+  }
+
+  void _selecionarLancamento(int lancamentoId) {
+    setState(() {
+      _lancamentoSelecionadoId = lancamentoId;
+      _activePoints = [];
+      _modo = _ModoRastreio.spray;
+    });
+  }
+
+  void _irParaProximoLancamento() {
+    final proximoId = _proximoLancamentoPendenteId;
+    if (proximoId == null) return;
+    _selecionarLancamento(proximoId);
+  }
+
+  Future<void> _encerrarConcretagem() async {
+    if (_salvando) return;
+
+    final pendentes = _lancamentosComId.where((item) {
+      final id = item.id;
+      return id != null && !_lancamentosMarcados.contains(id);
+    }).length;
+
+    if (pendentes > 0) {
+      final confirmar = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Encerrar concretagem'),
+          content: Text(
+            pendentes == 1
+                ? 'Ainda resta 1 lançamento sem marcação. Deseja encerrar mesmo assim?'
+                : 'Ainda restam $pendentes lançamentos sem marcação. Deseja encerrar mesmo assim?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Continuar marcando'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Encerrar'),
+            ),
+          ],
+        ),
+      );
+      if (confirmar != true || !mounted) return;
+    }
+
+    Navigator.of(context).pop();
   }
 
   Future<void> _carregarAspectRatio() async {
@@ -300,7 +491,12 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
       );
       if (source == null) return;
 
-      final picked = await _picker.pickImage(source: source, imageQuality: 90);
+      final picked = await _picker.pickImage(
+        source: source,
+        imageQuality: 80,
+        maxWidth: 2400,
+        maxHeight: 2400,
+      );
       if (picked == null) return;
 
       final path = await _salvarPlantaSelecionada(picked);
@@ -516,7 +712,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
       return 'Escaneie ou importe a planta para começar o rastreio.';
     }
     if (!_temLancamentos) {
-      return 'A planta já foi salva. Agora basta cadastrar os lançamentos desta concretagem para marcá-los.';
+      return 'A planta já foi salva. Agora basta cadastrar o primeiro lançamento desta concretagem para começar a marcação.';
     }
     return '${_lancamentosMarcados.length} de ${_lancamentosComId.length} lançamentos já foram marcados.';
   }
@@ -526,7 +722,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
       return 'Use a câmera para fotografar a planta ou escolha uma imagem já escaneada da galeria.';
     }
     if (!_temLancamentos) {
-      return 'Cadastre pelo menos um lançamento nesta concretagem para habilitar as marcações.';
+      return 'Use o botão abaixo para ir ao primeiro lançamento e depois volte para marcar a planta.';
     }
     if (_modo == _ModoRastreio.navegar) {
       return 'Modo navegar ativo: use pinça e arraste para ampliar e posicionar a planta. Ao voltar para o spray, esse enquadramento é mantido.';
@@ -855,7 +1051,23 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
             ),
             const SizedBox(height: 12),
             if (!_temLancamentos)
-              const Text('Nenhum lançamento cadastrado nesta concretagem.')
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Nenhum lançamento cadastrado nesta concretagem.'),
+                  if (_temPlanta) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: _abrirPrimeiroLancamento,
+                        icon: const Icon(Icons.playlist_add_outlined),
+                        label: const Text('Ir para o primeiro lançamento'),
+                      ),
+                    ),
+                  ],
+                ],
+              )
             else
               Wrap(
                 spacing: 8,
@@ -867,12 +1079,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
                       final tracos = _quantidadeTracosLancamento(id);
                       return ChoiceChip(
                         selected: selecionado,
-                        onSelected: (_) {
-                          setState(() {
-                            _lancamentoSelecionadoId = id;
-                            _activePoints = [];
-                          });
-                        },
+                        onSelected: (_) => _selecionarLancamento(id),
                         avatar: CircleAvatar(
                           radius: 9,
                           backgroundColor: _corDoLancamento(id),
@@ -904,6 +1111,67 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
     );
   }
 
+  Widget? _buildBottomActions() {
+    if (_temAlteracoesPendentes || _salvando) {
+      return SafeArea(
+        minimum: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        child: SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: _podeSalvar ? _salvarAlteracoes : null,
+            icon: _salvando
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.save_outlined),
+            label: Text(
+              _temAlteracoesPendentes ? 'Salvar marcações' : 'Tudo salvo',
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (!_temLancamentos || !_lancamentoTemMarcacao(_lancamentoSelecionadoId)) {
+      return null;
+    }
+
+    final proximoId = _proximoLancamentoPendenteId;
+    return SafeArea(
+      minimum: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: proximoId == null
+          ? SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                onPressed: _encerrarConcretagem,
+                icon: const Icon(Icons.task_alt_outlined),
+                label: const Text('Encerrar concretagem'),
+              ),
+            )
+          : Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _irParaProximoLancamento,
+                    icon: const Icon(Icons.skip_next_outlined),
+                    label: const Text('Próximo lançamento'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.tonalIcon(
+                    onPressed: _encerrarConcretagem,
+                    icon: const Icon(Icons.task_alt_outlined),
+                    label: const Text('Encerrar concretagem'),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope<void>(
@@ -931,25 +1199,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
             ],
           ),
         ),
-        bottomNavigationBar: SafeArea(
-          minimum: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          child: SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _podeSalvar ? _salvarAlteracoes : null,
-              icon: _salvando
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save_outlined),
-              label: Text(
-                _temAlteracoesPendentes ? 'Salvar marcações' : 'Tudo salvo',
-              ),
-            ),
-          ),
-        ),
+        bottomNavigationBar: _buildBottomActions(),
       ),
     );
   }
