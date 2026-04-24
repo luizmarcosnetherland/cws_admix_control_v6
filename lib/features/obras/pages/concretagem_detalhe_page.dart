@@ -13,6 +13,8 @@ import 'concretagem_rastreio_page.dart';
 import 'nova_concretagem_page.dart';
 import 'novo_lancamento_page.dart';
 
+enum _AcaoEncerrarConcretagem { cancelar, encerrar, gerarPdf }
+
 class ConcretagemDetalhePage extends StatefulWidget {
   final Obra obra;
   final Concretagem concretagem;
@@ -113,7 +115,7 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
   }
 
   Future<void> _abrirRastreio() async {
-    await Navigator.of(context).push<void>(
+    final encerrou = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => ConcretagemRastreioPage(
           obraNome: widget.obra.nome,
@@ -123,6 +125,9 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
       ),
     );
     await _carregar();
+    if (encerrou == true && mounted) {
+      await _encerrarConcretagem();
+    }
   }
 
   Future<void> _excluirLancamento(Lancamento lancamento) async {
@@ -226,6 +231,55 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
         setState(() => _processandoRelatorio = false);
       }
     }
+  }
+
+  Future<bool> _oferecerRelatorioEncerramento() async {
+    final acao = await showDialog<_AcaoEncerrarConcretagem>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Encerrar concretagem'),
+        content: const Text(
+          'Deseja gerar o PDF da concretagem antes de encerrar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () =>
+                Navigator.of(context).pop(_AcaoEncerrarConcretagem.cancelar),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.of(context).pop(_AcaoEncerrarConcretagem.encerrar),
+            child: const Text('Encerrar sem PDF'),
+          ),
+          FilledButton.icon(
+            onPressed: () =>
+                Navigator.of(context).pop(_AcaoEncerrarConcretagem.gerarPdf),
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            label: const Text('Gerar PDF'),
+          ),
+        ],
+      ),
+    );
+
+    if (acao == null || acao == _AcaoEncerrarConcretagem.cancelar) {
+      return false;
+    }
+
+    if (acao == _AcaoEncerrarConcretagem.gerarPdf) {
+      await _compartilharRelatorio();
+    }
+
+    return mounted;
+  }
+
+  Future<void> _encerrarConcretagem() async {
+    if (_processandoRelatorio) return;
+
+    final encerrar = await _oferecerRelatorioEncerramento();
+    if (!encerrar || !mounted) return;
+
+    Navigator.of(context).pop(true);
   }
 
   Future<void> _enviarRelatorioPorEmail() async {
@@ -545,6 +599,17 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
         title: const Text('Concretagem'),
         actions: [
           IconButton(
+            tooltip: 'Gerar PDF da concretagem',
+            onPressed: _processandoRelatorio ? null : _compartilharRelatorio,
+            icon: _processandoRelatorio
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.picture_as_pdf_outlined),
+          ),
+          IconButton(
             tooltip: 'Editar concretagem',
             onPressed: _editarConcretagem,
             icon: const Icon(Icons.edit),
@@ -569,13 +634,24 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
       ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-        child: SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: _abrirNovoLancamento,
-            icon: const Icon(Icons.add),
-            label: const Text('Adicionar Lançamento'),
-          ),
+        child: Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: _abrirNovoLancamento,
+                icon: const Icon(Icons.add),
+                label: const Text('Adicionar'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton.tonalIcon(
+                onPressed: _encerrarConcretagem,
+                icon: const Icon(Icons.task_alt_outlined),
+                label: const Text('Encerrar'),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -240,7 +240,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
     }
   }
 
-  Future<void> _abrirPrimeiroLancamento() async {
+  Future<void> _abrirNovoLancamento({bool primeiro = false}) async {
     if (_concretagemAtual.id == null) return;
 
     final created = await Navigator.of(context).push<bool>(
@@ -257,10 +257,18 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
     await _recarregarLancamentos();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Primeiro lançamento pronto para ser marcado na planta.'),
+      SnackBar(
+        content: Text(
+          primeiro
+              ? 'Primeiro lançamento pronto para ser marcado na planta.'
+              : 'Novo lançamento pronto para ser marcado na planta.',
+        ),
       ),
     );
+  }
+
+  Future<void> _abrirPrimeiroLancamento() async {
+    await _abrirNovoLancamento(primeiro: true);
   }
 
   void _selecionarLancamento(int lancamentoId) {
@@ -310,7 +318,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
       if (confirmar != true || !mounted) return;
     }
 
-    Navigator.of(context).pop();
+    Navigator.of(context).pop(true);
   }
 
   Future<void> _carregarAspectRatio() async {
@@ -1142,26 +1150,60 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       child: proximoId == null
-          ? SizedBox(
-              width: double.infinity,
-              child: FilledButton.tonalIcon(
-                onPressed: _encerrarConcretagem,
-                icon: const Icon(Icons.task_alt_outlined),
-                label: const Text('Encerrar concretagem'),
-              ),
-            )
-          : Row(
+          ? Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _irParaProximoLancamento,
-                    icon: const Icon(Icons.skip_next_outlined),
-                    label: const Text('Próximo lançamento'),
+                    onPressed: _abrirNovoLancamento,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    icon: const Icon(Icons.playlist_add_outlined),
+                    label: const Text('Novo lançamento'),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: FilledButton.tonalIcon(
+                    onPressed: _encerrarConcretagem,
+                    icon: const Icon(Icons.task_alt_outlined),
+                    label: const Text('Encerrar'),
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _abrirNovoLancamento,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        icon: const Icon(Icons.playlist_add_outlined),
+                        label: const Text('Novo lançamento'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _irParaProximoLancamento,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        icon: const Icon(Icons.skip_next_outlined),
+                        label: const Text('Próximo'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
                     onPressed: _encerrarConcretagem,
                     icon: const Icon(Icons.task_alt_outlined),
                     label: const Text('Encerrar concretagem'),
@@ -1190,11 +1232,11 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
             children: [
               _buildCabecalho(),
               const SizedBox(height: 10),
-              _buildControles(),
-              const SizedBox(height: 10),
               _buildCanvas(),
               const SizedBox(height: 10),
               _buildLancamentos(),
+              const SizedBox(height: 10),
+              _buildControles(),
               const SizedBox(height: 24),
             ],
           ),

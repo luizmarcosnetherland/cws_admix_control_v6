@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:keyboard_actions/keyboard_actions.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/services/local_storage_service.dart';
@@ -43,6 +44,13 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
   final _tempoMisturaCtrl = TextEditingController();
 
   final _obsCtrl = TextEditingController();
+  final _volumeFocusNode = FocusNode();
+  final _dosagemFocusNode = FocusNode();
+  final _cwsAdicionadoFocusNode = FocusNode();
+  final _slumpAntesFocusNode = FocusNode();
+  final _slumpDepoisFocusNode = FocusNode();
+  final _tempoMisturaFocusNode = FocusNode();
+  final _obsFocusNode = FocusNode();
   List<String> _fotoPaths = [];
 
   late final DateTime _dataHora;
@@ -89,6 +97,13 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     _slumpDepoisCtrl.dispose();
     _tempoMisturaCtrl.dispose();
     _obsCtrl.dispose();
+    _volumeFocusNode.dispose();
+    _dosagemFocusNode.dispose();
+    _cwsAdicionadoFocusNode.dispose();
+    _slumpAntesFocusNode.dispose();
+    _slumpDepoisFocusNode.dispose();
+    _tempoMisturaFocusNode.dispose();
+    _obsFocusNode.dispose();
     super.dispose();
   }
 
@@ -203,6 +218,38 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
 
   InputDecoration _dec(String label) =>
       InputDecoration(labelText: label, border: const OutlineInputBorder());
+
+  void _focusNextField() {
+    FocusScope.of(context).nextFocus();
+  }
+
+  KeyboardActionsConfig _keyboardActionsConfig() {
+    KeyboardActionsItem item(FocusNode node) {
+      return KeyboardActionsItem(
+        focusNode: node,
+        toolbarButtons: [
+          (focusNode) => TextButton.icon(
+            onPressed: focusNode.nextFocus,
+            icon: const Icon(Icons.keyboard_arrow_down),
+            label: const Text('Próximo'),
+          ),
+        ],
+      );
+    }
+
+    return KeyboardActionsConfig(
+      keyboardActionsPlatform: KeyboardActionsPlatform.ALL,
+      nextFocus: true,
+      actions: [
+        item(_volumeFocusNode),
+        item(_dosagemFocusNode),
+        item(_cwsAdicionadoFocusNode),
+        item(_slumpAntesFocusNode),
+        item(_slumpDepoisFocusNode),
+        item(_tempoMisturaFocusNode),
+      ],
+    );
+  }
 
   Future<void> _adicionarFotos() async {
     if (_pickingFotos || _saving) return;
@@ -369,231 +416,249 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: Form(
-          key: _formKey,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.obraNome,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Estrutura: ${concretagem.estruturaConcretada.trim().isEmpty ? 'não informada' : concretagem.estruturaConcretada}',
-                      ),
-                      Text(
-                        'Concreteira: ${concretagem.concreteira.trim().isEmpty ? 'não informada' : concretagem.concreteira}',
-                      ),
-                      Text('Data/hora: ${_fmtDataHora(_dataHora)}'),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              TextFormField(
-                controller: _betoneiraCtrl,
-                decoration: _dec('Betoneira * (nº/placa)'),
-                textInputAction: TextInputAction.next,
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'Informe a betoneira'
-                    : null,
-              ),
-              const SizedBox(height: 12),
-
-              TextFormField(
-                controller: _notaFiscalCtrl,
-                decoration: _dec('Nota fiscal (NF)'),
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 12),
-
-              TextFormField(
-                controller: _volumeCtrl,
-                decoration: _dec('Volume (m³) *'),
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                textInputAction: TextInputAction.next,
-                validator: (value) {
-                  final v = _parseNumero(value ?? '');
-                  if (v == null) return 'Informe o volume';
-                  if (v <= 0) return 'Volume deve ser maior que zero';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-
-              TextFormField(
-                controller: _dosagemCtrl,
-                decoration: _dec('Dosagem (kg/m³) *'),
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                textInputAction: TextInputAction.next,
-                validator: (value) {
-                  final v = _parseNumero(value ?? '');
-                  if (v == null) return 'Informe a dosagem';
-                  if (v <= 0) return 'Dosagem deve ser maior que zero';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-
-              TextFormField(
-                controller: _cwsAdicionadoCtrl,
-                decoration: _dec('Quantidade adicionada (kg)'),
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                textInputAction: TextInputAction.next,
-                validator: _validateOptionalNumber,
-              ),
-              const SizedBox(height: 12),
-
-              _previewCards(),
-              const SizedBox(height: 12),
-
-              // Extras de campo
-              TextFormField(
-                controller: _slumpAntesCtrl,
-                decoration: _dec('Slump antes (cm)'),
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                textInputAction: TextInputAction.next,
-                validator: _validateOptionalNumber,
-              ),
-              const SizedBox(height: 12),
-
-              TextFormField(
-                controller: _slumpDepoisCtrl,
-                decoration: _dec('Slump depois (cm)'),
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                textInputAction: TextInputAction.next,
-                validator: _validateOptionalNumber,
-              ),
-              const SizedBox(height: 12),
-
-              TextFormField(
-                controller: _tempoMisturaCtrl,
-                decoration: _dec('Tempo de mistura (min)'),
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                textInputAction: TextInputAction.next,
-                validator: _validateOptionalNumber,
-              ),
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Observações',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+      body: KeyboardActions(
+        config: _keyboardActionsConfig(),
+        child: SafeArea(
+          child: Form(
+            key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.obraNome,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Estrutura: ${concretagem.estruturaConcretada.trim().isEmpty ? 'não informada' : concretagem.estruturaConcretada}',
+                        ),
+                        Text(
+                          'Concreteira: ${concretagem.concreteira.trim().isEmpty ? 'não informada' : concretagem.concreteira}',
+                        ),
+                        Text('Data/hora: ${_fmtDataHora(_dataHora)}'),
+                      ],
                     ),
                   ),
-                  TextButton.icon(
-                    onPressed: _pickingFotos || _saving
-                        ? null
-                        : _adicionarFotos,
-                    icon: _pickingFotos
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.photo_library_outlined),
-                    label: const Text('Fotos'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _obsCtrl,
-                decoration: const InputDecoration(
-                  hintText: 'Observações do lançamento',
-                  border: OutlineInputBorder(),
                 ),
-                minLines: 2,
-                maxLines: 4,
-              ),
-              if (_fotoPaths.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                SizedBox(
-                  height: 92,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _fotoPaths.length,
-                    separatorBuilder: (_, index) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      final path = _fotoPaths[index];
-                      return Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Container(
-                              width: 92,
-                              height: 92,
-                              color: Colors.grey.shade200,
-                              child: Image.file(
-                                File(path),
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const Center(
-                                      child: Icon(Icons.broken_image_outlined),
-                                    ),
+
+                TextFormField(
+                  controller: _betoneiraCtrl,
+                  decoration: _dec('Betoneira * (nº/placa)'),
+                  textInputAction: TextInputAction.next,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Informe a betoneira'
+                      : null,
+                ),
+                const SizedBox(height: 12),
+
+                TextFormField(
+                  controller: _notaFiscalCtrl,
+                  decoration: _dec('Nota fiscal (NF)'),
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: 12),
+
+                TextFormField(
+                  controller: _volumeCtrl,
+                  focusNode: _volumeFocusNode,
+                  decoration: _dec('Volume (m³) *'),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => _focusNextField(),
+                  validator: (value) {
+                    final v = _parseNumero(value ?? '');
+                    if (v == null) return 'Informe o volume';
+                    if (v <= 0) return 'Volume deve ser maior que zero';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                TextFormField(
+                  controller: _dosagemCtrl,
+                  focusNode: _dosagemFocusNode,
+                  decoration: _dec('Dosagem (kg/m³) *'),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => _focusNextField(),
+                  validator: (value) {
+                    final v = _parseNumero(value ?? '');
+                    if (v == null) return 'Informe a dosagem';
+                    if (v <= 0) return 'Dosagem deve ser maior que zero';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                TextFormField(
+                  controller: _cwsAdicionadoCtrl,
+                  focusNode: _cwsAdicionadoFocusNode,
+                  decoration: _dec('Quantidade adicionada (kg)'),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => _focusNextField(),
+                  validator: _validateOptionalNumber,
+                ),
+                const SizedBox(height: 12),
+
+                _previewCards(),
+                const SizedBox(height: 12),
+
+                // Extras de campo
+                TextFormField(
+                  controller: _slumpAntesCtrl,
+                  focusNode: _slumpAntesFocusNode,
+                  decoration: _dec('Slump antes (cm)'),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => _focusNextField(),
+                  validator: _validateOptionalNumber,
+                ),
+                const SizedBox(height: 12),
+
+                TextFormField(
+                  controller: _slumpDepoisCtrl,
+                  focusNode: _slumpDepoisFocusNode,
+                  decoration: _dec('Slump depois (cm)'),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => _focusNextField(),
+                  validator: _validateOptionalNumber,
+                ),
+                const SizedBox(height: 12),
+
+                TextFormField(
+                  controller: _tempoMisturaCtrl,
+                  focusNode: _tempoMisturaFocusNode,
+                  decoration: _dec('Tempo de mistura (min)'),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => _focusNextField(),
+                  validator: _validateOptionalNumber,
+                ),
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Observações',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: _pickingFotos || _saving
+                          ? null
+                          : _adicionarFotos,
+                      icon: _pickingFotos
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.photo_library_outlined),
+                      label: const Text('Fotos'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _obsCtrl,
+                  focusNode: _obsFocusNode,
+                  decoration: const InputDecoration(
+                    hintText: 'Observações do lançamento',
+                    border: OutlineInputBorder(),
+                  ),
+                  minLines: 2,
+                  maxLines: 4,
+                ),
+                if (_fotoPaths.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 92,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _fotoPaths.length,
+                      separatorBuilder: (_, index) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final path = _fotoPaths[index];
+                        return Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                width: 92,
+                                height: 92,
+                                color: Colors.grey.shade200,
+                                child: Image.file(
+                                  File(path),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Center(
+                                        child: Icon(
+                                          Icons.broken_image_outlined,
+                                        ),
+                                      ),
+                                ),
                               ),
                             ),
-                          ),
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child: Material(
-                              color: Colors.black54,
-                              shape: const CircleBorder(),
-                              child: InkWell(
-                                customBorder: const CircleBorder(),
-                                onTap: () => _removerFoto(path),
-                                child: const Padding(
-                                  padding: EdgeInsets.all(4),
-                                  child: Icon(
-                                    Icons.close,
-                                    size: 16,
-                                    color: Colors.white,
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: Material(
+                                color: Colors.black54,
+                                shape: const CircleBorder(),
+                                child: InkWell(
+                                  customBorder: const CircleBorder(),
+                                  onTap: () => _removerFoto(path),
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(4),
+                                    child: Icon(
+                                      Icons.close,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      );
-                    },
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: _saving ? null : _salvar,
+                  icon: const Icon(Icons.save),
+                  label: Text(
+                    _isEdicao ? 'Salvar alterações' : 'Salvar lançamento',
                   ),
                 ),
               ],
-
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: _saving ? null : _salvar,
-                icon: const Icon(Icons.save),
-                label: Text(
-                  _isEdicao ? 'Salvar alterações' : 'Salvar lançamento',
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
