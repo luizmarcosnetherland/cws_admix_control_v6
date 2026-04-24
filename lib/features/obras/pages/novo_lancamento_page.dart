@@ -416,12 +416,12 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
           ),
         ],
       ),
-      body: KeyboardActions(
-        config: _keyboardActionsConfig(),
-        child: SafeArea(
-          child: Form(
-            key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: KeyboardActions(
+            config: _keyboardActionsConfig(),
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
