@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -34,7 +35,8 @@ class ConcretagemRastreioPage extends StatefulWidget {
       _ConcretagemRastreioPageState();
 }
 
-class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
+class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
+    with WidgetsBindingObserver {
   static const double _viewportHeight = 420;
   static const double _minBrushSize = 8;
   static const double _maxBrushSize = 40;
@@ -58,6 +60,8 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
   int? _lancamentoSelecionadoId;
   List<Offset> _activePoints = [];
   double _activeCanvasMinSide = 0;
+  int _rastreioRevision = 0;
+  Future<void>? _salvamentoPendente;
 
   List<Lancamento> get _lancamentosComId =>
       _lancamentos.where((item) => item.id != null).toList(growable: false);
@@ -89,6 +93,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _concretagemAtual = widget.concretagem;
     _lancamentos = _ordenarLancamentos(widget.lancamentos);
     _tracos = _filtrarTracosValidos(widget.concretagem.rastreioTracos);
@@ -111,8 +116,25 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _viewerController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        if (_temAlteracoesPendentes) {
+          unawaited(_salvarRastreioPendente(silent: true));
+        }
+        break;
+      case AppLifecycleState.resumed:
+        break;
+    }
   }
 
   List<Lancamento> _ordenarLancamentos(List<Lancamento> origem) {
@@ -354,12 +376,64 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
   bool get _podeSalvar =>
       _temAlteracoesPendentes && !_salvando && _concretagemAtual.id != null;
 
+  void _marcarAlteracoesPendentes() {
+    _rastreioRevision++;
+    _temAlteracoesPendentes = true;
+  }
+
+  Future<bool> _salvarRastreioPendente({required bool silent}) async {
+    if (!_temAlteracoesPendentes || _concretagemAtual.id == null) return true;
+
+    final emAndamento = _salvamentoPendente;
+    if (emAndamento != null) {
+      await emAndamento;
+      if (_temAlteracoesPendentes && !silent) {
+        return _salvarRastreioPendente(silent: silent);
+      }
+      return !_temAlteracoesPendentes;
+    }
+
+    late final Future<void> salvamento;
+    salvamento = _executarFilaSalvamento(silent: silent);
+    _salvamentoPendente = salvamento;
+
+    try {
+      await salvamento;
+    } finally {
+      if (identical(_salvamentoPendente, salvamento)) {
+        _salvamentoPendente = null;
+      }
+    }
+
+    return !_temAlteracoesPendentes;
+  }
+
+  Future<void> _executarFilaSalvamento({required bool silent}) async {
+    while (_temAlteracoesPendentes && _concretagemAtual.id != null) {
+      final revision = _rastreioRevision;
+      final tracosSnapshot = List<ConcretagemRastreioTraco>.unmodifiable(
+        _tracos,
+      );
+      final plantaPathSnapshot = _concretagemAtual.plantaPath;
+
+      final salvou = await _persistirRastreio(
+        tracos: tracosSnapshot,
+        plantaPath: plantaPathSnapshot,
+        silent: silent,
+        revision: revision,
+      );
+      if (!salvou) break;
+    }
+  }
+
   Future<bool> _persistirRastreio({
     List<ConcretagemRastreioTraco>? tracos,
     String? plantaPath,
     bool silent = false,
+    int? revision,
   }) async {
     if (_concretagemAtual.id == null) return false;
+    final revisionSalva = revision ?? _rastreioRevision;
 
     final atualizado = _concretagemAtual.copyWith(
       plantaPath: plantaPath ?? _concretagemAtual.plantaPath,
@@ -376,8 +450,16 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
       salvou = true;
       if (!mounted) return true;
       setState(() {
-        _concretagemAtual = salvo;
-        _temAlteracoesPendentes = false;
+        if (revisionSalva >= _rastreioRevision) {
+          _concretagemAtual = salvo;
+          _temAlteracoesPendentes = false;
+        } else {
+          _concretagemAtual = salvo.copyWith(
+            plantaPath: _concretagemAtual.plantaPath,
+            rastreioTracos: _tracos,
+          );
+          _temAlteracoesPendentes = true;
+        }
       });
     } catch (e) {
       if (!mounted || silent) return false;
@@ -396,7 +478,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
   Future<bool> _salvarAlteracoes({bool showFeedback = true}) async {
     if (!_temAlteracoesPendentes) return true;
 
-    final salvou = await _persistirRastreio(tracos: _tracos);
+    final salvou = await _salvarRastreioPendente(silent: !showFeedback);
     if (salvou && showFeedback && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Marcações salvas na concretagem.')),
@@ -518,13 +600,13 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
         );
         _tracos = novosTracos;
         _activePoints = [];
-        _temAlteracoesPendentes = true;
+        _marcarAlteracoesPendentes();
         _modo = _ModoRastreio.spray;
         _viewerController.value = Matrix4.identity();
       });
 
+      await _salvarRastreioPendente(silent: false);
       await _carregarAspectRatio();
-      await _persistirRastreio(tracos: novosTracos, plantaPath: path);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -592,8 +674,9 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
     setState(() {
       _tracos = novosTracos;
       _activePoints = [];
-      _temAlteracoesPendentes = true;
+      _marcarAlteracoesPendentes();
     });
+    unawaited(_salvarRastreioPendente(silent: true));
   }
 
   Future<void> _desfazerUltimoTraco() async {
@@ -609,8 +692,9 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
       ..removeAt(index);
     setState(() {
       _tracos = novosTracos;
-      _temAlteracoesPendentes = true;
+      _marcarAlteracoesPendentes();
     });
+    unawaited(_salvarRastreioPendente(silent: true));
   }
 
   void _mudarModo(_ModoRastreio modo) {
@@ -669,8 +753,9 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
       _tracos = novosTracos;
       _activeCanvasMinSide = 0;
       _activePoints = [];
-      _temAlteracoesPendentes = true;
+      _marcarAlteracoesPendentes();
     });
+    unawaited(_salvarRastreioPendente(silent: true));
   }
 
   Offset? _toNormalizedOffset(Offset position, Size canvasSize) {
@@ -735,7 +820,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage> {
     if (_modo == _ModoRastreio.navegar) {
       return 'Modo navegar ativo: use pinça e arraste para ampliar e posicionar a planta. Ao voltar para o spray, esse enquadramento é mantido.';
     }
-    return 'Modo spray ativo: a planta fica travada no enquadramento atual para não se mover durante a marcação. Use Navegar para ajustar o zoom e depois Salvar para gravar.';
+    return 'Modo spray ativo: a planta fica travada no enquadramento atual para não se mover durante a marcação. Use Navegar para ajustar o zoom; as marcações são salvas automaticamente.';
   }
 
   Size _canvasSizeFor(Size viewportSize) {
