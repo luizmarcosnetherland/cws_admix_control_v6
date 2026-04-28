@@ -14,6 +14,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'features/agendamento/pages/agendamento_concretagem_page.dart';
 import 'features/obras/pages/obras_page.dart';
 import 'cws_calculator_page.dart';
 
@@ -186,6 +187,14 @@ class _AppGateState extends State<AppGate> {
         return const ObrasPage();
       case 'literatura':
         return const LiteraturaTecnicaPage();
+      case 'agendamento':
+        return AgendamentoConcretagemPage(
+          onBackFallback: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const HomePage()),
+            );
+          },
+        );
       case 'about':
         return const AboutPage();
       case 'dashboard':
@@ -358,6 +367,12 @@ class HomePage extends StatelessWidget {
     Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => const LiteraturaTecnicaPage()));
+  }
+
+  void _openAgendamentoConcretagem(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const AgendamentoConcretagemPage()),
+    );
   }
 
   void _openAbout(BuildContext context) {
@@ -598,6 +613,84 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  Widget _secondaryQuickAccessRow({
+    required BuildContext context,
+    required bool compact,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useTwoColumns = constraints.maxWidth >= 360;
+        final rowSpacing = compact ? 10.0 : 12.0;
+        final cardCompact = compact || constraints.maxWidth < 560;
+
+        if (!useTwoColumns) {
+          return Column(
+            children: [
+              _menuButton(
+                context: context,
+                title: 'Literatura técnica',
+                subtitle:
+                    'Acesse ficha técnica e orientações para consulta rápida em campo.',
+                icon: Icons.menu_book_outlined,
+                accentColor: const Color(0xFF9A621A),
+                onTap: () => _openLiteraturaTecnica(context),
+                compact: compact,
+              ),
+              _menuButton(
+                context: context,
+                title: 'Agendamento de Concretagem',
+                subtitle:
+                    'Programe concretagens futuras e compartilhe convites de calendário.',
+                icon: Icons.event_note_outlined,
+                accentColor: const Color(0xFF5F4CA8),
+                onTap: () => _openAgendamentoConcretagem(context),
+                compact: compact,
+              ),
+            ],
+          );
+        }
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: rowSpacing),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _menuButton(
+                    context: context,
+                    title: 'Literatura técnica',
+                    subtitle:
+                        'Acesse ficha técnica e orientações para consulta rápida em campo.',
+                    icon: Icons.menu_book_outlined,
+                    accentColor: const Color(0xFF9A621A),
+                    onTap: () => _openLiteraturaTecnica(context),
+                    compact: cardCompact,
+                    bottomSpacing: 0,
+                  ),
+                ),
+                SizedBox(width: rowSpacing),
+                Expanded(
+                  child: _menuButton(
+                    context: context,
+                    title: 'Agendamento de Concretagem',
+                    subtitle:
+                        'Programe concretagens futuras e compartilhe convites de calendário.',
+                    icon: Icons.event_note_outlined,
+                    accentColor: const Color(0xFF5F4CA8),
+                    onTap: () => _openAgendamentoConcretagem(context),
+                    compact: cardCompact,
+                    bottomSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _brandingWatermark({bool compact = false}) {
     final cardHeight = compact ? 118.0 : 141.0;
     final logoHeight = compact ? 56.0 : 62.0;
@@ -714,14 +807,8 @@ class HomePage extends StatelessWidget {
           SizedBox(height: isCompactDashboard ? 12 : 18),
           _quickAccessIntro(compact: isCompactDashboard),
           _primaryQuickAccessRow(context: context, compact: isCompactDashboard),
-          _menuButton(
+          _secondaryQuickAccessRow(
             context: context,
-            title: 'Literatura técnica',
-            subtitle:
-                'Acesse ficha técnica e orientações para consulta rápida em campo.',
-            icon: Icons.menu_book_outlined,
-            accentColor: const Color(0xFF9A621A),
-            onTap: () => _openLiteraturaTecnica(context),
             compact: isCompactDashboard,
           ),
           const SizedBox(height: 4),

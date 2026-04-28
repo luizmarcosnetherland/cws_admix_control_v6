@@ -34,6 +34,10 @@
 	<string>Selecione fotos do lançamento para incluir no relatório da obra.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Use a camera para registrar fotos do lancamento e anexar ao relatorio da obra.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Usamos o calendario para criar o evento da concretagem programada.</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>Usamos acesso de gravacao ao calendario apenas para criar o evento da concretagem programada.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Usamos sua localizacao para registrar a posicao da obra no cadastro.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

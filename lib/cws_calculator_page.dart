@@ -5,7 +5,9 @@ import 'package:keyboard_actions/keyboard_actions.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class CwsCalculatorPage extends StatefulWidget {
-  const CwsCalculatorPage({super.key});
+  final double? initialVolumeM3;
+
+  const CwsCalculatorPage({super.key, this.initialVolumeM3});
 
   @override
   State<CwsCalculatorPage> createState() => _CwsCalculatorPageState();
@@ -158,6 +160,15 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
   @override
   void initState() {
     super.initState();
+    final initialVolume = widget.initialVolumeM3;
+    if (initialVolume != null && initialVolume > 0) {
+      final decimals = initialVolume.truncateToDouble() == initialVolume
+          ? 0
+          : 2;
+      _volumeCtrl.text = initialVolume
+          .toStringAsFixed(decimals)
+          .replaceAll('.', ',');
+    }
     _inputsListenable = Listenable.merge([_volumeCtrl, _cementCtrl]);
   }
 
