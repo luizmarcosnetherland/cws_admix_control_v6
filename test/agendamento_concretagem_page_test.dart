@@ -30,6 +30,7 @@ void main() {
     expect(find.text('AGENDAR'), findsOneWidget);
     expect(find.text('Compartilhar WhatsApp'), findsOneWidget);
     expect(find.text('Fazer pedido de CWS Admix'), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
   });
 
   testWidgets('calculadora recebe volume inicial do agendamento', (

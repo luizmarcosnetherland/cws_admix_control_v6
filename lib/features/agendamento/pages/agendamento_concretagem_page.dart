@@ -39,16 +39,21 @@ class _AgendamentoConcretagemPageState
   DateTime? _dataConcretagem;
   TimeOfDay? _horaInicio;
   bool _processando = false;
+  bool _agendamentoConcluido = false;
 
   @override
   void initState() {
     super.initState();
     _volumeCtrl.addListener(_atualizarEstimativaCws);
+    _estruturaCtrl.addListener(_limparConfirmacaoAgendamento);
+    _tracoCtrl.addListener(_limparConfirmacaoAgendamento);
   }
 
   @override
   void dispose() {
     _volumeCtrl.removeListener(_atualizarEstimativaCws);
+    _estruturaCtrl.removeListener(_limparConfirmacaoAgendamento);
+    _tracoCtrl.removeListener(_limparConfirmacaoAgendamento);
     _dataCtrl.dispose();
     _horaCtrl.dispose();
     _volumeCtrl.dispose();
@@ -66,7 +71,13 @@ class _AgendamentoConcretagemPageState
   }
 
   void _atualizarEstimativaCws() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() => _agendamentoConcluido = false);
+  }
+
+  void _limparConfirmacaoAgendamento() {
+    if (!mounted || !_agendamentoConcluido) return;
+    setState(() => _agendamentoConcluido = false);
   }
 
   double? _volumeEstimadoM3() {
@@ -102,6 +113,7 @@ class _AgendamentoConcretagemPageState
     setState(() {
       _dataConcretagem = DateTime(picked.year, picked.month, picked.day);
       _dataCtrl.text = DateFormat('dd/MM/yyyy', 'pt_BR').format(picked);
+      _agendamentoConcluido = false;
     });
   }
 
@@ -123,6 +135,7 @@ class _AgendamentoConcretagemPageState
       _horaInicio = picked;
       _horaCtrl.text =
           '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      _agendamentoConcluido = false;
     });
   }
 
@@ -321,12 +334,12 @@ class _AgendamentoConcretagemPageState
       );
 
       if (!mounted) return;
+      setState(() => _agendamentoConcluido = true);
+
       if (compartilhar == true) {
         await _compartilharWhatsAppArquivo();
         if (!mounted) return;
       }
-
-      _irParaDashboard();
     });
   }
 
@@ -423,32 +436,63 @@ class _AgendamentoConcretagemPageState
     widget.onBackFallback?.call();
   }
 
-  Widget _floatingActionButtons() {
+  Widget _formActionButtons() {
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        FloatingActionButton.extended(
-          heroTag: 'agendamento_agendar',
+        FilledButton.icon(
           onPressed: _processando ? null : _agendar,
           icon: const Icon(Icons.event_available_outlined),
           label: const Text('AGENDAR'),
         ),
         const SizedBox(height: 10),
-        FloatingActionButton.extended(
-          heroTag: 'agendamento_whatsapp',
+        OutlinedButton.icon(
           onPressed: _processando ? null : _compartilharWhatsApp,
           icon: const Icon(Icons.chat_outlined),
           label: const Text('Compartilhar WhatsApp'),
         ),
         const SizedBox(height: 10),
-        FloatingActionButton.extended(
-          heroTag: 'agendamento_pedido_cws',
+        OutlinedButton.icon(
           onPressed: _processando ? null : _abrirPedidoCwsAdmix,
           icon: const Icon(Icons.shopping_cart_outlined),
           label: const Text('Fazer pedido de CWS Admix'),
         ),
+        if (_agendamentoConcluido) ...[
+          const SizedBox(height: 10),
+          TextButton.icon(
+            onPressed: _processando ? null : _irParaDashboard,
+            icon: const Icon(Icons.dashboard_outlined),
+            label: const Text('Voltar ao dashboard'),
+          ),
+        ],
       ],
+    );
+  }
+
+  Widget _agendamentoConcluidoCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF7ED),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFF2E7D32).withValues(alpha: 0.18),
+        ),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.check_circle_outline, color: Color(0xFF2E7D32)),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Agendamento criado. Você continua nesta tela.',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -495,12 +539,11 @@ class _AgendamentoConcretagemPageState
         ),
         title: const Text('Agendamento de Concretagem'),
       ),
-      floatingActionButton: _floatingActionButtons(),
       body: SafeArea(
         child: Form(
           key: _formKey,
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 190),
+            padding: const EdgeInsets.all(16),
             children: [
               Card(
                 elevation: 0,
@@ -590,6 +633,12 @@ class _AgendamentoConcretagemPageState
                       ),
                       const SizedBox(height: 12),
                       _estimativaCwsCard(),
+                      if (_agendamentoConcluido) ...[
+                        const SizedBox(height: 12),
+                        _agendamentoConcluidoCard(),
+                      ],
+                      const SizedBox(height: 20),
+                      _formActionButtons(),
                     ],
                   ),
                 ),
