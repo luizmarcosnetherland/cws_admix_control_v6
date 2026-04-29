@@ -14,6 +14,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'core/services/app_update_service.dart';
 import 'features/agendamento/pages/agendamento_concretagem_page.dart';
 import 'features/obras/pages/obras_page.dart';
 import 'cws_calculator_page.dart';
@@ -137,11 +138,20 @@ class AppGate extends StatefulWidget {
 
 class _AppGateState extends State<AppGate> {
   bool _showSplash = true;
+  bool _updateCheckStarted = false;
+  late final AppUpdateService _appUpdateService;
 
   @override
   void initState() {
     super.initState();
+    _appUpdateService = AppUpdateService();
     _bootstrap();
+  }
+
+  @override
+  void dispose() {
+    _appUpdateService.dispose();
+    super.dispose();
   }
 
   Future<void> _bootstrap() async {
@@ -155,6 +165,64 @@ class _AppGateState extends State<AppGate> {
     setState(() {
       _showSplash = false;
     });
+
+    unawaited(_maybeShowUpdateDialog());
+  }
+
+  Future<void> _maybeShowUpdateDialog() async {
+    if (_updateCheckStarted || AppGate._previewPage.isNotEmpty) return;
+    _updateCheckStarted = true;
+
+    AppUpdateInfo? updateInfo;
+    try {
+      updateInfo = await _appUpdateService.checkForUpdate();
+    } catch (_) {
+      return;
+    }
+
+    if (!mounted || updateInfo == null) return;
+    final update = updateInfo;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Atualizacao disponivel'),
+        content: Text(
+          'Ha uma nova versao do ${update.appName} disponivel na App Store.\n\n'
+          'Instalada: ${update.installedVersion} '
+          '(build ${update.installedBuildNumber})\n'
+          'Disponivel: ${update.storeVersion}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Depois'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              unawaited(_openAppStore(update));
+            },
+            icon: const Icon(Icons.open_in_new),
+            label: const Text('Atualizar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openAppStore(AppUpdateInfo updateInfo) async {
+    if (await launchUrl(
+      updateInfo.storeUri,
+      mode: LaunchMode.externalApplication,
+    )) {
+      return;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Nao foi possivel abrir a App Store.')),
+    );
   }
 
   @override

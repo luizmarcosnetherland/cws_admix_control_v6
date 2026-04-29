@@ -487,7 +487,7 @@ class _AgendamentoConcretagemPageState
           SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Agendamento criado. Você continua nesta tela.',
+              'Agendamento criado.',
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
           ),
