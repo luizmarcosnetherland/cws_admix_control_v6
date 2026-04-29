@@ -410,6 +410,49 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  List<String> _menuTitleLines(String title) {
+    final words = title.trim().split(RegExp(r'\s+'));
+    if (words.length <= 1) return [title.trim()];
+    if (words.length == 2) return words;
+    return [words.first, words.skip(1).join(' ')];
+  }
+
+  Widget _menuButtonTitle({
+    required BuildContext context,
+    required String title,
+    required Color color,
+  }) {
+    final style = Theme.of(context).textTheme.titleMedium?.copyWith(
+      fontWeight: FontWeight.w800,
+      color: color,
+      letterSpacing: 0,
+    );
+    final lines = _menuTitleLines(title);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var index = 0; index < lines.length; index++) ...[
+          SizedBox(
+            width: double.infinity,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                lines[index],
+                maxLines: 1,
+                overflow: TextOverflow.visible,
+                softWrap: false,
+                style: style,
+              ),
+            ),
+          ),
+          if (index < lines.length - 1) const SizedBox(height: 2),
+        ],
+      ],
+    );
+  }
+
   Widget _menuButton({
     required BuildContext context,
     required String title,
@@ -505,14 +548,10 @@ class HomePage extends StatelessWidget {
                           ],
                         ),
                         SizedBox(height: compact ? 10 : 12),
-                        Text(
-                          title,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: textColor,
-                                letterSpacing: 0.1,
-                              ),
+                        _menuButtonTitle(
+                          context: context,
+                          title: title,
+                          color: textColor,
                         ),
                         SizedBox(height: compact ? 3 : 4),
                         Text(

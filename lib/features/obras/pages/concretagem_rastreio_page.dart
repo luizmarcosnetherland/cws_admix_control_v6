@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
@@ -58,6 +59,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
   bool _selecionandoPlanta = false;
   bool _temAlteracoesPendentes = false;
   int? _lancamentoSelecionadoId;
+  int? _activePointerId;
   List<Offset> _activePoints = [];
   double _activeCanvasMinSide = 0;
   int _rastreioRevision = 0;
@@ -77,6 +79,12 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
   }
 
   bool get _temPlanta => _plantaFile != null;
+
+  bool get _podeMarcarNaPlanta =>
+      _modo == _ModoRastreio.spray &&
+      _temPlanta &&
+      _temLancamentos &&
+      _lancamentoSelecionadoId != null;
 
   Set<int> get _lancamentosMarcados =>
       _tracos.map((item) => item.lancamentoId).toSet();
@@ -254,6 +262,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
       _lancamentos = ordenados;
       _tracos = tracosValidos;
       _lancamentoSelecionadoId = selecionadoId;
+      _activePointerId = null;
       _activePoints = [];
     });
 
@@ -296,6 +305,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
   void _selecionarLancamento(int lancamentoId) {
     setState(() {
       _lancamentoSelecionadoId = lancamentoId;
+      _activePointerId = null;
       _activePoints = [];
       _modo = _ModoRastreio.spray;
     });
@@ -480,6 +490,11 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
 
     final salvou = await _salvarRastreioPendente(silent: !showFeedback);
     if (salvou && showFeedback && mounted) {
+      setState(() {
+        _modo = _ModoRastreio.navegar;
+        _activePointerId = null;
+        _activePoints = [];
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Marcações salvas na concretagem.')),
       );
@@ -700,6 +715,33 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
   void _mudarModo(_ModoRastreio modo) {
     setState(() {
       _modo = modo;
+      _activePointerId = null;
+      _activePoints = [];
+    });
+  }
+
+  void _iniciarTracoPorPonteiro(PointerDownEvent event, Size canvasSize) {
+    if (!_podeMarcarNaPlanta || _activePointerId != null) return;
+    _activePointerId = event.pointer;
+    _iniciarTraco(event.localPosition, canvasSize);
+  }
+
+  void _atualizarTracoPorPonteiro(PointerMoveEvent event, Size canvasSize) {
+    if (event.pointer != _activePointerId || !_podeMarcarNaPlanta) return;
+    _atualizarTraco(event.localPosition, canvasSize);
+  }
+
+  void _finalizarTracoPorPonteiro(PointerUpEvent event) {
+    if (event.pointer != _activePointerId) return;
+    _activePointerId = null;
+    unawaited(_finalizarTraco());
+  }
+
+  void _cancelarTracoPorPonteiro(PointerCancelEvent event) {
+    if (event.pointer != _activePointerId) return;
+    _activePointerId = null;
+    setState(() {
+      _activeCanvasMinSide = 0;
       _activePoints = [];
     });
   }
@@ -1066,67 +1108,65 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
   }
 
   Widget _buildCanvasConteudo(File file, Size canvasSize) {
-    return GestureDetector(
-      onPanStart:
-          (_modo == _ModoRastreio.spray &&
-              _temPlanta &&
-              _temLancamentos &&
-              _lancamentoSelecionadoId != null)
-          ? (details) => _iniciarTraco(details.localPosition, canvasSize)
-          : null,
-      onPanUpdate:
-          (_modo == _ModoRastreio.spray &&
-              _temPlanta &&
-              _temLancamentos &&
-              _lancamentoSelecionadoId != null)
-          ? (details) => _atualizarTraco(details.localPosition, canvasSize)
-          : null,
-      onPanEnd:
-          (_modo == _ModoRastreio.spray &&
-              _temPlanta &&
-              _temLancamentos &&
-              _lancamentoSelecionadoId != null)
-          ? (_) => _finalizarTraco()
-          : null,
-      child: Container(
-        width: canvasSize.width,
-        height: canvasSize.height,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
+    final canvas = Container(
+      width: canvasSize.width,
+      height: canvasSize.height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.file(
+            file,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => Container(
+              color: Colors.black.withValues(alpha: 0.04),
+              alignment: Alignment.center,
+              child: const Text('Não foi possível abrir a planta'),
             ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.file(
-              file,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                color: Colors.black.withValues(alpha: 0.04),
-                alignment: Alignment.center,
-                child: const Text('Não foi possível abrir a planta'),
+          ),
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _RastreioSprayPainter(
+                tracos: _tracos,
+                activePoints: _activePoints,
+                activeBrushSize: _brushSize,
+                activeLancamentoId: _lancamentoSelecionadoId,
+                colorForLancamento: _corDoLancamento,
               ),
             ),
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _RastreioSprayPainter(
-                  tracos: _tracos,
-                  activePoints: _activePoints,
-                  activeBrushSize: _brushSize,
-                  activeLancamentoId: _lancamentoSelecionadoId,
-                  colorForLancamento: _corDoLancamento,
-                ),
-              ),
+          ),
+        ],
+      ),
+    );
+
+    if (!_podeMarcarNaPlanta) return canvas;
+
+    return RawGestureDetector(
+      behavior: HitTestBehavior.opaque,
+      gestures: {
+        EagerGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<EagerGestureRecognizer>(
+              EagerGestureRecognizer.new,
+              (_) {},
             ),
-          ],
-        ),
+      },
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (event) => _iniciarTracoPorPonteiro(event, canvasSize),
+        onPointerMove: (event) => _atualizarTracoPorPonteiro(event, canvasSize),
+        onPointerUp: _finalizarTracoPorPonteiro,
+        onPointerCancel: _cancelarTracoPorPonteiro,
+        child: canvas,
       ),
     );
   }
