@@ -53,6 +53,7 @@ class NotaFiscalOcrService {
       numeroNotaFiscal: _extractNumeroNotaFiscal(lines),
       volumeM3: _extractVolume(lines),
       lacre: _extractLacre(lines),
+      betoneira: _extractBetoneira(lines),
       traco: _extractTraco(lines),
       horarioCarregamento: horarioCarregamento,
       intervaloCargaDescarga: intervalo == null || intervalo.isNegative
@@ -77,9 +78,20 @@ class NotaFiscalOcrService {
       ),
     ];
 
+    final windowPatterns = [
+      RegExp(
+        r'\b(?:nf\s*-?\s*e?|nfe|danfe)\b.{0,90}\b(?:n\s*[ºo°.]?|n[uú]mero|numero)\s*[:\-]?\s*([0-9][0-9.\-/ ]{2,18})',
+        caseSensitive: false,
+      ),
+      RegExp(
+        r'\b(?:n\s*[ºo°.]?|n[uú]mero|numero)\s*[:\-]?\s*([0-9][0-9.\-/ ]{2,18}).{0,36}\bs[ée]rie\b',
+        caseSensitive: false,
+      ),
+    ];
+
     for (final line in lines) {
       if (!RegExp(
-        r'\b(?:nf|nfe|nota\s*fiscal)\b',
+        r'\b(?:nf|nfe|nota\s*fiscal|danfe)\b',
         caseSensitive: false,
       ).hasMatch(line)) {
         continue;
@@ -87,6 +99,21 @@ class NotaFiscalOcrService {
 
       for (final pattern in patterns) {
         final normalized = _normalizedIdFromFirstMatch(line, pattern);
+        if (_isLikelyNotaFiscal(normalized)) return normalized;
+      }
+    }
+
+    for (var i = 0; i < lines.length; i++) {
+      final window = _lineWindow(lines, i, 3);
+      if (!RegExp(
+        r'\b(?:nf\s*-?\s*e?|nfe|nota\s*fiscal|danfe)\b',
+        caseSensitive: false,
+      ).hasMatch(window)) {
+        continue;
+      }
+
+      for (final pattern in windowPatterns) {
+        final normalized = _normalizedIdFromFirstMatch(window, pattern);
         if (_isLikelyNotaFiscal(normalized)) return normalized;
       }
     }
@@ -103,6 +130,10 @@ class NotaFiscalOcrService {
       r'\b([0-9]{1,3}(?:[,.][0-9]{1,2})?)\s*m\s*[3³]\b',
       caseSensitive: false,
     );
+    final reversedUnitPattern = RegExp(
+      r'\bm\s*[3³]\s+([0-9]{1,3}(?:[,.][0-9]{1,2})?)\b',
+      caseSensitive: false,
+    );
 
     for (final line in lines) {
       final lower = line.toLowerCase();
@@ -113,12 +144,44 @@ class NotaFiscalOcrService {
           lower.contains('m³'))) {
         continue;
       }
+      if (_isIgnoredVolumeContext(lower)) continue;
 
-      final byLabel = _parseDecimalFromMatch(line, labelPattern);
+      final byLabel = _validVolume(_parseDecimalFromMatch(line, labelPattern));
       if (byLabel != null) return byLabel;
 
-      final byUnit = _parseDecimalFromMatch(line, unitPattern);
+      final byUnit = _validVolume(_parseDecimalFromMatch(line, unitPattern));
       if (byUnit != null) return byUnit;
+
+      final byReversedUnit = _validVolume(
+        _parseDecimalFromMatch(line, reversedUnitPattern),
+      );
+      if (byReversedUnit != null) return byReversedUnit;
+    }
+
+    for (var i = 0; i < lines.length; i++) {
+      final lower = lines[i].toLowerCase();
+      if (!(lower.contains('volume') ||
+          lower.contains('quantidade') ||
+          lower.contains('qtd') ||
+          lower.contains('m3') ||
+          lower.contains('m³'))) {
+        continue;
+      }
+      if (_isIgnoredVolumeContext(lower)) continue;
+
+      final window = _lineWindow(lines, i, 3);
+      final byLabel = _validVolume(
+        _parseDecimalFromMatch(window, labelPattern),
+      );
+      if (byLabel != null) return byLabel;
+
+      final byUnit = _validVolume(_parseDecimalFromMatch(window, unitPattern));
+      if (byUnit != null) return byUnit;
+
+      final byReversedUnit = _validVolume(
+        _parseDecimalFromMatch(window, reversedUnitPattern),
+      );
+      if (byReversedUnit != null) return byReversedUnit;
     }
 
     return null;
@@ -130,19 +193,53 @@ class NotaFiscalOcrService {
       caseSensitive: false,
     );
 
-    for (final line in lines) {
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
       if (!line.toLowerCase().contains('lacre')) continue;
       final match = pattern.firstMatch(line);
       final value = match == null ? null : _cleanLabelValue(match.group(1));
-      if (value != null && value.length >= 2) return value;
+      if (_isLikelyIdentifier(value)) return value;
+
+      for (var j = i + 1; j < lines.length && j <= i + 2; j++) {
+        final nextValue = _firstIdentifierValue(lines[j]);
+        if (_isLikelyIdentifier(nextValue)) return nextValue;
+      }
+    }
+
+    return null;
+  }
+
+  static String? _extractBetoneira(List<String> lines) {
+    final pattern = RegExp(
+      r'\bbetoneira\s*[:\-]?\s*([A-Z]{0,4}\s*[0-9][0-9A-Z]{1,8})\b',
+      caseSensitive: false,
+    );
+
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      if (!line.toLowerCase().contains('betoneira')) continue;
+
+      final match = pattern.firstMatch(line);
+      final value = match == null
+          ? null
+          : _normalizeVehicleCode(match.group(1));
+      if (_isLikelyIdentifier(value)) return value;
+
+      for (var j = i + 1; j < lines.length && j <= i + 2; j++) {
+        final nextValue = _firstBetoneiraValue(lines[j]);
+        if (_isLikelyIdentifier(nextValue)) return nextValue;
+      }
     }
 
     return null;
   }
 
   static String? _extractTraco(List<String> lines) {
+    final concreteTrace = _extractConcreteTrace(lines);
+    if (concreteTrace != null) return concreteTrace;
+
     final label = RegExp(
-      r'(?:tra[cç]o|fck|receita|mix|produto|descri[cç][aã]o\s+do\s+produto)',
+      r'(?:tra[cç]o|fck|receita|mix|descri[cç][aã]o\s+do\s+produto)',
       caseSensitive: false,
     );
 
@@ -212,6 +309,17 @@ class NotaFiscalOcrService {
           dataHoraDescarga: dataHoraDescarga,
         );
       }
+
+      final nearbyTime = _extractNearbyTime(lines, i);
+      if (nearbyTime == null) continue;
+
+      final date = _extractNearbyDate(lines, i);
+      return _composeCargaDateTime(
+        date: date,
+        hour: nearbyTime.$1,
+        minute: nearbyTime.$2,
+        dataHoraDescarga: dataHoraDescarga,
+      );
     }
 
     return null;
@@ -272,6 +380,42 @@ class NotaFiscalOcrService {
     return (hour, minute);
   }
 
+  static (int, int)? _extractNearbyTime(List<String> lines, int index) {
+    final start = index < 1 ? 0 : index - 1;
+    final end = index + 3 > lines.length ? lines.length : index + 3;
+    for (var i = index; i < end; i++) {
+      final time = _extractTimeFromLine(lines[i]);
+      if (time != null) return time;
+    }
+    for (var i = start; i < index; i++) {
+      final time = _extractTimeFromLine(lines[i]);
+      if (time != null) return time;
+    }
+    return null;
+  }
+
+  static (int, int)? _extractTimeFromLine(String line) {
+    final match = RegExp(
+      r'\b([0-9]{1,2}\s*[:h]\s*[0-9]{2})\b',
+    ).firstMatch(line);
+    if (match == null) return null;
+    return _parseHourMinute(match.group(1)!);
+  }
+
+  static _ParsedDate? _extractNearbyDate(List<String> lines, int index) {
+    final start = index < 3 ? 0 : index - 3;
+    final end = index + 3 > lines.length ? lines.length : index + 3;
+    for (var i = index; i >= start; i--) {
+      final date = _extractDate(lines[i]);
+      if (date != null) return date;
+    }
+    for (var i = index + 1; i < end; i++) {
+      final date = _extractDate(lines[i]);
+      if (date != null) return date;
+    }
+    return null;
+  }
+
   static String? _normalizedIdFromFirstMatch(String line, RegExp pattern) {
     final match = pattern.firstMatch(line);
     if (match == null) return null;
@@ -282,6 +426,21 @@ class NotaFiscalOcrService {
     if (value == null) return false;
     final digits = value.replaceAll(RegExp(r'\D'), '');
     return digits.length >= 3 && digits.length <= 12;
+  }
+
+  static double? _validVolume(double? value) {
+    if (value == null || value <= 0 || value > 100) return null;
+    return value;
+  }
+
+  static bool _isIgnoredVolumeContext(String lower) {
+    return lower.contains('valor') ||
+        lower.contains('volume total entregue') ||
+        lower.contains('cimento') ||
+        lower.contains('areia') ||
+        lower.contains('aditivo') ||
+        lower.contains('agua') ||
+        lower.contains('água');
   }
 
   static double? _parseDecimalFromMatch(String line, RegExp pattern) {
@@ -299,6 +458,126 @@ class NotaFiscalOcrService {
     return cleaned;
   }
 
+  static bool _isLikelyIdentifier(String? value) {
+    if (value == null) return false;
+    final cleaned = value.trim();
+    return cleaned.length >= 2 && RegExp(r'[0-9]').hasMatch(cleaned);
+  }
+
+  static String? _firstIdentifierValue(String line) {
+    final match = RegExp(
+      r'\b([A-Z0-9][A-Z0-9\-/.]{1,24})\b',
+      caseSensitive: false,
+    ).firstMatch(line);
+    return _cleanLabelValue(match?.group(1));
+  }
+
+  static String? _firstBetoneiraValue(String line) {
+    final match = RegExp(
+      r'\b([A-Z]{0,4}\s*[0-9][0-9A-Z]{1,8})\b',
+      caseSensitive: false,
+    ).firstMatch(line);
+    return _normalizeVehicleCode(match?.group(1));
+  }
+
+  static String? _normalizeVehicleCode(String? value) {
+    final cleaned = _cleanLabelValue(value)?.toUpperCase();
+    if (cleaned == null) return null;
+
+    final match = RegExp(
+      r'^([A-Z]{1,4})\s*([0-9][0-9A-Z]{1,8})$',
+    ).firstMatch(cleaned);
+    if (match == null) return cleaned;
+    return '${match.group(1)} ${match.group(2)}';
+  }
+
+  static String? _extractConcreteTrace(List<String> lines) {
+    final traceLine = RegExp(
+      r'\b(?:fck|slump|brita|resist[eê]ncia)\b',
+      caseSensitive: false,
+    );
+
+    for (var i = 0; i < lines.length; i++) {
+      if (!traceLine.hasMatch(lines[i])) continue;
+
+      final window = _lineWindow(lines, i, 3);
+      final parts = <String>[];
+
+      final fck = _extractFck(window);
+      if (fck != null) parts.add('FCK $fck MPa');
+
+      final slump = _extractSlump(window);
+      if (slump != null) parts.add('Slump $slump');
+
+      final brita = _extractBrita(window);
+      if (brita != null) parts.add('Brita $brita');
+
+      if (parts.isEmpty) continue;
+      if (parts.length == 1 &&
+          fck != null &&
+          !RegExp(
+            r'\b(?:slump|brita|resist[eê]ncia)\b',
+            caseSensitive: false,
+          ).hasMatch(window)) {
+        continue;
+      }
+      return parts.join('; ');
+    }
+
+    return null;
+  }
+
+  static String? _extractFck(String text) {
+    final fckMatch = RegExp(
+      r'\bfck\b(?:\s*\(?\s*m\s*p?a?\s*\)?)?\s*[:\-]?\s*([0-9]{1,3}(?:[,.][0-9]{1,2})?)',
+      caseSensitive: false,
+    ).firstMatch(text);
+    if (fckMatch != null) return _normalizeDecimalText(fckMatch.group(1)!);
+
+    final resistenciaMatch = RegExp(
+      r'\bresist[eê]ncia(?:\s+caracter[ií]stica)?\D{0,36}([0-9]{1,3}(?:[,.][0-9]{1,2})?)\s*m\s*p?a?\b',
+      caseSensitive: false,
+    ).firstMatch(text);
+    if (resistenciaMatch == null) return null;
+    return _normalizeDecimalText(resistenciaMatch.group(1)!);
+  }
+
+  static String? _extractSlump(String text) {
+    final match = RegExp(
+      r'\bslump\s*[:\-]?\s*([0-9]{1,3}\s*(?:[±+/\-]\s*[0-9]{1,3})?\s*(?:mm|cm)?)',
+      caseSensitive: false,
+    ).firstMatch(text);
+    if (match == null) return null;
+
+    final value = _collapseSpaces(
+      match.group(1)!.replaceAll(RegExp(r'\s*±\s*'), '±'),
+    );
+    if (value.toLowerCase().endsWith('mm') ||
+        value.toLowerCase().endsWith('cm')) {
+      return value;
+    }
+    return '$value mm';
+  }
+
+  static String? _extractBrita(String text) {
+    final match = RegExp(
+      r'\bbrita\s*[:\-]?\s*(?:brita\s*)?([0-9A-Za-z][0-9A-Za-z +./\-]{0,18}?)(?=\s+(?:volume|adic|adicionais|bomba|taxa|m3|m³|pe[cç]a|$)|$)',
+      caseSensitive: false,
+    ).firstMatch(text);
+    if (match == null) return null;
+
+    return _collapseSpaces(
+      match.group(1)!.replaceAll(RegExp(r'\s*\+\s*'), ' + '),
+    );
+  }
+
+  static String _normalizeDecimalText(String value) {
+    final normalized = value.replaceAll('.', ',');
+    return normalized.endsWith(',0')
+        ? normalized.substring(0, normalized.length - 2)
+        : normalized;
+  }
+
   static String? _cleanLabelValue(String? value) {
     if (value == null) return null;
     final cleaned = _collapseSpaces(
@@ -312,7 +591,7 @@ class NotaFiscalOcrService {
   static String _trimNextKnownLabel(String value) {
     final cleaned = _collapseSpaces(value);
     final match = RegExp(
-      r'\b(?:nf|nota\s*fiscal|lacre|volume|hor[aá]rio|hora|carregamento|carga)\b',
+      r'\b(?:nf|nota\s*fiscal|lacre|betoneira|volume|hor[aá]rio|hora|carregamento|carga|peso|valor|data)\b',
       caseSensitive: false,
     ).firstMatch(cleaned);
     if (match != null && match.start > 2) {
@@ -324,6 +603,11 @@ class NotaFiscalOcrService {
   static String _collapseSpaces(String value) {
     return value.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
+
+  static String _lineWindow(List<String> lines, int start, int count) {
+    final end = start + count > lines.length ? lines.length : start + count;
+    return _collapseSpaces(lines.sublist(start, end).join(' '));
+  }
 }
 
 class NotaFiscalOcrResult {
@@ -331,6 +615,7 @@ class NotaFiscalOcrResult {
   final String? numeroNotaFiscal;
   final double? volumeM3;
   final String? lacre;
+  final String? betoneira;
   final String? traco;
   final DateTime? horarioCarregamento;
   final Duration? intervaloCargaDescarga;
@@ -340,6 +625,7 @@ class NotaFiscalOcrResult {
     this.numeroNotaFiscal,
     this.volumeM3,
     this.lacre,
+    this.betoneira,
     this.traco,
     this.horarioCarregamento,
     this.intervaloCargaDescarga,
@@ -349,6 +635,7 @@ class NotaFiscalOcrResult {
       numeroNotaFiscal != null ||
       volumeM3 != null ||
       lacre != null ||
+      betoneira != null ||
       traco != null ||
       horarioCarregamento != null;
 

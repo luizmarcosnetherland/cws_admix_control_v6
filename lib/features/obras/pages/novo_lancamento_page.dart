@@ -313,6 +313,14 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
         if (numero != null && numero.trim().isNotEmpty) {
           _notaFiscalCtrl.text = numero.trim();
         }
+        final betoneira = result.betoneira;
+        if (betoneira != null && betoneira.trim().isNotEmpty) {
+          _betoneiraCtrl.text = betoneira.trim();
+        }
+        final volume = result.volumeM3;
+        if (volume != null && volume > 0) {
+          _volumeCtrl.text = _fmtNum(volume, casas: 1);
+        }
         _obsCtrl.text = _mergeObservacoes(
           _obsCtrl.text,
           _observacoesNotaFiscalOcr(result),
@@ -360,6 +368,11 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
 
     final lacre = result.lacre?.trim();
     if (lacre != null && lacre.isNotEmpty) linhas.add('Lacre: $lacre');
+
+    final betoneira = result.betoneira?.trim();
+    if (betoneira != null && betoneira.isNotEmpty) {
+      linhas.add('Betoneira: $betoneira');
+    }
 
     final traco = result.traco?.trim();
     if (traco != null && traco.isNotEmpty) linhas.add('Traço: $traco');

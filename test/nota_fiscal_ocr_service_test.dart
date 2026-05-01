@@ -43,4 +43,42 @@ void main() {
     );
     expect(result.cargaDescargaAcimaDoLimite, isFalse);
   });
+
+  test('extrai dados do layout de NF de concreteira Polimix', () {
+    final result = NotaFiscalOcrService.parseText('''
+      POLIMIX CONCRETO
+      DANFE
+      Documento Auxiliar da Nota Fiscal Eletronica
+      NF-E
+      N°: 00012015
+      SÉRIE: 1
+      DATA DA SAIDA
+      26/04/2021
+      HORA DA SAIDA
+      12:21
+      TRANSPORTADOR / VOLUMES TRANSPORTADOS
+      QUANTIDADE
+      8,0
+      M³
+      LACRE
+      104488
+      BETONEIRA
+      BT 2649
+      DADOS ADICIONAIS
+      RESISTÊNCIA CARACTERÍSTICA FCK (Mpa): 25 SLUMP: 100±20 mm BRITA: BRITA 0 + 1
+      VOLUME: 8,00
+      ''', dataHoraDescarga: DateTime(2021, 4, 26, 13, 45));
+
+    expect(result.numeroNotaFiscal, '00012015');
+    expect(result.volumeM3, 8);
+    expect(result.lacre, '104488');
+    expect(result.betoneira, 'BT 2649');
+    expect(result.traco, 'FCK 25 MPa; Slump 100±20 mm; Brita 0 + 1');
+    expect(result.horarioCarregamento, DateTime(2021, 4, 26, 12, 21));
+    expect(
+      result.intervaloCargaDescarga,
+      const Duration(hours: 1, minutes: 24),
+    );
+    expect(result.cargaDescargaAcimaDoLimite, isFalse);
+  });
 }
