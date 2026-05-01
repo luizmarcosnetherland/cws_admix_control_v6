@@ -6,6 +6,7 @@ import 'package:keyboard_actions/keyboard_actions.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/services/local_storage_service.dart';
+import '../../../core/services/nota_fiscal_ocr_service.dart';
 import '../../../data/models/concretagem_model.dart';
 import '../../../data/models/lancamento_model.dart';
 import '../../../data/repositories/lancamento_repository.dart';
@@ -31,6 +32,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
   final _repo = LancamentoRepository();
   final _storage = LocalStorageService();
   final _imagePicker = ImagePicker();
+  final _notaFiscalOcr = NotaFiscalOcrService();
 
   final _betoneiraCtrl = TextEditingController();
   final _notaFiscalCtrl = TextEditingController();
@@ -57,6 +59,8 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
   late final Listenable _previewListenable;
   bool _saving = false;
   bool _pickingFotos = false;
+  bool _scanningNotaFiscal = false;
+  String? _notaFiscalOcrAviso;
 
   bool get _isEdicao => widget.lancamento != null;
 
@@ -251,6 +255,182 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     );
   }
 
+  Future<void> _escanearNotaFiscal() async {
+    if (_scanningNotaFiscal || _saving) return;
+
+    if (!_notaFiscalOcr.isSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('OCR de nota fiscal disponível apenas em Android/iOS.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _scanningNotaFiscal = true);
+    try {
+      final source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        builder: (context) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.document_scanner_outlined),
+                title: const Text('Escanear com a câmera'),
+                onTap: () => Navigator.of(context).pop(ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Usar imagem da galeria'),
+                onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (source == null) return;
+
+      final picked = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 88,
+        maxWidth: 1800,
+        maxHeight: 1800,
+      );
+      if (picked == null) return;
+
+      final result = await _notaFiscalOcr.processarImagem(
+        File(picked.path),
+        dataHoraDescarga: _dataHora,
+      );
+      final savedPaths = await _salvarFotosSelecionadas([
+        picked,
+      ], filenamePrefix: 'nota_fiscal');
+
+      if (!mounted) return;
+      setState(() {
+        final numero = result.numeroNotaFiscal;
+        if (numero != null && numero.trim().isNotEmpty) {
+          _notaFiscalCtrl.text = numero.trim();
+        }
+        _obsCtrl.text = _mergeObservacoes(
+          _obsCtrl.text,
+          _observacoesNotaFiscalOcr(result),
+        );
+        if (savedPaths.isNotEmpty) {
+          _fotoPaths = [..._fotoPaths, ...savedPaths];
+        }
+        _notaFiscalOcrAviso = _avisoTempoNotaFiscal(result);
+      });
+
+      if (!mounted) return;
+      if (result.cargaDescargaAcimaDoLimite) {
+        await _mostrarAvisoTempoNotaFiscal(result);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result.hasStructuredData
+                  ? 'Nota fiscal escaneada. Confira os dados preenchidos.'
+                  : 'OCR concluído, mas os dados principais não foram identificados.',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao escanear nota fiscal: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _scanningNotaFiscal = false);
+    }
+  }
+
+  String _observacoesNotaFiscalOcr(NotaFiscalOcrResult result) {
+    final linhas = <String>['Dados extraídos da NF por OCR:'];
+
+    final numero = result.numeroNotaFiscal?.trim();
+    if (numero != null && numero.isNotEmpty) linhas.add('NF: $numero');
+
+    final volume = result.volumeM3;
+    if (volume != null) {
+      linhas.add('Volume de concreto: ${_fmtNum(volume, casas: 1)} m³');
+    }
+
+    final lacre = result.lacre?.trim();
+    if (lacre != null && lacre.isNotEmpty) linhas.add('Lacre: $lacre');
+
+    final traco = result.traco?.trim();
+    if (traco != null && traco.isNotEmpty) linhas.add('Traço: $traco');
+
+    final carregamento = result.horarioCarregamento;
+    if (carregamento != null) {
+      linhas.add('Carregamento: ${_fmtDataHora(carregamento)}');
+    }
+
+    final intervalo = result.intervaloCargaDescarga;
+    if (intervalo != null) {
+      final sufixo = result.cargaDescargaAcimaDoLimite
+          ? ' - ATENÇÃO: acima do limite de 2h30'
+          : '';
+      linhas.add('Tempo carga-descarga: ${_fmtDuracao(intervalo)}$sufixo');
+    }
+
+    if (linhas.length == 1) {
+      linhas.add('Nenhum dado estruturado identificado. Conferir a imagem.');
+    }
+
+    return linhas.join('\n');
+  }
+
+  String _mergeObservacoes(String atual, String blocoOcr) {
+    final partes = [
+      atual.trim(),
+      blocoOcr.trim(),
+    ].where((parte) => parte.isNotEmpty).toList(growable: false);
+    return partes.join('\n\n');
+  }
+
+  String? _avisoTempoNotaFiscal(NotaFiscalOcrResult result) {
+    if (!result.cargaDescargaAcimaDoLimite) return null;
+    final carregamento = result.horarioCarregamento;
+    final intervalo = result.intervaloCargaDescarga;
+    if (carregamento == null || intervalo == null) return null;
+
+    return 'Carregamento em ${_fmtDataHora(carregamento)}. '
+        'Intervalo de ${_fmtDuracao(intervalo)} até o preenchimento.';
+  }
+
+  Future<void> _mostrarAvisoTempoNotaFiscal(NotaFiscalOcrResult result) async {
+    final aviso = _avisoTempoNotaFiscal(result);
+    if (aviso == null) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.warning_amber_outlined),
+        title: const Text('Tempo de carregamento acima do limite'),
+        content: Text(
+          '$aviso\n\nO limite configurado é 2h30. Confira a nota fiscal e o horário do lançamento.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Entendi'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _fmtDuracao(Duration duration) {
+    final horas = duration.inHours;
+    final minutos = duration.inMinutes.remainder(60);
+    if (horas <= 0) return '${minutos}min';
+    return '${horas}h${minutos.toString().padLeft(2, '0')}';
+  }
+
   Future<void> _adicionarFotos() async {
     if (_pickingFotos || _saving) return;
 
@@ -282,11 +462,17 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
       if (source == ImageSource.camera) {
         final captured = await _imagePicker.pickImage(
           source: ImageSource.camera,
-          imageQuality: 85,
+          imageQuality: 82,
+          maxWidth: 1600,
+          maxHeight: 1600,
         );
         picked = captured == null ? <XFile>[] : <XFile>[captured];
       } else {
-        picked = await _imagePicker.pickMultiImage(imageQuality: 85);
+        picked = await _imagePicker.pickMultiImage(
+          imageQuality: 82,
+          maxWidth: 1600,
+          maxHeight: 1600,
+        );
       }
       if (picked.isEmpty) return;
 
@@ -304,12 +490,19 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     }
   }
 
-  Future<List<String>> _salvarFotosSelecionadas(List<XFile> picked) async {
+  Future<List<String>> _salvarFotosSelecionadas(
+    List<XFile> picked, {
+    String filenamePrefix = 'foto',
+  }) async {
     await _storage.ensureBaseStructure();
     final fotosDir = await _storage.lancamentoPhotosDir(
       widget.concretagem.obraId,
     );
     final savedPaths = <String>[];
+    final safePrefix = filenamePrefix
+        .replaceAll(RegExp(r'[^A-Za-z0-9_]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
 
     for (final foto in picked) {
       final source = File(foto.path);
@@ -319,7 +512,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
       final ext = p.extension(foto.path).toLowerCase();
       final safeExt = ext.isEmpty ? '.jpg' : ext;
       final filename =
-          'obra_${widget.concretagem.obraId}_${now.microsecondsSinceEpoch}_${savedPaths.length}$safeExt';
+          '${safePrefix.isEmpty ? 'foto' : safePrefix}_obra_${widget.concretagem.obraId}_${now.microsecondsSinceEpoch}_${savedPaths.length}$safeExt';
       final target = File(p.join(fotosDir.path, filename));
       await source.copy(target.path);
       savedPaths.add(target.path);
@@ -459,11 +652,80 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                 ),
                 const SizedBox(height: 12),
 
-                TextFormField(
-                  controller: _notaFiscalCtrl,
-                  decoration: _dec('Nota fiscal (NF)'),
-                  textInputAction: TextInputAction.next,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _notaFiscalCtrl,
+                        decoration: _dec('Nota fiscal (NF)').copyWith(
+                          enabledBorder: _notaFiscalOcrAviso == null
+                              ? null
+                              : OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: Colors.orange.shade700,
+                                    width: 1.4,
+                                  ),
+                                ),
+                          focusedBorder: _notaFiscalOcrAviso == null
+                              ? null
+                              : OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: Colors.orange.shade800,
+                                    width: 2,
+                                  ),
+                                ),
+                        ),
+                        textInputAction: TextInputAction.next,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: 'Escanear nota fiscal',
+                      child: IconButton.filledTonal(
+                        onPressed: _scanningNotaFiscal || _saving
+                            ? null
+                            : _escanearNotaFiscal,
+                        icon: _scanningNotaFiscal
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.document_scanner_outlined),
+                      ),
+                    ),
+                  ],
                 ),
+                if (_notaFiscalOcrAviso != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      border: Border.all(color: Colors.orange.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.warning_amber_outlined,
+                          color: Colors.orange.shade800,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _notaFiscalOcrAviso!,
+                            style: TextStyle(color: Colors.orange.shade900),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
 
                 TextFormField(

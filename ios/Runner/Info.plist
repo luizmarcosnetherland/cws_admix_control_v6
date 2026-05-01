@@ -31,9 +31,9 @@
 		<string>comgooglemaps</string>
 	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Selecione fotos do lançamento para incluir no relatório da obra.</string>
+	<string>Selecione fotos do lançamento ou da nota fiscal para incluir no relatório da obra.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Use a camera para registrar fotos do lancamento e anexar ao relatorio da obra.</string>
+	<string>Use a camera para escanear a nota fiscal e registrar fotos do lancamento no relatorio da obra.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>Usamos o calendario para criar o evento da concretagem programada.</string>
 	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>

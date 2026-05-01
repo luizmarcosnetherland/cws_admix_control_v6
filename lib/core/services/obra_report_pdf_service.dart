@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:image/image.dart' as img;
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -13,6 +14,10 @@ import '../../data/models/concretagem_model.dart';
 import '../../data/models/lancamento_model.dart';
 import '../../data/models/obra_model.dart';
 import 'local_storage_service.dart';
+
+const _pdfPhotoMaxSidePx = 360;
+const _pdfPhotoJpegQuality = 72;
+const _pdfPhotoMaxSourceBytes = 8 * 1024 * 1024;
 
 class ObraReportPdfService {
   final LocalStorageService _storage = LocalStorageService();
@@ -741,9 +746,15 @@ class ObraReportPdfService {
       try {
         final file = File(path);
         if (!await file.exists()) continue;
+        if (await file.length() > _pdfPhotoMaxSourceBytes) continue;
         final bytes = await file.readAsBytes();
         if (bytes.isEmpty) continue;
-        fotos.add(pw.MemoryImage(bytes));
+        final thumbnailBytes = await compute(
+          _compactLancamentoPhotoForPdf,
+          bytes,
+        );
+        if (thumbnailBytes.isEmpty) continue;
+        fotos.add(pw.MemoryImage(thumbnailBytes));
       } catch (_) {
         continue;
       }
@@ -1223,6 +1234,34 @@ class ObraReportPdfService {
     0xFFC8553D,
     0xFF4D908E,
   ];
+}
+
+Uint8List _compactLancamentoPhotoForPdf(Uint8List bytes) {
+  try {
+    final decoded = img.decodeImage(bytes);
+    if (decoded == null) {
+      return bytes.length <= 512 * 1024 ? bytes : Uint8List(0);
+    }
+
+    final oriented = img.bakeOrientation(decoded);
+    final largestSide = math.max(oriented.width, oriented.height);
+    final resized = largestSide <= _pdfPhotoMaxSidePx
+        ? oriented
+        : img.copyResize(
+            oriented,
+            width: oriented.width >= oriented.height
+                ? _pdfPhotoMaxSidePx
+                : null,
+            height: oriented.height > oriented.width
+                ? _pdfPhotoMaxSidePx
+                : null,
+            interpolation: img.Interpolation.average,
+          );
+
+    return img.encodeJpg(resized, quality: _pdfPhotoJpegQuality);
+  } catch (_) {
+    return bytes.length <= 512 * 1024 ? bytes : Uint8List(0);
+  }
 }
 
 class _PdfLogos {
