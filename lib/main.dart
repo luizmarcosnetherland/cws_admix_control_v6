@@ -12,9 +12,12 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:printing/printing.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'core/services/app_review_service.dart';
 import 'core/services/app_update_service.dart';
+import 'core/services/onboarding_service.dart';
 import 'features/agendamento/pages/agendamento_concretagem_page.dart';
 import 'features/obras/pages/obras_page.dart';
 import 'cws_calculator_page.dart';
@@ -139,6 +142,7 @@ class AppGate extends StatefulWidget {
 class _AppGateState extends State<AppGate> {
   bool _showSplash = true;
   bool _updateCheckStarted = false;
+  final _homePageKey = GlobalKey<_HomePageState>();
   late final AppUpdateService _appUpdateService;
 
   @override
@@ -165,6 +169,12 @@ class _AppGateState extends State<AppGate> {
     setState(() {
       _showSplash = false;
     });
+
+    await Future<void>.delayed(const Duration(milliseconds: 950));
+    if (!mounted) return;
+
+    await _homePageKey.currentState?._showHomeOnboardingIfNeeded();
+    if (!mounted) return;
 
     unawaited(_maybeShowUpdateDialog());
   }
@@ -233,7 +243,7 @@ class _AppGateState extends State<AppGate> {
 
     return Stack(
       children: [
-        const HomePage(),
+        HomePage(key: _homePageKey),
         IgnorePointer(
           ignoring: !_showSplash,
           child: AnimatedOpacity(
@@ -416,8 +426,30 @@ class _SplashScreenState extends State<_SplashScreen> {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final _onboardingService = OnboardingService();
+  final _scrollController = ScrollController();
+  final _calculatorKey = GlobalKey();
+  final _obrasKey = GlobalKey();
+  final _literaturaKey = GlobalKey();
+  final _agendamentoKey = GlobalKey();
+  final _aboutKey = GlobalKey();
+  final _obrasShortcutKey = GlobalKey();
+
+  bool _tutorialShowing = false;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   void _openObras(BuildContext context) {
     Navigator.of(
@@ -443,10 +475,172 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  void _openAbout(BuildContext context) {
-    Navigator.of(
+  Future<void> _openAbout(BuildContext context) async {
+    final replayOnboarding = await Navigator.of(
       context,
-    ).push(MaterialPageRoute(builder: (_) => const AboutPage()));
+    ).push<bool>(MaterialPageRoute(builder: (_) => const AboutPage()));
+    if (!mounted || replayOnboarding != true) return;
+
+    await _onboardingService.resetHomeOnboarding();
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    if (!mounted) return;
+    await _showHomeOnboarding(force: true);
+  }
+
+  Future<void> _showHomeOnboardingIfNeeded() async {
+    if (AppGate._previewPage.isNotEmpty) return;
+    final shouldShow = await _onboardingService.shouldShowHomeOnboarding();
+    if (!shouldShow || !mounted) return;
+    await _showHomeOnboarding();
+  }
+
+  Future<void> _showHomeOnboarding({bool force = false}) async {
+    if (_tutorialShowing) return;
+    if (!force) {
+      final shouldShow = await _onboardingService.shouldShowHomeOnboarding();
+      if (!shouldShow) return;
+    }
+    if (!mounted) return;
+
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
+
+    _tutorialShowing = true;
+    final completer = Completer<void>();
+
+    void closeTutorial() {
+      _finishHomeOnboarding();
+      if (!completer.isCompleted) completer.complete();
+    }
+
+    TutorialCoachMark(
+      targets: _homeOnboardingTargets(),
+      colorShadow: const Color(0xFF0F172A),
+      opacityShadow: 0.82,
+      paddingFocus: 8,
+      pulseEnable: false,
+      textSkip: 'Pular',
+      textStyleSkip: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.w800,
+      ),
+      alignSkip: Alignment.topRight,
+      showSkipInLastTarget: false,
+      beforeFocus: _scrollToOnboardingTarget,
+      onFinish: closeTutorial,
+      onSkip: () {
+        closeTutorial();
+        return true;
+      },
+    ).show(context: context);
+
+    return completer.future;
+  }
+
+  Future<void> _scrollToOnboardingTarget(TargetFocus target) async {
+    final key = switch (target.identify) {
+      'calculator' => _calculatorKey,
+      'obras' => _obrasKey,
+      'literatura' => _literaturaKey,
+      'agendamento' => _agendamentoKey,
+      'about' => _aboutKey,
+      'obras_shortcut' => _obrasShortcutKey,
+      _ => null,
+    };
+    final targetContext = key?.currentContext;
+    if (targetContext == null) return;
+
+    await Scrollable.ensureVisible(
+      targetContext,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+      alignment: 0.24,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+  }
+
+  void _finishHomeOnboarding() {
+    _tutorialShowing = false;
+    unawaited(_onboardingService.markHomeOnboardingSeen());
+  }
+
+  List<TargetFocus> _homeOnboardingTargets() {
+    return [
+      _homeOnboardingTarget(
+        identify: 'calculator',
+        key: _calculatorKey,
+        title: 'Calculadora CWS',
+        body:
+            'Calcule a dosagem do CWS Admix pelo volume da concretagem e siga para a solicitação comercial.',
+        align: ContentAlign.bottom,
+      ),
+      _homeOnboardingTarget(
+        identify: 'obras',
+        key: _obrasKey,
+        title: 'Obras',
+        body:
+            'Cadastre uma obra, acompanhe concretagens, lançamentos, fotos, notas fiscais e relatórios.',
+        align: ContentAlign.bottom,
+      ),
+      _homeOnboardingTarget(
+        identify: 'literatura',
+        key: _literaturaKey,
+        title: 'Literatura técnica',
+        body:
+            'Consulte ficha técnica e orientações de cura do concreto sem sair do aplicativo.',
+        align: ContentAlign.top,
+      ),
+      _homeOnboardingTarget(
+        identify: 'agendamento',
+        key: _agendamentoKey,
+        title: 'Agendamento',
+        body:
+            'Programe uma concretagem futura e compartilhe o compromisso com quem precisa acompanhar.',
+        align: ContentAlign.top,
+      ),
+      _homeOnboardingTarget(
+        identify: 'about',
+        key: _aboutKey,
+        title: 'Sobre e suporte',
+        body:
+            'Aqui ficam versão do app, suporte, feedback, avaliação e a opção de rever esta introdução.',
+        align: ContentAlign.bottom,
+        radius: 28,
+      ),
+    ];
+  }
+
+  TargetFocus _homeOnboardingTarget({
+    required String identify,
+    required GlobalKey key,
+    required String title,
+    required String body,
+    required ContentAlign align,
+    double radius = 20,
+  }) {
+    final isLast = identify == 'about';
+    return TargetFocus(
+      identify: identify,
+      keyTarget: key,
+      shape: ShapeLightFocus.RRect,
+      radius: radius,
+      paddingFocus: 8,
+      enableOverlayTab: true,
+      contents: [
+        TargetContent(
+          align: align,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          builder: (context, controller) {
+            return _OnboardingTipCard(
+              title: title,
+              body: body,
+              actionLabel: isLast ? 'Concluir' : 'Próximo',
+              onPressed: controller.next,
+            );
+          },
+        ),
+      ],
+    );
   }
 
   Widget _quickAccessIntro({bool compact = false}) {
@@ -528,6 +722,7 @@ class HomePage extends StatelessWidget {
     required IconData icon,
     required Color accentColor,
     required VoidCallback onTap,
+    GlobalKey? targetKey,
     bool compact = false,
     double? bottomSpacing,
   }) {
@@ -542,6 +737,7 @@ class HomePage extends StatelessWidget {
         label: '$title. $subtitle',
         hint: 'Toque para abrir',
         child: Material(
+          key: targetKey,
           color: surfaceColor,
           elevation: 2,
           shadowColor: const Color(0xFF1E3A5F).withValues(alpha: 0.10),
@@ -663,6 +859,7 @@ class HomePage extends StatelessWidget {
                 icon: Icons.calculate,
                 accentColor: const Color(0xFF2B63A7),
                 onTap: () => _openCalculator(context),
+                targetKey: _calculatorKey,
                 compact: compact,
               ),
               _menuButton(
@@ -673,6 +870,7 @@ class HomePage extends StatelessWidget {
                 icon: Icons.apartment,
                 accentColor: const Color(0xFF1B7A73),
                 onTap: () => _openObras(context),
+                targetKey: _obrasKey,
                 compact: compact,
               ),
             ],
@@ -694,6 +892,7 @@ class HomePage extends StatelessWidget {
                     icon: Icons.calculate,
                     accentColor: const Color(0xFF2B63A7),
                     onTap: () => _openCalculator(context),
+                    targetKey: _calculatorKey,
                     compact: cardCompact,
                     bottomSpacing: 0,
                   ),
@@ -708,6 +907,7 @@ class HomePage extends StatelessWidget {
                     icon: Icons.apartment,
                     accentColor: const Color(0xFF1B7A73),
                     onTap: () => _openObras(context),
+                    targetKey: _obrasKey,
                     compact: cardCompact,
                     bottomSpacing: 0,
                   ),
@@ -741,6 +941,7 @@ class HomePage extends StatelessWidget {
                 icon: Icons.menu_book_outlined,
                 accentColor: const Color(0xFF9A621A),
                 onTap: () => _openLiteraturaTecnica(context),
+                targetKey: _literaturaKey,
                 compact: compact,
               ),
               _menuButton(
@@ -751,6 +952,7 @@ class HomePage extends StatelessWidget {
                 icon: Icons.event_note_outlined,
                 accentColor: const Color(0xFF5F4CA8),
                 onTap: () => _openAgendamentoConcretagem(context),
+                targetKey: _agendamentoKey,
                 compact: compact,
               ),
             ],
@@ -772,6 +974,7 @@ class HomePage extends StatelessWidget {
                     icon: Icons.menu_book_outlined,
                     accentColor: const Color(0xFF9A621A),
                     onTap: () => _openLiteraturaTecnica(context),
+                    targetKey: _literaturaKey,
                     compact: cardCompact,
                     bottomSpacing: 0,
                   ),
@@ -786,6 +989,7 @@ class HomePage extends StatelessWidget {
                     icon: Icons.event_note_outlined,
                     accentColor: const Color(0xFF5F4CA8),
                     onTap: () => _openAgendamentoConcretagem(context),
+                    targetKey: _agendamentoKey,
                     compact: cardCompact,
                     bottomSpacing: 0,
                   ),
@@ -896,11 +1100,13 @@ class HomePage extends StatelessWidget {
         title: const Text('Dashboard'),
         actions: [
           IconButton(
+            key: _aboutKey,
             tooltip: 'Sobre',
             icon: const Icon(Icons.info_outline),
             onPressed: () => _openAbout(context),
           ),
           IconButton(
+            key: _obrasShortcutKey,
             tooltip: 'Obras',
             icon: const Icon(Icons.apartment),
             onPressed: () => _openObras(context),
@@ -908,6 +1114,7 @@ class HomePage extends StatelessWidget {
         ],
       ),
       body: ListView(
+        controller: _scrollController,
         padding: EdgeInsets.fromLTRB(16, isCompactDashboard ? 8 : 16, 16, 16),
         children: [
           _brandingWatermark(compact: isCompactDashboard),
@@ -926,6 +1133,77 @@ class HomePage extends StatelessWidget {
   }
 }
 
+class _OnboardingTipCard extends StatelessWidget {
+  final String title;
+  final String body;
+  final String actionLabel;
+  final VoidCallback onPressed;
+
+  const _OnboardingTipCard({
+    required this.title,
+    required this.body,
+    required this.actionLabel,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 340),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.18),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Color(0xFF1E3A5F),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    height: 1.15,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  body,
+                  style: const TextStyle(
+                    color: Color(0xFF3F4C5A),
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton(
+                    onPressed: onPressed,
+                    child: Text(actionLabel),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
 
@@ -935,6 +1213,7 @@ class AboutPage extends StatefulWidget {
 
 class _AboutPageState extends State<AboutPage> {
   late final Future<String> _versionLabelFuture;
+  final _reviewService = AppReviewService();
 
   static final Uri _supportEmailUri = Uri.parse(
     'mailto:netherland@netherland.com.br?subject=Suporte%20-%20CWS%20Admix%20Control',
@@ -956,6 +1235,56 @@ class _AboutPageState extends State<AboutPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Nao foi possivel abrir o email de suporte.'),
+      ),
+    );
+  }
+
+  Future<void> _openFeedbackEmail(
+    BuildContext context, {
+    required String versionLabel,
+  }) async {
+    final opened = await _reviewService.openFeedbackEmail(
+      versionLabel: versionLabel,
+    );
+    if (!context.mounted || opened) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Nao foi possivel abrir o email de feedback.'),
+      ),
+    );
+  }
+
+  Future<void> _openAppReview(BuildContext context) async {
+    final result = await _reviewService.openStoreListing();
+    if (!context.mounted) return;
+
+    final message = switch (result) {
+      AppReviewRequestResult.openedStore => null,
+      AppReviewRequestResult.requested => null,
+      AppReviewRequestResult.missingAppStoreId =>
+        'A avaliacao pela App Store sera ativada quando o app estiver publicado.',
+      AppReviewRequestResult.unsupportedPlatform =>
+        'A avaliacao direta esta disponivel no Android e no iOS.',
+      AppReviewRequestResult.failed =>
+        'Nao foi possivel abrir a loja para avaliacao.',
+    };
+
+    if (message == null) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _replayOnboarding(BuildContext context) {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop(true);
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Abra o Dashboard para rever a introducao guiada.'),
       ),
     );
   }
@@ -1064,6 +1393,45 @@ class _AboutPageState extends State<AboutPage> {
                               onPressed: () => _openSupportEmail(context),
                               icon: const Icon(Icons.email_outlined),
                               label: const Text('Enviar email'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _openAppReview(context),
+                              icon: const Icon(Icons.star_outline),
+                              label: const Text('Avaliar o app'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _openFeedbackEmail(
+                                context,
+                                versionLabel: versionLabel,
+                              ),
+                              icon: const Icon(Icons.rate_review_outlined),
+                              label: const Text('Enviar feedback'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton.icon(
+                              onPressed: () => _replayOnboarding(context),
+                              icon: const Icon(Icons.tips_and_updates_outlined),
+                              label: const Text('Ver introducao novamente'),
                             ),
                           ),
                         ],

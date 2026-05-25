@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/services/app_review_service.dart';
 import '../../../data/models/obra_model.dart';
 import '../../../data/repositories/obra_repository.dart';
 import 'nova_obra_page.dart';
 import 'obra_detalhe_page.dart';
+
+enum _ReviewPromptAction { rate, feedback }
 
 class ObrasPage extends StatefulWidget {
   const ObrasPage({super.key});
@@ -14,6 +17,7 @@ class ObrasPage extends StatefulWidget {
 
 class _ObrasPageState extends State<ObrasPage> {
   final _repo = ObraRepository();
+  final _reviewService = AppReviewService();
 
   bool _loading = true;
 
@@ -50,7 +54,79 @@ class _ObrasPageState extends State<ObrasPage> {
     final created = await Navigator.of(
       context,
     ).push<bool>(MaterialPageRoute(builder: (_) => const NovaObraPage()));
-    if (created == true) await _carregarTudo();
+    if (created == true) {
+      await _carregarTudo();
+      await _maybeAskForReviewAfterCompletedTask();
+    }
+  }
+
+  Future<void> _maybeAskForReviewAfterCompletedTask() async {
+    final shouldPrompt = await _reviewService
+        .recordCompletedTaskAndShouldPrompt();
+    if (!mounted || !shouldPrompt) return;
+
+    final action = await showDialog<_ReviewPromptAction>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Como esta sua experiencia?'),
+        content: const Text(
+          'Sua avaliacao ajuda outros profissionais a encontrarem o CWS Admix Control. Se preferir, envie um feedback direto para a equipe.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Agora nao'),
+          ),
+          TextButton.icon(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(_ReviewPromptAction.feedback),
+            icon: const Icon(Icons.rate_review_outlined),
+            label: const Text('Enviar feedback'),
+          ),
+          FilledButton.icon(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(_ReviewPromptAction.rate),
+            icon: const Icon(Icons.star_outline),
+            label: const Text('Avaliar'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || action == null) return;
+
+    switch (action) {
+      case _ReviewPromptAction.rate:
+        final result = await _reviewService.requestReview();
+        if (!mounted) return;
+        _showReviewResultMessage(result);
+      case _ReviewPromptAction.feedback:
+        final opened = await _reviewService.openFeedbackEmail();
+        if (!mounted || opened) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nao foi possivel abrir o email de feedback.'),
+          ),
+        );
+    }
+  }
+
+  void _showReviewResultMessage(AppReviewRequestResult result) {
+    final message = switch (result) {
+      AppReviewRequestResult.requested => null,
+      AppReviewRequestResult.openedStore => null,
+      AppReviewRequestResult.missingAppStoreId =>
+        'A avaliacao pela App Store sera ativada quando o app estiver publicado.',
+      AppReviewRequestResult.unsupportedPlatform =>
+        'A avaliacao direta esta disponivel no Android e no iOS.',
+      AppReviewRequestResult.failed =>
+        'Nao foi possivel abrir a loja para avaliacao.',
+    };
+
+    if (message == null) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _arquivar(Obra obra) async {
