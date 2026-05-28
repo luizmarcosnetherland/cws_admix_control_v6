@@ -38,6 +38,12 @@ void main() {
     expect(tr('Nova Obra'), 'New Jobsite');
     expect(tr('Rastreio da Planta'), 'Plan Tracking');
     expect(tr('Lançamentos: {count}', params: {'count': 3}), 'Placements: 3');
+    expect(tr('Nome'), 'Name');
+    expect(tr('Responsavel'), 'Person in charge');
+    expect(tr('E-mail engenheiro'), 'Responsible email');
+    expect(tr('Empresa tecnologia'), 'Quality control company');
+    expect(tr('Primeiro lancamento'), '1st pour');
+    expect(tr('Lançamentos da concretagem'), 'Pour batches');
 
     CwsLocalizations.activate(CwsLocalizations(const Locale('es')));
     expect(tr('Calculadora CWS'), 'Calculadora CWS');

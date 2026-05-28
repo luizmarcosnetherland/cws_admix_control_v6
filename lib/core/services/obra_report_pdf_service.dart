@@ -74,10 +74,7 @@ class ObraReportPdfService {
       lancamentosPorConcretagem,
     );
     final generatedAt = DateTime.now();
-    final generatedAtLabel = DateFormat(
-      'dd/MM/yyyy HH:mm',
-      CwsLocalizations.current.dateLocale,
-    ).format(generatedAt);
+    final generatedAtLabel = _fmtReportDateTime(generatedAt);
 
     double volumeTotal = 0;
     double cwsTotal = 0;
@@ -159,12 +156,7 @@ class ObraReportPdfService {
                   _kv('CWS total', '${_fmtNum(cwsTotal, 1)} kg'),
                   _kv(
                     'Cura umida recomendada ate',
-                    curaUmidaAte == null
-                        ? '-'
-                        : DateFormat(
-                            'dd/MM/yyyy',
-                            CwsLocalizations.current.dateLocale,
-                          ).format(curaUmidaAte),
+                    curaUmidaAte == null ? '-' : _fmtReportDate(curaUmidaAte),
                   ),
                 ]),
               ),
@@ -299,10 +291,7 @@ class ObraReportPdfService {
       concretagem,
       lancamentosOrdenados,
     );
-    final generatedAtLabel = DateFormat(
-      'dd/MM/yyyy HH:mm',
-      CwsLocalizations.current.dateLocale,
-    ).format(DateTime.now());
+    final generatedAtLabel = _fmtReportDateTime(DateTime.now());
     final volumeTotal = lancamentosOrdenados.fold<double>(
       0,
       (total, item) => total + item.volumeM3,
@@ -407,28 +396,17 @@ class ObraReportPdfService {
                     'Primeiro lancamento',
                     primeiroLancamento == null
                         ? '-'
-                        : DateFormat(
-                            'dd/MM/yyyy HH:mm',
-                            CwsLocalizations.current.dateLocale,
-                          ).format(primeiroLancamento),
+                        : _fmtReportDateTime(primeiroLancamento),
                   ),
                   _kv(
                     'Ultimo lancamento',
                     ultimoLancamento == null
                         ? '-'
-                        : DateFormat(
-                            'dd/MM/yyyy HH:mm',
-                            CwsLocalizations.current.dateLocale,
-                          ).format(ultimoLancamento),
+                        : _fmtReportDateTime(ultimoLancamento),
                   ),
                   _kv(
                     'Cura umida recomendada ate',
-                    curaUmidaAte == null
-                        ? '-'
-                        : DateFormat(
-                            'dd/MM/yyyy',
-                            CwsLocalizations.current.dateLocale,
-                          ).format(curaUmidaAte),
+                    curaUmidaAte == null ? '-' : _fmtReportDate(curaUmidaAte),
                   ),
                 ]),
               ),
@@ -750,12 +728,7 @@ class ObraReportPdfService {
       _kv('CWS total', '${_fmtNum(cwsTotal, 1)} kg'),
       _kv(
         'Ultimo lancamento',
-        ultimoLancamento == null
-            ? '-'
-            : DateFormat(
-                'dd/MM/yyyy HH:mm',
-                CwsLocalizations.current.dateLocale,
-              ).format(ultimoLancamento),
+        ultimoLancamento == null ? '-' : _fmtReportDateTime(ultimoLancamento),
       ),
     ]);
   }
@@ -1076,10 +1049,7 @@ class ObraReportPdfService {
     Lancamento l,
     List<pw.MemoryImage> fotos,
   ) {
-    final dataHora = DateFormat(
-      'dd/MM/yyyy HH:mm',
-      CwsLocalizations.current.dateLocale,
-    ).format(l.dataHora);
+    final dataHora = _fmtReportDateTime(l.dataHora);
     final linhas = <String>[
       tr('Data/hora: {date}', params: {'date': dataHora}),
       tr('Betoneira: {value}', params: {'value': _fallback(l.caminhao)}),
@@ -1267,14 +1237,35 @@ class ObraReportPdfService {
     return value.toStringAsFixed(casas).replaceAll('.', ',');
   }
 
+  String _fmtReportDate(DateTime value) {
+    final locale = CwsLocalizations.current.dateLocale;
+    final pattern = CwsLocalizations.current.languageCode == 'en'
+        ? 'MM/dd/yyyy'
+        : 'dd/MM/yyyy';
+    return DateFormat(pattern, locale).format(value);
+  }
+
+  String _fmtReportDateTime(DateTime value) {
+    final locale = CwsLocalizations.current.dateLocale;
+    final pattern = CwsLocalizations.current.languageCode == 'en'
+        ? 'MM/dd/yyyy HH:mm'
+        : 'dd/MM/yyyy HH:mm';
+    return DateFormat(pattern, locale).format(value);
+  }
+
+  String _fmtReportShortDateTime(DateTime value) {
+    final locale = CwsLocalizations.current.dateLocale;
+    final pattern = CwsLocalizations.current.languageCode == 'en'
+        ? 'MM/dd HH:mm'
+        : 'dd/MM HH:mm';
+    return DateFormat(pattern, locale).format(value);
+  }
+
   String _legendTitleLancamento(Lancamento lancamento) {
     final titulo = lancamento.caminhao.trim().isEmpty
         ? tr('Lançamento {id}', params: {'id': lancamento.id ?? ''}).trim()
         : lancamento.caminhao.trim();
-    final dataHora = DateFormat(
-      'dd/MM HH:mm',
-      CwsLocalizations.current.dateLocale,
-    ).format(lancamento.dataHora);
+    final dataHora = _fmtReportShortDateTime(lancamento.dataHora);
     return '$titulo • $dataHora • ${_fmtNum(lancamento.volumeM3, 1)} m³';
   }
 

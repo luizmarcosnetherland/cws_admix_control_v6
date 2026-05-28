@@ -1367,4 +1367,28 @@ const _translations = <String, Map<String, String>>{
     'en': 'Last placement: {date}',
     'es': 'Último lanzamiento: {date}',
   },
+  'Nome': {'en': 'Name', 'es': 'Nombre'},
+  'Coordenadas': {'en': 'Coordinates', 'es': 'Coordenadas'},
+  'Responsavel': {'en': 'Person in charge', 'es': 'Responsable'},
+  'E-mail engenheiro': {
+    'en': 'Responsible email',
+    'es': 'Email del responsable',
+  },
+  'Empresa tecnologia': {
+    'en': 'Quality control company',
+    'es': 'Empresa de control de calidad',
+  },
+  'Lancamentos': {'en': 'Pours', 'es': 'Lanzamientos'},
+  'Volume total': {'en': 'Total volume', 'es': 'Volumen total'},
+  'CWS total': {'en': 'Total CWS', 'es': 'CWS total'},
+  'Primeiro lancamento': {'en': '1st pour', 'es': 'Primer lanzamiento'},
+  'Ultimo lancamento': {'en': 'Last pour', 'es': 'Último lanzamiento'},
+  'Cura umida recomendada ate': {
+    'en': 'Wet cure recommended until',
+    'es': 'Curado húmedo recomendado hasta',
+  },
+  'Lançamentos da concretagem': {
+    'en': 'Pour batches',
+    'es': 'Lanzamientos del hormigonado',
+  },
 };
