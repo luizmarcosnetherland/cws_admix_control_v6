@@ -14,6 +14,7 @@ import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'core/branding/brand_assets.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/services/app_review_service.dart';
 import 'core/services/app_update_service.dart';
@@ -126,7 +127,7 @@ class _AppWatermarkBackground extends StatelessWidget {
               child: Opacity(
                 opacity: 0.045,
                 child: Image.asset(
-                  'assets/logos/netherland.png',
+                  companyLogoAssetForDeviceLocale(),
                   width: 360,
                   fit: BoxFit.contain,
                 ),
@@ -350,7 +351,7 @@ class _SplashScreenState extends State<_SplashScreen> {
                         children: [
                           Flexible(
                             child: Image.asset(
-                              'assets/logos/netherland.png',
+                              companyLogoAssetForDeviceLocale(),
                               height: logoHeight,
                               fit: BoxFit.contain,
                             ),
@@ -364,7 +365,7 @@ class _SplashScreenState extends State<_SplashScreen> {
                           SizedBox(width: spacing),
                           Flexible(
                             child: Image.asset(
-                              'assets/logos/cwsadmix.jpg',
+                              kCwsAdmixLogoAsset,
                               height: logoHeight,
                               fit: BoxFit.contain,
                             ),
@@ -1045,7 +1046,10 @@ class _HomePageState extends State<HomePage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset('assets/logos/netherland.png', height: logoHeight),
+                Image.asset(
+                  companyLogoAssetForDeviceLocale(),
+                  height: logoHeight,
+                ),
                 SizedBox(width: horizontalSpacing),
                 Container(
                   width: 1,
@@ -1053,7 +1057,7 @@ class _HomePageState extends State<HomePage> {
                   color: const Color(0xFF1E3A5F),
                 ),
                 SizedBox(width: horizontalSpacing),
-                Image.asset('assets/logos/cwsadmix.jpg', height: logoHeight),
+                Image.asset(kCwsAdmixLogoAsset, height: logoHeight),
               ],
             ),
           ),
@@ -1361,7 +1365,7 @@ class _AboutPageState extends State<AboutPage> {
                       Row(
                         children: [
                           Image.asset(
-                            'assets/logos/netherland.png',
+                            companyLogoAssetForDeviceLocale(),
                             height: 32,
                           ),
                           const SizedBox(width: 12),
@@ -1542,17 +1546,12 @@ class LiteraturaTecnicaPage extends StatelessWidget {
     );
   }
 
-  bool _isPtBr(Locale locale) {
-    return locale.languageCode.toLowerCase() == 'pt' &&
-        locale.countryCode?.toUpperCase() == 'BR';
-  }
-
   Uri _siteUriForLocale(Locale locale) {
-    return _isPtBr(locale) ? _sitePtBrUri : _siteInternationalUri;
+    return isPtBrLocale(locale) ? _sitePtBrUri : _siteInternationalUri;
   }
 
   String _siteLabelForLocale(Locale locale) {
-    return _isPtBr(locale)
+    return isPtBrLocale(locale)
         ? tr('Site Netherland')
         : tr('Site CWS Waterproofing');
   }
@@ -1701,7 +1700,7 @@ class LiteraturaTecnicaPage extends StatelessWidget {
     final fichaTecnicaTitle = _fichaTecnicaTitleForLanguage(
       fichaTecnicaLanguageCode,
     );
-    final siteLocale = context.l10n.locale;
+    final siteLocale = WidgetsBinding.instance.platformDispatcher.locale;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5F7),

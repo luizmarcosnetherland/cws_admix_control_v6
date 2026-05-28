@@ -13,6 +13,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../data/models/concretagem_model.dart';
 import '../../data/models/lancamento_model.dart';
 import '../../data/models/obra_model.dart';
+import '../branding/brand_assets.dart';
 import '../localization/app_localizations.dart';
 import 'local_storage_service.dart';
 
@@ -185,11 +186,11 @@ class ObraReportPdfService {
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            if (logos.netherland != null)
-              pw.Image(logos.netherland!, height: 34)
+            if (logos.company != null)
+              pw.Image(logos.company!, height: 34)
             else
               pw.SizedBox(),
-            if (logos.cws != null) pw.Image(logos.cws!, height: 34),
+            if (logos.cwsAdmix != null) pw.Image(logos.cwsAdmix!, height: 34),
           ],
         ),
         pw.SizedBox(height: 12),
@@ -491,11 +492,11 @@ class ObraReportPdfService {
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            if (logos.netherland != null)
-              pw.Image(logos.netherland!, height: 34)
+            if (logos.company != null)
+              pw.Image(logos.company!, height: 34)
             else
               pw.SizedBox(),
-            if (logos.cws != null) pw.Image(logos.cws!, height: 34),
+            if (logos.cwsAdmix != null) pw.Image(logos.cwsAdmix!, height: 34),
           ],
         ),
         pw.SizedBox(height: 12),
@@ -1166,8 +1167,8 @@ class ObraReportPdfService {
       }
 
       return _PdfLogos(
-        netherland: await load('assets/logos/netherland.png'),
-        cws: await load('assets/logos/cwsadmix.jpg'),
+        company: await load(companyLogoAssetForDeviceLocale()),
+        cwsAdmix: await load(kCwsAdmixLogoAsset),
       );
     }();
   }
@@ -1327,10 +1328,10 @@ Uint8List _compactLancamentoPhotoForPdf(Uint8List bytes) {
 }
 
 class _PdfLogos {
-  final pw.MemoryImage? netherland;
-  final pw.MemoryImage? cws;
+  final pw.MemoryImage? company;
+  final pw.MemoryImage? cwsAdmix;
 
-  const _PdfLogos({required this.netherland, required this.cws});
+  const _PdfLogos({required this.company, required this.cwsAdmix});
 }
 
 class _PdfFonts {

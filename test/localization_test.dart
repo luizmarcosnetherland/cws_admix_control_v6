@@ -1,3 +1,4 @@
+import 'package:cws_admix_control/core/branding/brand_assets.dart';
 import 'package:cws_admix_control/core/localization/app_localizations.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,6 +29,25 @@ void main() {
         CwsLocalizations.supportedLocales,
       ),
       const Locale('pt', 'BR'),
+    );
+  });
+
+  test('usa marca Netherland apenas para portugues do Brasil', () {
+    expect(isPtBrLocale(const Locale('pt', 'BR')), isTrue);
+    expect(isPtBrLocale(const Locale('pt', 'PT')), isFalse);
+    expect(isPtBrLocale(const Locale('en', 'US')), isFalse);
+
+    expect(
+      companyLogoAssetForLocale(const Locale('pt', 'BR')),
+      kNetherlandLogoAsset,
+    );
+    expect(
+      companyLogoAssetForLocale(const Locale('en', 'US')),
+      kCwsWaterproofingLogoAsset,
+    );
+    expect(
+      companyLogoAssetForLocale(const Locale('fr', 'FR')),
+      kCwsWaterproofingLogoAsset,
     );
   });
 
