@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:csv/csv.dart';
 import 'package:path/path.dart' as p;
 
+import '../localization/app_localizations.dart';
 import '../../data/models/lancamento_model.dart';
 import '../../data/models/obra_model.dart';
 import '../../data/repositories/lancamento_repository.dart';
@@ -16,7 +17,9 @@ class CsvExportService {
   /// Mantido por compatibilidade: exporta TODOS os lançamentos da obra.
   Future<String> exportLancamentosObraToDownloads({required Obra obra}) async {
     final obraId = obra.id;
-    if (obraId == null) throw Exception('Obra sem ID (não persistida).');
+    if (obraId == null) {
+      throw Exception(tr('Obra sem ID (não persistida).'));
+    }
 
     final lancamentos = await _repo.listarPorObra(obraId);
     return exportLancamentosToDownloads(
@@ -35,29 +38,29 @@ class CsvExportService {
     final rows = <List<String>>[];
 
     rows.add([
-      'Obra',
-      'Cliente',
-      'Local',
-      'Localizacao da obra',
-      'Latitude',
-      'Longitude',
-      'Responsável',
-      'Data/Hora',
-      'Estrutura concretada',
-      'Betoneira (nº/placa)',
-      'Concreteira',
-      'Controle tecnologico',
-      'Empresa tecnologia do concreto',
-      'NF',
-      'Slump antes (cm)',
-      'Slump depois (cm)',
-      'Tempo mistura (min)',
-      'Volume (m³)',
-      'Dosagem (kg/m³)',
-      'CWS Total (kg)',
-      'CWS adicionado (kg)',
-      'Dosagem de acordo',
-      'Observações',
+      tr('Obra'),
+      tr('Cliente'),
+      tr('Local'),
+      tr('Localizacao da obra'),
+      tr('Latitude'),
+      tr('Longitude'),
+      tr('Responsável'),
+      tr('Data/Hora'),
+      tr('Estrutura concretada'),
+      tr('Betoneira (nº/placa)'),
+      tr('Concreteira'),
+      tr('Controle tecnologico'),
+      tr('Empresa tecnologia do concreto'),
+      tr('NF'),
+      tr('Slump antes (cm)'),
+      tr('Slump depois (cm)'),
+      tr('Tempo mistura (min)'),
+      tr('Volume (m³)'),
+      tr('Dosagem (kg/m³)'),
+      tr('CWS Total (kg)'),
+      tr('CWS adicionado (kg)'),
+      tr('Dosagem de acordo'),
+      tr('Observações'),
     ]);
 
     for (final l in lancamentos) {
@@ -74,11 +77,11 @@ class CsvExportService {
         l.caminhao,
         l.concreteira,
         l.controleTecnologico.trim().toLowerCase() == 'sim'
-            ? 'Sim'
-            : 'Nao informado',
+            ? tr('Sim')
+            : tr('Nao informado'),
         l.controleTecnologico.trim().toLowerCase() == 'sim'
             ? l.empresaTecnologiaConcreto
-            : 'Nao informada',
+            : tr('Nao informada'),
         l.notaFiscal,
         l.slumpAntes == null ? '' : _fmtNum(l.slumpAntes!, casas: 1),
         l.slumpDepois == null ? '' : _fmtNum(l.slumpDepois!, casas: 1),
@@ -89,7 +92,7 @@ class CsvExportService {
         l.cwsAdicionadoKg == null ? '' : _fmtNum(l.cwsAdicionadoKg!, casas: 1),
         l.dosagemDeAcordo == null
             ? ''
-            : (l.dosagemDeAcordo == 1 ? 'OK' : 'DIVERGENTE'),
+            : (l.dosagemDeAcordo == 1 ? tr('OK') : tr('DIVERGENTE')),
         l.observacoes,
       ]);
     }

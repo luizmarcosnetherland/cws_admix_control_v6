@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../../../data/models/concretagem_model.dart';
 import '../../../data/repositories/concretagem_repository.dart';
 
@@ -57,7 +58,7 @@ class _NovaConcretagemPageState extends State<NovaConcretagemPage> {
   }
 
   InputDecoration _dec(String label) =>
-      InputDecoration(labelText: label, border: const OutlineInputBorder());
+      InputDecoration(labelText: tr(label), border: const OutlineInputBorder());
 
   Future<void> _salvar() async {
     if (_saving) return;
@@ -91,15 +92,21 @@ class _NovaConcretagemPageState extends State<NovaConcretagemPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao salvar concretagem: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr('Erro ao salvar concretagem: {error}', params: {'error': e}),
+          ),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final titulo = _isEdicao ? 'Editar Concretagem' : 'Nova Concretagem';
+    final titulo = _isEdicao
+        ? context.tr('Editar Concretagem')
+        : context.tr('Nova Concretagem');
     return Scaffold(
       appBar: AppBar(
         title: Text(titulo),
@@ -112,7 +119,7 @@ class _NovaConcretagemPageState extends State<NovaConcretagemPage> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Salvar'),
+                : Text(context.tr('Salvar')),
           ),
         ],
       ),
@@ -147,10 +154,16 @@ class _NovaConcretagemPageState extends State<NovaConcretagemPage> {
               DropdownButtonFormField<String>(
                 initialValue: _controleTecnologico,
                 decoration: _dec('Controle tecnológico?'),
-                items: const [
-                  DropdownMenuItem(value: '', child: Text('')),
-                  DropdownMenuItem(value: 'sim', child: Text('Sim')),
-                  DropdownMenuItem(value: 'nao', child: Text('Não')),
+                items: [
+                  const DropdownMenuItem(value: '', child: Text('')),
+                  DropdownMenuItem(
+                    value: 'sim',
+                    child: Text(context.tr('Sim')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'nao',
+                    child: Text(context.tr('Não')),
+                  ),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -174,7 +187,9 @@ class _NovaConcretagemPageState extends State<NovaConcretagemPage> {
                 onPressed: _saving ? null : _salvar,
                 icon: const Icon(Icons.save),
                 label: Text(
-                  _isEdicao ? 'Salvar alterações' : 'Salvar concretagem',
+                  _isEdicao
+                      ? context.tr('Salvar alterações')
+                      : context.tr('Salvar concretagem'),
                 ),
               ),
             ],

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../../../core/services/email_compose_service.dart';
 import '../../../core/services/obra_report_pdf_service.dart';
 import '../../../data/models/concretagem_model.dart';
@@ -64,7 +65,11 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
       if (!mounted) return;
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao carregar lançamentos: $e')),
+        SnackBar(
+          content: Text(
+            tr('Erro ao carregar lançamentos: {error}', params: {'error': e}),
+          ),
+        ),
       );
     }
   }
@@ -135,18 +140,21 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir lançamento'),
+        title: Text(tr('Excluir lançamento')),
         content: Text(
-          'Deseja excluir o lançamento da betoneira "${lancamento.caminhao}"?',
+          tr(
+            'Deseja excluir o lançamento da betoneira "{betoneira}"?',
+            params: {'betoneira': lancamento.caminhao},
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Excluir'),
+            child: Text(tr('Excluir')),
           ),
         ],
       ),
@@ -168,9 +176,13 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
       await _carregar();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao excluir lançamento: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr('Erro ao excluir lançamento: {error}', params: {'error': e}),
+          ),
+        ),
+      );
     }
   }
 
@@ -185,23 +197,23 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
 
   String _fallbackNaoInformado(String value) {
     final trimmed = value.trim();
-    return trimmed.isEmpty ? 'não informada' : trimmed;
+    return trimmed.isEmpty ? tr('não informada') : trimmed;
   }
 
   String _controleTecnologicoLabel() {
     if (_concretagemAtual.controleTecnologico.trim().toLowerCase() == 'sim') {
-      return 'Sim';
+      return tr('Sim');
     }
-    return 'não informado';
+    return tr('não informado');
   }
 
   String _tituloConcretagem() {
     final estrutura = _concretagemAtual.estruturaConcretada.trim();
     if (estrutura.isNotEmpty) return estrutura;
     if (_concretagemAtual.id != null) {
-      return 'Concretagem ${_concretagemAtual.id}';
+      return tr('Concretagem {id}', params: {'id': _concretagemAtual.id});
     }
-    return 'Concretagem';
+    return tr('Concretagem');
   }
 
   Rect? _shareOrigin() {
@@ -224,7 +236,14 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao gerar relatório da concretagem: $e')),
+        SnackBar(
+          content: Text(
+            tr(
+              'Erro ao gerar relatório da concretagem: {error}',
+              params: {'error': e},
+            ),
+          ),
+        ),
       );
     } finally {
       if (mounted) {
@@ -237,26 +256,26 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
     final acao = await showDialog<_AcaoEncerrarConcretagem>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Encerrar concretagem'),
-        content: const Text(
-          'Deseja gerar o PDF da concretagem antes de encerrar?',
+        title: Text(tr('Encerrar concretagem')),
+        content: Text(
+          tr('Deseja gerar o PDF da concretagem antes de encerrar?'),
         ),
         actions: [
           TextButton(
             onPressed: () =>
                 Navigator.of(context).pop(_AcaoEncerrarConcretagem.cancelar),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar')),
           ),
           TextButton(
             onPressed: () =>
                 Navigator.of(context).pop(_AcaoEncerrarConcretagem.encerrar),
-            child: const Text('Encerrar sem PDF'),
+            child: Text(tr('Encerrar sem PDF')),
           ),
           FilledButton.icon(
             onPressed: () =>
                 Navigator.of(context).pop(_AcaoEncerrarConcretagem.gerarPdf),
             icon: const Icon(Icons.picture_as_pdf_outlined),
-            label: const Text('Gerar PDF'),
+            label: Text(tr('Gerar PDF')),
           ),
         ],
       ),
@@ -286,9 +305,9 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
     final emailDestino = widget.obra.emailEngenheiro.trim();
     if (emailDestino.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Cadastre o e-mail do engenheiro na obra antes de enviar.',
+            tr('Cadastre o e-mail do engenheiro na obra antes de enviar.'),
           ),
         ),
       );
@@ -303,13 +322,28 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
         concretagem: _concretagemAtual,
         lancamentos: _lancamentos,
       );
-      final assunto = 'Relatório da concretagem ${_tituloConcretagem()}';
+      final assunto = tr(
+        'Relatório da concretagem {concretagem}',
+        params: {'concretagem': _tituloConcretagem()},
+      );
       final body = [
-        'Segue em anexo o relatório da concretagem ${_tituloConcretagem()} da obra ${widget.obra.nome}.',
+        tr(
+          'Segue em anexo o relatório da concretagem {concretagem} da obra {obra}.',
+          params: {
+            'concretagem': _tituloConcretagem(),
+            'obra': widget.obra.nome,
+          },
+        ),
         '',
-        'Lançamentos: ${_lancamentos.length}',
-        'Volume total: ${_fmtNum(_volumeTotal, casas: 1)} m3',
-        'CWS total: ${_fmtNum(_cwsTotal, casas: 1)} kg',
+        tr('Lançamentos: {count}', params: {'count': _lancamentos.length}),
+        tr(
+          'Volume total: {value} m3',
+          params: {'value': _fmtNum(_volumeTotal, casas: 1)},
+        ),
+        tr(
+          'CWS total: {value} kg',
+          params: {'value': _fmtNum(_cwsTotal, casas: 1)},
+        ),
       ].join('\n');
 
       await _emailService.composeEmail(
@@ -322,12 +356,26 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('E-mail preparado para $emailDestino')),
+        SnackBar(
+          content: Text(
+            tr(
+              'E-mail preparado para {email}',
+              params: {'email': emailDestino},
+            ),
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao enviar relatório por e-mail: $e')),
+        SnackBar(
+          content: Text(
+            tr(
+              'Erro ao enviar relatório por e-mail: {error}',
+              params: {'error': e},
+            ),
+          ),
+        ),
       );
     } finally {
       if (mounted) {
@@ -364,12 +412,20 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
 
   String _resumoRastreio() {
     if (!_plantaDisponivel) {
-      return 'Planta ainda não cadastrada para esta concretagem.';
+      return tr('Planta ainda não cadastrada para esta concretagem.');
     }
     if (_lancamentos.isEmpty) {
-      return 'Planta salva. Adicione lançamentos para começar as marcações.';
+      return tr(
+        'Planta salva. Adicione lançamentos para começar as marcações.',
+      );
     }
-    return '${_lancamentosMarcados.length} de ${_lancamentos.length} lançamentos já foram marcados na planta.';
+    return tr(
+      '{marked} de {total} lançamentos já foram marcados na planta.',
+      params: {
+        'marked': _lancamentosMarcados.length,
+        'total': _lancamentos.length,
+      },
+    );
   }
 
   Widget _resumoCard() {
@@ -385,23 +441,65 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Estrutura: ${_fallbackNaoInformado(_concretagemAtual.estruturaConcretada)}',
+              tr(
+                'Estrutura: {value}',
+                params: {
+                  'value': _fallbackNaoInformado(
+                    _concretagemAtual.estruturaConcretada,
+                  ),
+                },
+              ),
             ),
             Text(
-              'Concreteira: ${_fallbackNaoInformado(_concretagemAtual.concreteira)}',
+              tr(
+                'Concreteira: {value}',
+                params: {
+                  'value': _fallbackNaoInformado(_concretagemAtual.concreteira),
+                },
+              ),
             ),
-            Text('Controle tecnológico: ${_controleTecnologicoLabel()}'),
             Text(
-              'Empresa de tecnologia do concreto: ${_concretagemAtual.controleTecnologico.trim().toLowerCase() == 'sim' ? _fallbackNaoInformado(_concretagemAtual.empresaTecnologiaConcreto) : 'não informada'}',
+              tr(
+                'Controle tecnológico: {value}',
+                params: {'value': _controleTecnologicoLabel()},
+              ),
+            ),
+            Text(
+              tr(
+                'Empresa de tecnologia do concreto: {value}',
+                params: {
+                  'value':
+                      _concretagemAtual.controleTecnologico
+                              .trim()
+                              .toLowerCase() ==
+                          'sim'
+                      ? _fallbackNaoInformado(
+                          _concretagemAtual.empresaTecnologiaConcreto,
+                        )
+                      : tr('não informada'),
+                },
+              ),
             ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                _tag('Lançamentos: ${_lancamentos.length}'),
-                _tag('Volume: ${_fmtNum(_volumeTotal)} m³'),
-                _tag('CWS: ${_fmtNum(_cwsTotal)} kg'),
+                _tag(
+                  tr(
+                    'Lançamentos: {count}',
+                    params: {'count': _lancamentos.length},
+                  ),
+                ),
+                _tag(
+                  tr(
+                    'Volume: {value} m³',
+                    params: {'value': _fmtNum(_volumeTotal)},
+                  ),
+                ),
+                _tag(
+                  tr('CWS: {value} kg', params: {'value': _fmtNum(_cwsTotal)}),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -422,8 +520,8 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
                       : const Icon(Icons.picture_as_pdf_outlined),
                   label: Text(
                     _processandoRelatorio
-                        ? 'Gerando relatório...'
-                        : 'Relatório da concretagem',
+                        ? tr('Gerando relatório...')
+                        : tr('Relatório da concretagem'),
                   ),
                 ),
                 OutlinedButton.icon(
@@ -431,7 +529,7 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
                       ? null
                       : _enviarRelatorioPorEmail,
                   icon: const Icon(Icons.email_outlined),
-                  label: const Text('Enviar por e-mail'),
+                  label: Text(tr('Enviar por e-mail')),
                 ),
               ],
             ),
@@ -442,10 +540,10 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
               children: [
                 const Icon(Icons.draw_outlined),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Rastreio na planta',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    tr('Rastreio na planta'),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
                 if (_plantaDisponivel)
@@ -467,7 +565,7 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
                     height: 150,
                     alignment: Alignment.center,
                     color: Colors.black.withValues(alpha: 0.04),
-                    child: const Text('Pré-visualização indisponível'),
+                    child: Text(tr('Pré-visualização indisponível')),
                   ),
                 ),
               ),
@@ -480,8 +578,8 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
                 icon: const Icon(Icons.draw_outlined),
                 label: Text(
                   _plantaDisponivel
-                      ? 'Abrir rastreio da planta'
-                      : 'Escanear ou importar planta',
+                      ? tr('Abrir rastreio da planta')
+                      : tr('Escanear ou importar planta'),
                 ),
               ),
             ),
@@ -508,12 +606,12 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: Column(
-            children: const [
-              Icon(Icons.local_shipping_outlined, size: 30),
-              SizedBox(height: 8),
+            children: [
+              const Icon(Icons.local_shipping_outlined, size: 30),
+              const SizedBox(height: 8),
               Text(
-                'Nenhum lançamento cadastrado nesta concretagem.',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                tr('Nenhum lançamento cadastrado nesta concretagem.'),
+                style: const TextStyle(fontWeight: FontWeight.w600),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -536,7 +634,9 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
           child: ListTile(
             leading: const CircleAvatar(child: Icon(Icons.local_shipping)),
             title: Text(
-              l.caminhao.isEmpty ? 'Betoneira sem identificação' : l.caminhao,
+              l.caminhao.isEmpty
+                  ? tr('Betoneira sem identificação')
+                  : l.caminhao,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             subtitle: Column(
@@ -544,22 +644,63 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
               children: [
                 Text(_fmtDataHora(l.dataHora)),
                 if (l.notaFiscal.isNotEmpty) Text('NF: ${l.notaFiscal}'),
-                Text('Volume: ${_fmtNum(l.volumeM3)} m³'),
-                Text('Dosagem: ${_fmtNum(l.dosagemKgM3)} kg/m³'),
-                Text('CWS: ${_fmtNum(l.cwsTotalKg)} kg'),
+                Text(
+                  tr(
+                    'Volume: {value} m³',
+                    params: {'value': _fmtNum(l.volumeM3)},
+                  ),
+                ),
+                Text(
+                  tr(
+                    'Dosagem: {value} kg/m³',
+                    params: {'value': _fmtNum(l.dosagemKgM3)},
+                  ),
+                ),
+                Text(
+                  tr(
+                    'CWS: {value} kg',
+                    params: {'value': _fmtNum(l.cwsTotalKg)},
+                  ),
+                ),
                 if (l.cwsAdicionadoKg != null)
-                  Text('CWS adicionado: ${_fmtNum(l.cwsAdicionadoKg!)} kg'),
+                  Text(
+                    tr(
+                      'CWS adicionado: {value} kg',
+                      params: {'value': _fmtNum(l.cwsAdicionadoKg!)},
+                    ),
+                  ),
                 if (l.slumpAntes != null)
-                  Text('Slump antes: ${_fmtNum(l.slumpAntes!)} cm'),
+                  Text(
+                    tr(
+                      'Slump antes: {value} cm',
+                      params: {'value': _fmtNum(l.slumpAntes!)},
+                    ),
+                  ),
                 if (l.slumpDepois != null)
-                  Text('Slump depois: ${_fmtNum(l.slumpDepois!)} cm'),
+                  Text(
+                    tr(
+                      'Slump depois: {value} cm',
+                      params: {'value': _fmtNum(l.slumpDepois!)},
+                    ),
+                  ),
                 if (l.tempoMisturaMin != null)
-                  Text('Mistura: ${_fmtNum(l.tempoMisturaMin!)} min'),
+                  Text(
+                    tr(
+                      'Mistura: {value} min',
+                      params: {'value': _fmtNum(l.tempoMisturaMin!)},
+                    ),
+                  ),
                 if (_lancamentoTemRastreio(l.id))
-                  const Text('Rastreio na planta: marcado'),
-                if (l.observacoes.isNotEmpty) Text('Obs.: ${l.observacoes}'),
+                  Text(tr('Rastreio na planta: marcado')),
+                if (l.observacoes.isNotEmpty)
+                  Text(tr('Obs.: {value}', params: {'value': l.observacoes})),
                 if (l.fotoPaths.isNotEmpty)
-                  Text('Fotos anexas: ${l.fotoPaths.length}'),
+                  Text(
+                    tr(
+                      'Fotos anexas: {count}',
+                      params: {'count': l.fotoPaths.length},
+                    ),
+                  ),
               ],
             ),
             trailing: Row(
@@ -579,9 +720,9 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
                       await _excluirLancamento(l);
                     }
                   },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'editar', child: Text('Editar')),
-                    PopupMenuItem(value: 'excluir', child: Text('Excluir')),
+                  itemBuilder: (_) => [
+                    PopupMenuItem(value: 'editar', child: Text(tr('Editar'))),
+                    PopupMenuItem(value: 'excluir', child: Text(tr('Excluir'))),
                   ],
                 ),
               ],
@@ -596,10 +737,10 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Concretagem'),
+        title: Text(context.tr('Concretagem')),
         actions: [
           IconButton(
-            tooltip: 'Gerar PDF da concretagem',
+            tooltip: context.tr('Gerar PDF da concretagem'),
             onPressed: _processandoRelatorio ? null : _compartilharRelatorio,
             icon: _processandoRelatorio
                 ? const SizedBox(
@@ -610,7 +751,7 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
                 : const Icon(Icons.picture_as_pdf_outlined),
           ),
           IconButton(
-            tooltip: 'Editar concretagem',
+            tooltip: context.tr('Editar concretagem'),
             onPressed: _editarConcretagem,
             icon: const Icon(Icons.edit),
           ),
@@ -640,7 +781,7 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
               child: FilledButton.icon(
                 onPressed: _abrirNovoLancamento,
                 icon: const Icon(Icons.add),
-                label: const Text('Adicionar'),
+                label: Text(context.tr('Adicionar')),
               ),
             ),
             const SizedBox(width: 8),
@@ -648,7 +789,7 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
               child: FilledButton.tonalIcon(
                 onPressed: _encerrarConcretagem,
                 icon: const Icon(Icons.task_alt_outlined),
-                label: const Text('Encerrar'),
+                label: Text(context.tr('Encerrar')),
               ),
             ),
           ],

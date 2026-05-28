@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../../../core/services/app_review_service.dart';
 import '../../../data/models/obra_model.dart';
 import '../../../data/repositories/obra_repository.dart';
@@ -44,9 +45,13 @@ class _ObrasPageState extends State<ObrasPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao carregar obras: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr('Erro ao carregar obras: {error}', params: {'error': e}),
+          ),
+        ),
+      );
     }
   }
 
@@ -68,26 +73,28 @@ class _ObrasPageState extends State<ObrasPage> {
     final action = await showDialog<_ReviewPromptAction>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Como esta sua experiencia?'),
-        content: const Text(
-          'Sua avaliacao ajuda outros profissionais a encontrarem o CWS Admix Control. Se preferir, envie um feedback direto para a equipe.',
+        title: Text(tr('Como esta sua experiencia?')),
+        content: Text(
+          tr(
+            'Sua avaliacao ajuda outros profissionais a encontrarem o CWS Admix Control. Se preferir, envie um feedback direto para a equipe.',
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Agora nao'),
+            child: Text(tr('Agora nao')),
           ),
           TextButton.icon(
             onPressed: () =>
                 Navigator.of(dialogContext).pop(_ReviewPromptAction.feedback),
             icon: const Icon(Icons.rate_review_outlined),
-            label: const Text('Enviar feedback'),
+            label: Text(tr('Enviar feedback')),
           ),
           FilledButton.icon(
             onPressed: () =>
                 Navigator.of(dialogContext).pop(_ReviewPromptAction.rate),
             icon: const Icon(Icons.star_outline),
-            label: const Text('Avaliar'),
+            label: Text(tr('Avaliar')),
           ),
         ],
       ),
@@ -104,8 +111,8 @@ class _ObrasPageState extends State<ObrasPage> {
         final opened = await _reviewService.openFeedbackEmail();
         if (!mounted || opened) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Nao foi possivel abrir o email de feedback.'),
+          SnackBar(
+            content: Text(tr('Nao foi possivel abrir o email de feedback.')),
           ),
         );
     }
@@ -126,7 +133,7 @@ class _ObrasPageState extends State<ObrasPage> {
     if (message == null) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ).showSnackBar(SnackBar(content: Text(tr(message))));
   }
 
   Future<void> _arquivar(Obra obra) async {
@@ -135,16 +142,18 @@ class _ObrasPageState extends State<ObrasPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Arquivar obra'),
-        content: Text('Deseja arquivar a obra "${obra.nome}"?'),
+        title: Text(tr('Arquivar obra')),
+        content: Text(
+          tr('Deseja arquivar a obra "{nome}"?', params: {'nome': obra.nome}),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar')),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Arquivar'),
+            child: Text(tr('Arquivar')),
           ),
         ],
       ),
@@ -162,16 +171,21 @@ class _ObrasPageState extends State<ObrasPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Restaurar obra'),
-        content: Text('Deseja restaurar a obra "${obra.nome}" para Ativas?'),
+        title: Text(tr('Restaurar obra')),
+        content: Text(
+          tr(
+            'Deseja restaurar a obra "{nome}" para Ativas?',
+            params: {'nome': obra.nome},
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar')),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Restaurar'),
+            child: Text(tr('Restaurar')),
           ),
         ],
       ),
@@ -189,19 +203,22 @@ class _ObrasPageState extends State<ObrasPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir obra'),
+        title: Text(tr('Excluir obra')),
         content: Text(
-          'Deseja excluir permanentemente a obra "${obra.nome}" e todos os seus lancamentos?',
+          tr(
+            'Deseja excluir permanentemente a obra "{nome}" e todos os seus lancamentos?',
+            params: {'nome': obra.nome},
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar')),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Excluir'),
+            child: Text(tr('Excluir')),
           ),
         ],
       ),
@@ -213,9 +230,13 @@ class _ObrasPageState extends State<ObrasPage> {
     if (!mounted) return;
     await _carregarTudo();
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Obra "${obra.nome}" excluida.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          tr('Obra "{nome}" excluida.', params: {'nome': obra.nome}),
+        ),
+      ),
+    );
   }
 
   Future<void> _abrirDetalhe(Obra obra) async {
@@ -240,8 +261,10 @@ class _ObrasPageState extends State<ObrasPage> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
                 arquivadas
-                    ? 'Nenhuma obra arquivada.'
-                    : 'Nenhuma obra cadastrada ainda.\nToque em "+ Nova Obra".',
+                    ? context.tr('Nenhuma obra arquivada.')
+                    : context.tr(
+                        'Nenhuma obra cadastrada ainda.\nToque em "+ Nova Obra".',
+                      ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -269,14 +292,34 @@ class _ObrasPageState extends State<ObrasPage> {
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (obra.cliente.isNotEmpty) Text('Cliente: ${obra.cliente}'),
-                if (obra.local.isNotEmpty) Text('Local: ${obra.local}'),
+                if (obra.cliente.isNotEmpty)
+                  Text(
+                    context.tr(
+                      'Cliente: {value}',
+                      params: {'value': obra.cliente},
+                    ),
+                  ),
+                if (obra.local.isNotEmpty)
+                  Text(
+                    context.tr('Local: {value}', params: {'value': obra.local}),
+                  ),
                 if (obra.localizacaoDescricao.isNotEmpty)
-                  Text('Localizacao: ${obra.localizacaoDescricao}'),
+                  Text(
+                    context.tr(
+                      'Localizacao: {value}',
+                      params: {'value': obra.localizacaoDescricao},
+                    ),
+                  ),
                 Text(
                   arquivadas
-                      ? 'Arquivada em: ${_fmt(obra.updatedAt)}'
-                      : 'Criada em: ${_fmt(obra.createdAt)}',
+                      ? context.tr(
+                          'Arquivada em: {date}',
+                          params: {'date': _fmt(obra.updatedAt)},
+                        )
+                      : context.tr(
+                          'Criada em: {date}',
+                          params: {'date': _fmt(obra.createdAt)},
+                        ),
                 ),
               ],
             ),
@@ -288,18 +331,21 @@ class _ObrasPageState extends State<ObrasPage> {
                 if (value == 'excluir') await _excluir(obra);
               },
               itemBuilder: (_) => [
-                const PopupMenuItem(value: 'abrir', child: Text('Abrir')),
+                PopupMenuItem(value: 'abrir', child: Text(context.tr('Abrir'))),
                 if (!arquivadas)
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'arquivar',
-                    child: Text('Arquivar'),
+                    child: Text(context.tr('Arquivar')),
                   ),
                 if (arquivadas)
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'restaurar',
-                    child: Text('Restaurar'),
+                    child: Text(context.tr('Restaurar')),
                   ),
-                const PopupMenuItem(value: 'excluir', child: Text('Excluir')),
+                PopupMenuItem(
+                  value: 'excluir',
+                  child: Text(context.tr('Excluir')),
+                ),
               ],
             ),
             onTap: () => _abrirDetalhe(obra),
@@ -315,11 +361,11 @@ class _ObrasPageState extends State<ObrasPage> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Obras'),
-          bottom: const TabBar(
+          title: Text(context.tr('Obras')),
+          bottom: TabBar(
             tabs: [
-              Tab(text: 'Ativas'),
-              Tab(text: 'Arquivadas'),
+              Tab(text: context.tr('Ativas')),
+              Tab(text: context.tr('Arquivadas')),
             ],
           ),
         ),
@@ -346,7 +392,7 @@ class _ObrasPageState extends State<ObrasPage> {
             return FloatingActionButton.extended(
               onPressed: _abrirNovaObra,
               icon: const Icon(Icons.add),
-              label: const Text('Nova Obra'),
+              label: Text(context.tr('Nova Obra')),
             );
           },
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../../../core/services/obra_location_service.dart';
 import '../../../data/repositories/obra_repository.dart';
 
@@ -56,17 +57,17 @@ class _NovaObraPageState extends State<NovaObraPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Permissao de localizacao'),
-          content: Text(exception.message),
+          title: Text(tr('Permissao de localizacao')),
+          content: Text(tr(exception.message)),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Fechar'),
+              child: Text(tr('Fechar')),
             ),
             if (settingsTarget != null)
               FilledButton(
                 onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('Abrir configuracoes'),
+                child: Text(tr('Abrir configuracoes')),
               ),
           ],
         );
@@ -79,8 +80,10 @@ class _NovaObraPageState extends State<NovaObraPage> {
     if (!mounted || opened) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Nao foi possivel abrir as configuracoes do aparelho.'),
+      SnackBar(
+        content: Text(
+          tr('Nao foi possivel abrir as configuracoes do aparelho.'),
+        ),
       ),
     );
   }
@@ -104,13 +107,24 @@ class _NovaObraPageState extends State<NovaObraPage> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao obter localizacao: ${e.message}')),
+        SnackBar(
+          content: Text(
+            tr(
+              'Erro ao obter localizacao: {error}',
+              params: {'error': tr(e.message)},
+            ),
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao obter localizacao: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr('Erro ao obter localizacao: {error}', params: {'error': e}),
+          ),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _loadingLocation = false);
     }
@@ -121,9 +135,9 @@ class _NovaObraPageState extends State<NovaObraPage> {
     if (endereco.isEmpty) {
       if (showFeedback && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Informe o endereco da obra para gerar a localizacao.',
+              tr('Informe o endereco da obra para gerar a localizacao.'),
             ),
           ),
         );
@@ -150,14 +164,18 @@ class _NovaObraPageState extends State<NovaObraPage> {
       if (showFeedback) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ).showSnackBar(SnackBar(content: Text(tr(e.message))));
       }
       return false;
     } catch (e) {
       if (!mounted) return false;
       if (showFeedback) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao localizar endereco: $e')),
+          SnackBar(
+            content: Text(
+              tr('Erro ao localizar endereco: {error}', params: {'error': e}),
+            ),
+          ),
         );
       }
       return false;
@@ -192,9 +210,11 @@ class _NovaObraPageState extends State<NovaObraPage> {
         if (!localizacaoOk) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(
-                'Nao foi possivel gerar a localizacao pelo endereco. Revise o endereco ou use a localizacao atual.',
+                tr(
+                  'Nao foi possivel gerar a localizacao pelo endereco. Revise o endereco ou use a localizacao atual.',
+                ),
               ),
             ),
           );
@@ -208,8 +228,8 @@ class _NovaObraPageState extends State<NovaObraPage> {
       if (existe) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Já existe uma obra ativa com esse nome.'),
+          SnackBar(
+            content: Text(tr('Já existe uma obra ativa com esse nome.')),
           ),
         );
         setState(() => _saving = false);
@@ -231,25 +251,29 @@ class _NovaObraPageState extends State<NovaObraPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Obra criada com sucesso.')));
+      ).showSnackBar(SnackBar(content: Text(tr('Obra criada com sucesso.'))));
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao salvar obra: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr('Erro ao salvar obra: {error}', params: {'error': e}),
+          ),
+        ),
+      );
       setState(() => _saving = false);
     }
   }
 
   InputDecoration _dec(String label) =>
-      InputDecoration(labelText: label, border: const OutlineInputBorder());
+      InputDecoration(labelText: tr(label), border: const OutlineInputBorder());
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nova Obra'),
+        title: Text(context.tr('Nova Obra')),
         actions: [
           TextButton(
             onPressed: _saving ? null : _salvar,
@@ -259,7 +283,7 @@ class _NovaObraPageState extends State<NovaObraPage> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Salvar'),
+                : Text(context.tr('Salvar')),
           ),
         ],
       ),
@@ -276,10 +300,10 @@ class _NovaObraPageState extends State<NovaObraPage> {
                 textInputAction: TextInputAction.next,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Informe o nome da obra';
+                    return context.tr('Informe o nome da obra');
                   }
                   if (value.trim().length < 3) {
-                    return 'Use pelo menos 3 caracteres';
+                    return context.tr('Use pelo menos 3 caracteres');
                   }
                   return null;
                 },
@@ -314,10 +338,10 @@ class _NovaObraPageState extends State<NovaObraPage> {
                 validator: (value) {
                   final v = (value ?? '').trim();
                   if (v.isEmpty) {
-                    return 'Informe o e-mail do engenheiro';
+                    return context.tr('Informe o e-mail do engenheiro');
                   }
                   final ok = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v);
-                  return ok ? null : 'Informe um e-mail válido';
+                  return ok ? null : context.tr('Informe um e-mail válido');
                 },
               ),
               const SizedBox(height: 12),
@@ -325,8 +349,9 @@ class _NovaObraPageState extends State<NovaObraPage> {
                 controller: _localizacaoCtrl,
                 readOnly: true,
                 decoration: _dec('Localizacao da obra').copyWith(
-                  hintText:
-                      'Gere pelo endereco digitado ou use a localizacao atual',
+                  hintText: context.tr(
+                    'Gere pelo endereco digitado ou use a localizacao atual',
+                  ),
                 ),
                 minLines: 2,
                 maxLines: 3,
@@ -348,8 +373,8 @@ class _NovaObraPageState extends State<NovaObraPage> {
                           : const Icon(Icons.my_location),
                       label: Text(
                         _localizacaoCtrl.text.trim().isEmpty
-                            ? 'Usar localizacao atual'
-                            : 'Atualizar localizacao',
+                            ? context.tr('Usar localizacao atual')
+                            : context.tr('Atualizar localizacao'),
                       ),
                     ),
                   ),
@@ -360,7 +385,7 @@ class _NovaObraPageState extends State<NovaObraPage> {
                           ? null
                           : () => _gerarLocalizacaoPeloEndereco(),
                       icon: const Icon(Icons.pin_drop_outlined),
-                      label: const Text('Gerar pelo endereco'),
+                      label: Text(context.tr('Gerar pelo endereco')),
                     ),
                   ),
                 ],
@@ -369,7 +394,7 @@ class _NovaObraPageState extends State<NovaObraPage> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: IconButton(
-                    tooltip: 'Limpar localizacao',
+                    tooltip: context.tr('Limpar localizacao'),
                     onPressed: (_saving || _loadingLocation)
                         ? null
                         : _limparLocalizacao,
@@ -379,7 +404,10 @@ class _NovaObraPageState extends State<NovaObraPage> {
               if (_coordenadasLabel != null) ...[
                 const SizedBox(height: 6),
                 Text(
-                  'Coordenadas: $_coordenadasLabel',
+                  context.tr(
+                    'Coordenadas: {value}',
+                    params: {'value': _coordenadasLabel},
+                  ),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -394,7 +422,7 @@ class _NovaObraPageState extends State<NovaObraPage> {
               ElevatedButton.icon(
                 onPressed: _saving ? null : _salvar,
                 icon: const Icon(Icons.save),
-                label: const Text('Salvar obra'),
+                label: Text(context.tr('Salvar obra')),
               ),
             ],
           ),

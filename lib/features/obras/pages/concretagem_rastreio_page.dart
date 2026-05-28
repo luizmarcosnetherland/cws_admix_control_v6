@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../core/localization/app_localizations.dart';
 import '../../../core/services/local_storage_service.dart';
 import '../../../data/models/concretagem_model.dart';
 import '../../../data/models/lancamento_model.dart';
@@ -291,8 +292,8 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
       SnackBar(
         content: Text(
           primeiro
-              ? 'Primeiro lançamento pronto para ser marcado na planta.'
-              : 'Novo lançamento pronto para ser marcado na planta.',
+              ? tr('Primeiro lançamento pronto para ser marcado na planta.')
+              : tr('Novo lançamento pronto para ser marcado na planta.'),
         ),
       ),
     );
@@ -329,20 +330,25 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
       final confirmar = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Encerrar concretagem'),
+          title: Text(tr('Encerrar concretagem')),
           content: Text(
             pendentes == 1
-                ? 'Ainda resta 1 lançamento sem marcação. Deseja encerrar mesmo assim?'
-                : 'Ainda restam $pendentes lançamentos sem marcação. Deseja encerrar mesmo assim?',
+                ? tr(
+                    'Ainda resta 1 lançamento sem marcação. Deseja encerrar mesmo assim?',
+                  )
+                : tr(
+                    'Ainda restam {count} lançamentos sem marcação. Deseja encerrar mesmo assim?',
+                    params: {'count': pendentes},
+                  ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Continuar marcando'),
+              child: Text(tr('Continuar marcando')),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Encerrar'),
+              child: Text(tr('Encerrar')),
             ),
           ],
         ),
@@ -474,7 +480,14 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
     } catch (e) {
       if (!mounted || silent) return false;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao salvar rastreio da planta: $e')),
+        SnackBar(
+          content: Text(
+            tr(
+              'Erro ao salvar rastreio da planta: {error}',
+              params: {'error': e},
+            ),
+          ),
+        ),
       );
     } finally {
       if (mounted) {
@@ -496,7 +509,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
         _activePoints = [];
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Marcações salvas na concretagem.')),
+        SnackBar(content: Text(tr('Marcações salvas na concretagem.'))),
       );
     }
     return salvou;
@@ -508,25 +521,27 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
     final acao = await showDialog<_AcaoSaidaRastreio>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Salvar marcações'),
-        content: const Text(
-          'Há marcações pendentes nesta planta. Deseja salvar antes de sair?',
+        title: Text(tr('Salvar marcações')),
+        content: Text(
+          tr(
+            'Há marcações pendentes nesta planta. Deseja salvar antes de sair?',
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () =>
                 Navigator.of(context).pop(_AcaoSaidaRastreio.cancelar),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar')),
           ),
           TextButton(
             onPressed: () =>
                 Navigator.of(context).pop(_AcaoSaidaRastreio.descartar),
-            child: const Text('Sair sem salvar'),
+            child: Text(tr('Sair sem salvar')),
           ),
           FilledButton(
             onPressed: () =>
                 Navigator.of(context).pop(_AcaoSaidaRastreio.salvar),
-            child: const Text('Salvar'),
+            child: Text(tr('Salvar')),
           ),
         ],
       ),
@@ -550,20 +565,22 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
       final confirmar = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Substituir planta'),
+          title: Text(tr('Substituir planta')),
           content: Text(
             _tracos.isEmpty
-                ? 'Deseja substituir a planta atual desta concretagem?'
-                : 'Substituir a planta vai limpar as marcações já feitas. Deseja continuar?',
+                ? tr('Deseja substituir a planta atual desta concretagem?')
+                : tr(
+                    'Substituir a planta vai limpar as marcações já feitas. Deseja continuar?',
+                  ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancelar'),
+              child: Text(tr('Cancelar')),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Substituir'),
+              child: Text(tr('Substituir')),
             ),
           ],
         ),
@@ -582,12 +599,12 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
             children: [
               ListTile(
                 leading: const Icon(Icons.photo_camera_outlined),
-                title: const Text('Escanear com a câmera'),
+                title: Text(tr('Escanear com a câmera')),
                 onTap: () => Navigator.of(context).pop(ImageSource.camera),
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Escolher da galeria'),
+                title: Text(tr('Escolher da galeria')),
                 onTap: () => Navigator.of(context).pop(ImageSource.gallery),
               ),
             ],
@@ -625,7 +642,11 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao selecionar a planta: $e')),
+        SnackBar(
+          content: Text(
+            tr('Erro ao selecionar a planta: {error}', params: {'error': e}),
+          ),
+        ),
       );
     } finally {
       if (mounted) {
@@ -636,7 +657,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
 
   Future<String> _salvarPlantaSelecionada(XFile picked) async {
     if (_concretagemAtual.id == null) {
-      throw Exception('Concretagem sem ID.');
+      throw Exception(tr('Concretagem sem ID.'));
     }
 
     await _storage.ensureBaseStructure();
@@ -669,16 +690,16 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Limpar marcações'),
-        content: const Text('Deseja apagar todas as marcações desta planta?'),
+        title: Text(tr('Limpar marcações')),
+        content: Text(tr('Deseja apagar todas as marcações desta planta?')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Limpar'),
+            child: Text(tr('Limpar')),
           ),
         ],
       ),
@@ -839,30 +860,46 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
   String _tituloLancamento(Lancamento lancamento) {
     final caminhao = lancamento.caminhao.trim();
     if (caminhao.isNotEmpty) return caminhao;
-    return 'Lançamento ${lancamento.id}';
+    return tr('Lançamento {id}', params: {'id': lancamento.id});
   }
 
   String _statusRastreio() {
     if (!_temPlanta) {
-      return 'Escaneie ou importe a planta para começar o rastreio.';
+      return tr('Escaneie ou importe a planta para começar o rastreio.');
     }
     if (!_temLancamentos) {
-      return 'A planta já foi salva. Agora basta cadastrar o primeiro lançamento desta concretagem para começar a marcação.';
+      return tr(
+        'A planta já foi salva. Agora basta cadastrar o primeiro lançamento desta concretagem para começar a marcação.',
+      );
     }
-    return '${_lancamentosMarcados.length} de ${_lancamentosComId.length} lançamentos já foram marcados.';
+    return tr(
+      '{marked} de {total} lançamentos já foram marcados.',
+      params: {
+        'marked': _lancamentosMarcados.length,
+        'total': _lancamentosComId.length,
+      },
+    );
   }
 
   String _instrucaoCanvas() {
     if (!_temPlanta) {
-      return 'Use a câmera para fotografar a planta ou escolha uma imagem já escaneada da galeria.';
+      return tr(
+        'Use a câmera para fotografar a planta ou escolha uma imagem já escaneada da galeria.',
+      );
     }
     if (!_temLancamentos) {
-      return 'Use o botão abaixo para ir ao primeiro lançamento e depois volte para marcar a planta.';
+      return tr(
+        'Use o botão abaixo para ir ao primeiro lançamento e depois volte para marcar a planta.',
+      );
     }
     if (_modo == _ModoRastreio.navegar) {
-      return 'Modo navegar ativo: use pinça e arraste para ampliar e posicionar a planta. Ao voltar para o spray, esse enquadramento é mantido.';
+      return tr(
+        'Modo navegar ativo: use pinça e arraste para ampliar e posicionar a planta. Ao voltar para o spray, esse enquadramento é mantido.',
+      );
     }
-    return 'Modo spray ativo: a planta fica travada no enquadramento atual para não se mover durante a marcação. Use Navegar para ajustar o zoom; as marcações são salvas automaticamente.';
+    return tr(
+      'Modo spray ativo: a planta fica travada no enquadramento atual para não se mover durante a marcação. Use Navegar para ajustar o zoom; as marcações são salvas automaticamente.',
+    );
   }
 
   Size _canvasSizeFor(Size viewportSize) {
@@ -893,7 +930,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
             const SizedBox(height: 4),
             Text(
               _concretagemAtual.estruturaConcretada.trim().isEmpty
-                  ? 'Estrutura não informada'
+                  ? tr('Estrutura não informada')
                   : _concretagemAtual.estruturaConcretada,
             ),
             const SizedBox(height: 12),
@@ -901,13 +938,23 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
               spacing: 8,
               runSpacing: 8,
               children: [
-                _tag(_temPlanta ? 'Planta salva' : 'Sem planta'),
-                _tag('Lançamentos: ${_lancamentosComId.length}'),
-                _tag('Marcados: ${_lancamentosMarcados.length}'),
+                _tag(_temPlanta ? tr('Planta salva') : tr('Sem planta')),
+                _tag(
+                  tr(
+                    'Lançamentos: {count}',
+                    params: {'count': _lancamentosComId.length},
+                  ),
+                ),
+                _tag(
+                  tr(
+                    'Marcados: {count}',
+                    params: {'count': _lancamentosMarcados.length},
+                  ),
+                ),
                 _tag(
                   _temAlteracoesPendentes
-                      ? 'Alterações pendentes'
-                      : 'Tudo salvo',
+                      ? tr('Alterações pendentes')
+                      : tr('Tudo salvo'),
                 ),
               ],
             ),
@@ -939,10 +986,10 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Ferramentas de rastreio',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    tr('Ferramentas de rastreio'),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
                 if (_salvando)
@@ -959,13 +1006,13 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
               runSpacing: 8,
               children: [
                 ChoiceChip(
-                  label: const Text('Spray'),
+                  label: Text(tr('Spray')),
                   selected: _modo == _ModoRastreio.spray,
                   onSelected: (_) => _mudarModo(_ModoRastreio.spray),
                   avatar: const Icon(Icons.brush_outlined, size: 18),
                 ),
                 ChoiceChip(
-                  label: const Text('Navegar'),
+                  label: Text(tr('Navegar')),
                   selected: _modo == _ModoRastreio.navegar,
                   onSelected: (_) => _mudarModo(_ModoRastreio.navegar),
                   avatar: const Icon(Icons.pan_tool_alt_outlined, size: 18),
@@ -978,7 +1025,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
                 children: [
                   const Icon(Icons.blur_circular_outlined, size: 18),
                   const SizedBox(width: 8),
-                  const Text('Spray'),
+                  Text(tr('Spray')),
                   Expanded(
                     child: Slider(
                       value: _brushSize,
@@ -1002,7 +1049,9 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
                   onPressed: _selecionandoPlanta ? null : _selecionarPlanta,
                   icon: const Icon(Icons.document_scanner_outlined),
                   label: Text(
-                    _temPlanta ? 'Substituir planta' : 'Escanear planta',
+                    _temPlanta
+                        ? tr('Substituir planta')
+                        : tr('Escanear planta'),
                   ),
                 ),
                 OutlinedButton.icon(
@@ -1016,12 +1065,12 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
                       ? _desfazerUltimoTraco
                       : null,
                   icon: const Icon(Icons.undo_outlined),
-                  label: const Text('Desfazer'),
+                  label: Text(tr('Desfazer')),
                 ),
                 OutlinedButton.icon(
                   onPressed: _tracos.isNotEmpty ? _limparMarcacoes : null,
                   icon: const Icon(Icons.layers_clear_outlined),
-                  label: const Text('Limpar marcações'),
+                  label: Text(tr('Limpar marcações')),
                 ),
               ],
             ),
@@ -1094,9 +1143,9 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
           children: [
             const Icon(Icons.map_outlined, size: 40),
             const SizedBox(height: 10),
-            const Text(
-              'Nenhuma planta carregada',
-              style: TextStyle(fontWeight: FontWeight.w700),
+            Text(
+              tr('Nenhuma planta carregada'),
+              style: const TextStyle(fontWeight: FontWeight.w700),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 6),
@@ -1131,7 +1180,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
             errorBuilder: (context, error, stackTrace) => Container(
               color: Colors.black.withValues(alpha: 0.04),
               alignment: Alignment.center,
-              child: const Text('Não foi possível abrir a planta'),
+              child: Text(tr('Não foi possível abrir a planta')),
             ),
           ),
           Positioned.fill(
@@ -1178,16 +1227,16 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Lançamentos para marcar',
-              style: TextStyle(fontWeight: FontWeight.w700),
+            Text(
+              tr('Lançamentos para marcar'),
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
             if (!_temLancamentos)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Nenhum lançamento cadastrado nesta concretagem.'),
+                  Text(tr('Nenhum lançamento cadastrado nesta concretagem.')),
                   if (_temPlanta) ...[
                     const SizedBox(height: 12),
                     SizedBox(
@@ -1195,7 +1244,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
                       child: FilledButton.icon(
                         onPressed: _abrirPrimeiroLancamento,
                         icon: const Icon(Icons.playlist_add_outlined),
-                        label: const Text('Ir para o primeiro lançamento'),
+                        label: Text(tr('Ir para o primeiro lançamento')),
                       ),
                     ),
                   ],
@@ -1229,7 +1278,10 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
             if (_lancamentoSelecionado != null) ...[
               const SizedBox(height: 12),
               Text(
-                'Selecionado: ${_tituloLancamento(_lancamentoSelecionado!)}',
+                tr(
+                  'Selecionado: {value}',
+                  params: {'value': _tituloLancamento(_lancamentoSelecionado!)},
+                ),
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               Text(
@@ -1260,7 +1312,9 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
                   )
                 : const Icon(Icons.save_outlined),
             label: Text(
-              _temAlteracoesPendentes ? 'Salvar marcações' : 'Tudo salvo',
+              _temAlteracoesPendentes
+                  ? tr('Salvar marcações')
+                  : tr('Tudo salvo'),
             ),
           ),
         ),
@@ -1284,7 +1338,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
                     icon: const Icon(Icons.playlist_add_outlined),
-                    label: const Text('Novo lançamento'),
+                    label: Text(tr('Novo lançamento')),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1292,7 +1346,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
                   child: FilledButton.tonalIcon(
                     onPressed: _encerrarConcretagem,
                     icon: const Icon(Icons.task_alt_outlined),
-                    label: const Text('Encerrar'),
+                    label: Text(tr('Encerrar')),
                   ),
                 ),
               ],
@@ -1309,7 +1363,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                         ),
                         icon: const Icon(Icons.playlist_add_outlined),
-                        label: const Text('Novo lançamento'),
+                        label: Text(tr('Novo lançamento')),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1320,7 +1374,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                         ),
                         icon: const Icon(Icons.skip_next_outlined),
-                        label: const Text('Próximo'),
+                        label: Text(tr('Próximo')),
                       ),
                     ),
                   ],
@@ -1331,7 +1385,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
                   child: FilledButton.icon(
                     onPressed: _encerrarConcretagem,
                     icon: const Icon(Icons.task_alt_outlined),
-                    label: const Text('Encerrar concretagem'),
+                    label: Text(tr('Encerrar concretagem')),
                   ),
                 ),
               ],
@@ -1350,7 +1404,7 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
         Navigator.of(context).pop();
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Rastreio da Planta')),
+        appBar: AppBar(title: Text(context.tr('Rastreio da Planta'))),
         body: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(12),

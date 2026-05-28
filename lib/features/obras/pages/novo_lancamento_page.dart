@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:keyboard_actions/keyboard_actions.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../core/localization/app_localizations.dart';
 import '../../../core/services/local_storage_service.dart';
 import '../../../core/services/nota_fiscal_ocr_service.dart';
 import '../../../data/models/concretagem_model.dart';
@@ -139,8 +140,8 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     final t = (value ?? '').trim();
     if (t.isEmpty) return null;
     final v = _parseNumero(t);
-    if (v == null) return 'Número inválido';
-    if (v < 0) return 'Não pode ser negativo';
+    if (v == null) return tr('Número inválido');
+    if (v < 0) return tr('Não pode ser negativo');
     return null;
   }
 
@@ -199,8 +200,8 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
         SnackBar(
           content: Text(
             _isEdicao
-                ? 'Lançamento atualizado com sucesso.'
-                : 'Lançamento salvo com sucesso.',
+                ? tr('Lançamento atualizado com sucesso.')
+                : tr('Lançamento salvo com sucesso.'),
           ),
         ),
       );
@@ -212,8 +213,14 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
         SnackBar(
           content: Text(
             _isEdicao
-                ? 'Erro ao atualizar lançamento: $e'
-                : 'Erro ao salvar lançamento: $e',
+                ? tr(
+                    'Erro ao atualizar lançamento: {error}',
+                    params: {'error': e},
+                  )
+                : tr(
+                    'Erro ao salvar lançamento: {error}',
+                    params: {'error': e},
+                  ),
           ),
         ),
       );
@@ -221,7 +228,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
   }
 
   InputDecoration _dec(String label) =>
-      InputDecoration(labelText: label, border: const OutlineInputBorder());
+      InputDecoration(labelText: tr(label), border: const OutlineInputBorder());
 
   void _focusNextField() {
     FocusScope.of(context).nextFocus();
@@ -235,7 +242,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
           (focusNode) => TextButton.icon(
             onPressed: focusNode.nextFocus,
             icon: const Icon(Icons.keyboard_arrow_down),
-            label: const Text('Próximo'),
+            label: Text(tr('Próximo')),
           ),
         ],
       );
@@ -260,8 +267,10 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
 
     if (!_notaFiscalOcr.isSupported) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('OCR de nota fiscal disponível apenas em Android/iOS.'),
+        SnackBar(
+          content: Text(
+            tr('OCR de nota fiscal disponível apenas em Android/iOS.'),
+          ),
         ),
       );
       return;
@@ -277,12 +286,12 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
             children: [
               ListTile(
                 leading: const Icon(Icons.document_scanner_outlined),
-                title: const Text('Escanear com a câmera'),
+                title: Text(tr('Escanear com a câmera')),
                 onTap: () => Navigator.of(context).pop(ImageSource.camera),
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Usar imagem da galeria'),
+                title: Text(tr('Usar imagem da galeria')),
                 onTap: () => Navigator.of(context).pop(ImageSource.gallery),
               ),
             ],
@@ -339,8 +348,10 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
           SnackBar(
             content: Text(
               result.hasStructuredData
-                  ? 'Nota fiscal escaneada. Confira os dados preenchidos.'
-                  : 'OCR concluído, mas os dados principais não foram identificados.',
+                  ? tr('Nota fiscal escaneada. Confira os dados preenchidos.')
+                  : tr(
+                      'OCR concluído, mas os dados principais não foram identificados.',
+                    ),
             ),
           ),
         );
@@ -348,7 +359,11 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao escanear nota fiscal: $e')),
+        SnackBar(
+          content: Text(
+            tr('Erro ao escanear nota fiscal: {error}', params: {'error': e}),
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _scanningNotaFiscal = false);
@@ -356,14 +371,19 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
   }
 
   String _observacoesNotaFiscalOcr(NotaFiscalOcrResult result) {
-    final linhas = <String>['Dados extraídos da NF por OCR:'];
+    final linhas = <String>[tr('Dados extraídos da NF por OCR:')];
 
     final numero = result.numeroNotaFiscal?.trim();
     if (numero != null && numero.isNotEmpty) linhas.add('NF: $numero');
 
     final volume = result.volumeM3;
     if (volume != null) {
-      linhas.add('Volume de concreto: ${_fmtNum(volume, casas: 1)} m³');
+      linhas.add(
+        tr(
+          'Volume de concreto: {value} m³',
+          params: {'value': _fmtNum(volume, casas: 1)},
+        ),
+      );
     }
 
     final lacre = result.lacre?.trim();
@@ -371,27 +391,42 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
 
     final betoneira = result.betoneira?.trim();
     if (betoneira != null && betoneira.isNotEmpty) {
-      linhas.add('Betoneira: $betoneira');
+      linhas.add(tr('Betoneira: {value}', params: {'value': betoneira}));
     }
 
     final traco = result.traco?.trim();
-    if (traco != null && traco.isNotEmpty) linhas.add('Traço: $traco');
+    if (traco != null && traco.isNotEmpty) {
+      linhas.add(tr('Traço: {value}', params: {'value': traco}));
+    }
 
     final carregamento = result.horarioCarregamento;
     if (carregamento != null) {
-      linhas.add('Carregamento: ${_fmtDataHora(carregamento)}');
+      linhas.add(
+        tr(
+          'Carregamento: {date}',
+          params: {'date': _fmtDataHora(carregamento)},
+        ),
+      );
     }
 
     final intervalo = result.intervaloCargaDescarga;
     if (intervalo != null) {
       final sufixo = result.cargaDescargaAcimaDoLimite
-          ? ' - ATENÇÃO: acima do limite de 2h30'
+          ? tr(' - ATENÇÃO: acima do limite de 2h30')
           : '';
-      linhas.add('Tempo carga-descarga: ${_fmtDuracao(intervalo)}$sufixo');
+      linhas.add(
+        tr(
+              'Tempo carga-descarga: {duration}',
+              params: {'duration': _fmtDuracao(intervalo)},
+            ) +
+            sufixo,
+      );
     }
 
     if (linhas.length == 1) {
-      linhas.add('Nenhum dado estruturado identificado. Conferir a imagem.');
+      linhas.add(
+        tr('Nenhum dado estruturado identificado. Conferir a imagem.'),
+      );
     }
 
     return linhas.join('\n');
@@ -411,8 +446,13 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     final intervalo = result.intervaloCargaDescarga;
     if (carregamento == null || intervalo == null) return null;
 
-    return 'Carregamento em ${_fmtDataHora(carregamento)}. '
-        'Intervalo de ${_fmtDuracao(intervalo)} até o preenchimento.';
+    return tr(
+      'Carregamento em {date}. Intervalo de {duration} até o preenchimento.',
+      params: {
+        'date': _fmtDataHora(carregamento),
+        'duration': _fmtDuracao(intervalo),
+      },
+    );
   }
 
   Future<void> _mostrarAvisoTempoNotaFiscal(NotaFiscalOcrResult result) async {
@@ -423,14 +463,17 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
       context: context,
       builder: (context) => AlertDialog(
         icon: const Icon(Icons.warning_amber_outlined),
-        title: const Text('Tempo de carregamento acima do limite'),
+        title: Text(tr('Tempo de carregamento acima do limite')),
         content: Text(
-          '$aviso\n\nO limite configurado é 2h30. Confira a nota fiscal e o horário do lançamento.',
+          tr(
+            '{warning}\n\nO limite configurado é 2h30. Confira a nota fiscal e o horário do lançamento.',
+            params: {'warning': aviso},
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Entendi'),
+            child: Text(tr('Entendi')),
           ),
         ],
       ),
@@ -457,12 +500,12 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
             children: [
               ListTile(
                 leading: const Icon(Icons.photo_camera_outlined),
-                title: const Text('Tirar foto'),
+                title: Text(tr('Tirar foto')),
                 onTap: () => Navigator.of(context).pop(ImageSource.camera),
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Escolher da galeria'),
+                title: Text(tr('Escolher da galeria')),
                 onTap: () => Navigator.of(context).pop(ImageSource.gallery),
               ),
             ],
@@ -495,9 +538,13 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
       setState(() => _fotoPaths = [..._fotoPaths, ...savedPaths]);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao adicionar fotos: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr('Erro ao adicionar fotos: {error}', params: {'error': e}),
+          ),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _pickingFotos = false);
     }
@@ -567,7 +614,10 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'CWS total: ${_fmtNum(cwsPreview, casas: 1)} kg',
+                        tr(
+                          'CWS total: {value} kg',
+                          params: {'value': _fmtNum(cwsPreview, casas: 1)},
+                        ),
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
@@ -586,7 +636,10 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'CWS adicionado: ${_fmtNum(cwsAddPreview, casas: 1)} kg',
+                          tr(
+                            'CWS adicionado: {value} kg',
+                            params: {'value': _fmtNum(cwsAddPreview, casas: 1)},
+                          ),
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
@@ -605,7 +658,9 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
   @override
   Widget build(BuildContext context) {
     final concretagem = widget.concretagem;
-    final titulo = _isEdicao ? 'Editar Lançamento' : 'Novo Lançamento';
+    final titulo = _isEdicao
+        ? context.tr('Editar Lançamento')
+        : context.tr('Novo Lançamento');
     return Scaffold(
       appBar: AppBar(
         title: Text(titulo),
@@ -618,7 +673,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Salvar'),
+                : Text(context.tr('Salvar')),
           ),
         ],
       ),
@@ -643,12 +698,32 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Estrutura: ${concretagem.estruturaConcretada.trim().isEmpty ? 'não informada' : concretagem.estruturaConcretada}',
+                          context.tr(
+                            'Estrutura: {value}',
+                            params: {
+                              'value':
+                                  concretagem.estruturaConcretada.trim().isEmpty
+                                  ? context.tr('não informada')
+                                  : concretagem.estruturaConcretada,
+                            },
+                          ),
                         ),
                         Text(
-                          'Concreteira: ${concretagem.concreteira.trim().isEmpty ? 'não informada' : concretagem.concreteira}',
+                          context.tr(
+                            'Concreteira: {value}',
+                            params: {
+                              'value': concretagem.concreteira.trim().isEmpty
+                                  ? context.tr('não informada')
+                                  : concretagem.concreteira,
+                            },
+                          ),
                         ),
-                        Text('Data/hora: ${_fmtDataHora(_dataHora)}'),
+                        Text(
+                          context.tr(
+                            'Data/hora: {date}',
+                            params: {'date': _fmtDataHora(_dataHora)},
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -660,7 +735,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                   decoration: _dec('Betoneira * (nº/placa)'),
                   textInputAction: TextInputAction.next,
                   validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Informe a betoneira'
+                      ? context.tr('Informe a betoneira')
                       : null,
                 ),
                 const SizedBox(height: 12),
@@ -694,7 +769,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                     ),
                     const SizedBox(width: 8),
                     Tooltip(
-                      message: 'Escanear nota fiscal',
+                      message: context.tr('Escanear nota fiscal'),
                       child: IconButton.filledTonal(
                         onPressed: _scanningNotaFiscal || _saving
                             ? null
@@ -752,8 +827,10 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                   onFieldSubmitted: (_) => _focusNextField(),
                   validator: (value) {
                     final v = _parseNumero(value ?? '');
-                    if (v == null) return 'Informe o volume';
-                    if (v <= 0) return 'Volume deve ser maior que zero';
+                    if (v == null) return context.tr('Informe o volume');
+                    if (v <= 0) {
+                      return context.tr('Volume deve ser maior que zero');
+                    }
                     return null;
                   },
                 ),
@@ -770,8 +847,10 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                   onFieldSubmitted: (_) => _focusNextField(),
                   validator: (value) {
                     final v = _parseNumero(value ?? '');
-                    if (v == null) return 'Informe a dosagem';
-                    if (v <= 0) return 'Dosagem deve ser maior que zero';
+                    if (v == null) return context.tr('Informe a dosagem');
+                    if (v <= 0) {
+                      return context.tr('Dosagem deve ser maior que zero');
+                    }
                     return null;
                   },
                 ),
@@ -835,10 +914,10 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
 
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Observações',
-                        style: TextStyle(fontWeight: FontWeight.w600),
+                        context.tr('Observações'),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
                     TextButton.icon(
@@ -852,7 +931,7 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.photo_library_outlined),
-                      label: const Text('Fotos'),
+                      label: Text(context.tr('Fotos')),
                     ),
                   ],
                 ),
@@ -860,9 +939,9 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                 TextFormField(
                   controller: _obsCtrl,
                   focusNode: _obsFocusNode,
-                  decoration: const InputDecoration(
-                    hintText: 'Observações do lançamento',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    hintText: context.tr('Observações do lançamento'),
+                    border: const OutlineInputBorder(),
                   ),
                   minLines: 2,
                   maxLines: 4,
@@ -929,7 +1008,9 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
                   onPressed: _saving ? null : _salvar,
                   icon: const Icon(Icons.save),
                   label: Text(
-                    _isEdicao ? 'Salvar alterações' : 'Salvar lançamento',
+                    _isEdicao
+                        ? context.tr('Salvar alterações')
+                        : context.tr('Salvar lançamento'),
                   ),
                 ),
               ],

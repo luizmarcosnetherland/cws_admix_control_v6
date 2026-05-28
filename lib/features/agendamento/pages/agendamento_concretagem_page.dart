@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../../../cws_calculator_page.dart';
 
 class AgendamentoConcretagemPage extends StatefulWidget {
@@ -64,7 +65,7 @@ class _AgendamentoConcretagemPageState
 
   InputDecoration _dec(String label, {IconData? icon}) {
     return InputDecoration(
-      labelText: label,
+      labelText: tr(label),
       prefixIcon: icon == null ? null : Icon(icon),
       border: const OutlineInputBorder(),
     );
@@ -92,7 +93,7 @@ class _AgendamentoConcretagemPageState
 
   String _fmtDecimal(double value, {int decimalDigits = 2}) {
     return NumberFormat.decimalPatternDigits(
-      locale: 'pt_BR',
+      locale: CwsLocalizations.current.dateLocale,
       decimalDigits: decimalDigits,
     ).format(value);
   }
@@ -105,14 +106,16 @@ class _AgendamentoConcretagemPageState
       initialDate: _dataConcretagem ?? now,
       firstDate: today,
       lastDate: DateTime(now.year + 5),
-      locale: const Locale('pt', 'BR'),
+      locale: CwsLocalizations.current.locale,
     );
     if (picked == null) return;
     if (!mounted) return;
 
     setState(() {
       _dataConcretagem = DateTime(picked.year, picked.month, picked.day);
-      _dataCtrl.text = DateFormat('dd/MM/yyyy', 'pt_BR').format(picked);
+      _dataCtrl.text = DateFormat.yMd(
+        CwsLocalizations.current.dateLocale,
+      ).format(picked);
       _agendamentoConcluido = false;
     });
   }
@@ -164,30 +167,29 @@ class _AgendamentoConcretagemPageState
   String _tituloEvento() {
     final estrutura = _estruturaCtrl.text.trim();
     return estrutura.isEmpty
-        ? 'Concretagem programada'
-        : 'Concretagem - $estrutura';
+        ? tr('Concretagem programada')
+        : '${tr('Concretagem')} - $estrutura';
   }
 
   String _descricaoEvento() {
-    final inicio = DateFormat(
-      'dd/MM/yyyy HH:mm',
-      'pt_BR',
-    ).format(_inicioConcretagem());
+    final inicio = DateFormat.yMd(
+      CwsLocalizations.current.dateLocale,
+    ).add_Hm().format(_inicioConcretagem());
     final estrutura = _estruturaCtrl.text.trim();
     final traco = _tracoCtrl.text.trim();
     final volumeLabel = _volumeLabel();
     final cwsAdmixQuantidadeLabel = _cwsAdmixQuantidadeLabel();
 
     return [
-      'Agendamento de concretagem',
+      tr('Agendamento de concretagem'),
       '',
-      if (estrutura.isNotEmpty) 'Estrutura: $estrutura',
-      if (traco.isNotEmpty) 'Traço do concreto: $traco',
-      'Data e hora previstas: $inicio',
-      if (volumeLabel != null) 'Volume estimado: $volumeLabel',
-      'Haverá adição do CWS Admix ao concreto.',
+      if (estrutura.isNotEmpty) '${tr('Estrutura')}: $estrutura',
+      if (traco.isNotEmpty) '${tr('Traço do concreto')}: $traco',
+      '${tr('Data e hora previstas')}: $inicio',
+      if (volumeLabel != null) '${tr('Volume estimado')}: $volumeLabel',
+      tr('Haverá adição do CWS Admix ao concreto.'),
       if (cwsAdmixQuantidadeLabel != null)
-        'Quantidade estimada de CWS Admix: $cwsAdmixQuantidadeLabel',
+        '${tr('Quantidade estimada de CWS Admix')}: $cwsAdmixQuantidadeLabel',
     ].join('\n');
   }
 
@@ -245,7 +247,7 @@ class _AgendamentoConcretagemPageState
       'BEGIN:VALARM',
       'TRIGGER:-P1D',
       'ACTION:DISPLAY',
-      'DESCRIPTION:${_icsEscape('Lembrete: ${_tituloEvento()} amanha')}',
+      'DESCRIPTION:${_icsEscape('${tr('Lembrete')}: ${_tituloEvento()} ${tr('amanha')}')}',
       'END:VALARM',
       'END:VEVENT',
       'END:VCALENDAR',
@@ -283,7 +285,7 @@ class _AgendamentoConcretagemPageState
 
     if (_inicioConcretagem().isBefore(DateTime.now())) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Informe uma data e horario futuros.')),
+        SnackBar(content: Text(tr('Informe uma data e horario futuros.'))),
       );
       return false;
     }
@@ -301,7 +303,11 @@ class _AgendamentoConcretagemPageState
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao preparar agendamento: $e')),
+        SnackBar(
+          content: Text(
+            tr('Erro ao preparar agendamento: {error}', params: {'error': e}),
+          ),
+        ),
       );
     } finally {
       if (mounted) {
@@ -318,16 +324,16 @@ class _AgendamentoConcretagemPageState
       final compartilhar = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Agendamento criado'),
-          content: const Text('Deseja compartilhar no WhatsApp?'),
+          title: Text(tr('Agendamento criado')),
+          content: Text(tr('Deseja compartilhar no WhatsApp?')),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Agora não'),
+              child: Text(tr('Agora não')),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Compartilhar'),
+              child: Text(tr('Compartilhar')),
             ),
           ],
         ),
@@ -366,7 +372,7 @@ class _AgendamentoConcretagemPageState
       if (result.exitCode == 0) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Evento enviado ao Calendario.')),
+          SnackBar(content: Text(tr('Evento enviado ao Calendario.'))),
         );
         return;
       }
@@ -402,8 +408,10 @@ class _AgendamentoConcretagemPageState
     final volume = _volumeEstimadoM3();
     if (volume == null || volume <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Informe o volume previsto antes de fazer o pedido.'),
+        SnackBar(
+          content: Text(
+            tr('Informe o volume previsto antes de fazer o pedido.'),
+          ),
         ),
       );
       return;
@@ -444,26 +452,26 @@ class _AgendamentoConcretagemPageState
         FilledButton.icon(
           onPressed: _processando ? null : _agendar,
           icon: const Icon(Icons.event_available_outlined),
-          label: const Text('AGENDAR'),
+          label: Text(tr('AGENDAR')),
         ),
         const SizedBox(height: 10),
         OutlinedButton.icon(
           onPressed: _processando ? null : _compartilharWhatsApp,
           icon: const Icon(Icons.chat_outlined),
-          label: const Text('Compartilhar WhatsApp'),
+          label: Text(tr('Compartilhar WhatsApp')),
         ),
         const SizedBox(height: 10),
         OutlinedButton.icon(
           onPressed: _processando ? null : _abrirPedidoCwsAdmix,
           icon: const Icon(Icons.shopping_cart_outlined),
-          label: const Text('Fazer pedido de CWS Admix'),
+          label: Text(tr('Fazer pedido de CWS Admix')),
         ),
         if (_agendamentoConcluido) ...[
           const SizedBox(height: 10),
           TextButton.icon(
             onPressed: _processando ? null : _irParaDashboard,
             icon: const Icon(Icons.dashboard_outlined),
-            label: const Text('Voltar ao dashboard'),
+            label: Text(tr('Voltar ao dashboard')),
           ),
         ],
       ],
@@ -481,14 +489,14 @@ class _AgendamentoConcretagemPageState
           color: const Color(0xFF2E7D32).withValues(alpha: 0.18),
         ),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.check_circle_outline, color: Color(0xFF2E7D32)),
-          SizedBox(width: 12),
+          const Icon(Icons.check_circle_outline, color: Color(0xFF2E7D32)),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Agendamento criado.',
-              style: TextStyle(fontWeight: FontWeight.w800),
+              tr('Agendamento criado.'),
+              style: const TextStyle(fontWeight: FontWeight.w800),
             ),
           ),
         ],
@@ -499,8 +507,8 @@ class _AgendamentoConcretagemPageState
   Widget _estimativaCwsCard() {
     final quantidade = _cwsAdmixEstimadoKg();
     final quantidadeLabel = quantidade == null
-        ? 'CWS Admix previsto: informe o volume.'
-        : 'CWS Admix previsto: ${_cwsAdmixQuantidadeLabel()}';
+        ? tr('CWS Admix previsto: informe o volume.')
+        : '${tr('CWS Admix previsto')}: ${_cwsAdmixQuantidadeLabel()}';
 
     return Container(
       width: double.infinity,
@@ -533,11 +541,11 @@ class _AgendamentoConcretagemPageState
       backgroundColor: const Color(0xFFF3F5F7),
       appBar: AppBar(
         leading: IconButton(
-          tooltip: 'Voltar',
+          tooltip: tr('Voltar'),
           icon: const Icon(Icons.arrow_back),
           onPressed: _voltar,
         ),
-        title: const Text('Agendamento de Concretagem'),
+        title: Text(tr('Agendamento de Concretagem')),
       ),
       body: SafeArea(
         child: Form(
@@ -555,8 +563,8 @@ class _AgendamentoConcretagemPageState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Dados da concretagem',
+                      Text(
+                        tr('Dados da concretagem'),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -572,7 +580,7 @@ class _AgendamentoConcretagemPageState
                         ),
                         onTap: _selecionarData,
                         validator: (_) => _dataConcretagem == null
-                            ? 'Informe a data da concretagem.'
+                            ? tr('Informe a data da concretagem.')
                             : null,
                       ),
                       const SizedBox(height: 12),
@@ -585,7 +593,7 @@ class _AgendamentoConcretagemPageState
                         ),
                         onTap: _selecionarHora,
                         validator: (_) => _horaInicio == null
-                            ? 'Informe o horario previsto.'
+                            ? tr('Informe o horario previsto.')
                             : null,
                       ),
                       const SizedBox(height: 12),
@@ -608,7 +616,7 @@ class _AgendamentoConcretagemPageState
                             (value ?? '').trim().replaceAll(',', '.'),
                           );
                           if (volume == null || volume <= 0) {
-                            return 'Informe um volume valido.';
+                            return tr('Informe um volume valido.');
                           }
                           return null;
                         },

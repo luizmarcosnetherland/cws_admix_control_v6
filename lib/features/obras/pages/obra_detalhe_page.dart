@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../../../core/services/csv_export_service.dart';
 import '../../../core/services/obra_location_service.dart';
 import '../../../data/models/concretagem_model.dart';
@@ -132,16 +133,16 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
 
     switch (_periodo) {
       case _PeriodoFiltro.todos:
-        return 'Todos';
+        return tr('Todos');
       case _PeriodoFiltro.hoje:
-        return 'Hoje';
+        return tr('Hoje');
       case _PeriodoFiltro.ultimos7:
         return '7d';
       case _PeriodoFiltro.ultimos30:
         return '30d';
       case _PeriodoFiltro.personalizado:
         final r = _rangePersonalizado;
-        if (r == null) return 'Período';
+        if (r == null) return tr('Período');
         return '${ddmm(r.start)}–${ddmm(r.end)}';
     }
   }
@@ -149,21 +150,21 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
   String _labelOrdenacao() {
     switch (_ordenacao) {
       case _Ordenacao.dataDesc:
-        return 'Data (recente→antigo)';
+        return tr('Data (recente→antigo)');
       case _Ordenacao.dataAsc:
-        return 'Data (antigo→recente)';
+        return tr('Data (antigo→recente)');
       case _Ordenacao.volumeDesc:
-        return 'Volume (maior→menor)';
+        return tr('Volume (maior→menor)');
       case _Ordenacao.volumeAsc:
-        return 'Volume (menor→maior)';
+        return tr('Volume (menor→maior)');
       case _Ordenacao.cwsDesc:
-        return 'CWS (maior→menor)';
+        return tr('CWS (maior→menor)');
       case _Ordenacao.cwsAsc:
-        return 'CWS (menor→maior)';
+        return tr('CWS (menor→maior)');
       case _Ordenacao.betoneiraAsc:
-        return 'Betoneira (A→Z)';
+        return tr('Betoneira (A→Z)');
       case _Ordenacao.concreteiraAsc:
-        return 'Concreteira (A→Z)';
+        return tr('Concreteira (A→Z)');
     }
   }
 
@@ -320,7 +321,11 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
       if (!mounted) return;
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao carregar lançamentos: $e')),
+        SnackBar(
+          content: Text(
+            tr('Erro ao carregar lançamentos: {error}', params: {'error': e}),
+          ),
+        ),
       );
     }
   }
@@ -399,9 +404,14 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         final origin = _shareOrigin();
         await Share.shareXFiles(
           [XFile(path)],
-          subject: 'Relatório CSV da obra ${_obraAtual.nome}',
-          text:
-              'Relatório CSV da obra ${_obraAtual.nome}. Toque em "Salvar em Arquivos" para escolher onde guardar.',
+          subject: tr(
+            'Relatório CSV da obra {obra}',
+            params: {'obra': _obraAtual.nome},
+          ),
+          text: tr(
+            'Relatório CSV da obra {obra}. Toque em "Salvar em Arquivos" para escolher onde guardar.',
+            params: {'obra': _obraAtual.nome},
+          ),
           sharePositionOrigin: origin,
         );
         if (!mounted) return;
@@ -411,9 +421,14 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         final origin = _shareOrigin();
         await Share.shareXFiles(
           [XFile(path)],
-          subject: 'Relatório CSV da obra ${_obraAtual.nome}',
-          text:
-              'CSV da obra ${_obraAtual.nome}. Use "Salvar em Arquivos" ou sua nuvem preferida.',
+          subject: tr(
+            'Relatório CSV da obra {obra}',
+            params: {'obra': _obraAtual.nome},
+          ),
+          text: tr(
+            'CSV da obra {obra}. Use "Salvar em Arquivos" ou sua nuvem preferida.',
+            params: {'obra': _obraAtual.nome},
+          ),
           sharePositionOrigin: origin,
         );
         if (!mounted) return;
@@ -425,19 +440,32 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
       }
 
       final message = Platform.isIOS
-          ? 'CSV pronto para exportacao (${_filtrado.length} linhas). Use "Salvar em Arquivos".'
+          ? tr(
+              'CSV pronto para exportacao ({count} linhas). Use "Salvar em Arquivos".',
+              params: {'count': _filtrado.length},
+            )
           : Platform.isAndroid
-          ? 'CSV pronto para compartilhar (${_filtrado.length} linhas).'
-          : 'CSV exportado (${_filtrado.length} linhas): $path';
+          ? tr(
+              'CSV pronto para compartilhar ({count} linhas).',
+              params: {'count': _filtrado.length},
+            )
+          : tr(
+              'CSV exportado ({count} linhas): {path}',
+              params: {'count': _filtrado.length, 'path': path},
+            );
 
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao exportar CSV: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr('Erro ao exportar CSV: {error}', params: {'error': e}),
+          ),
+        ),
+      );
     }
   }
 
@@ -464,9 +492,10 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
       firstDate: DateTime(2020, 1, 1),
       lastDate: DateTime(now.year + 5, 12, 31),
       initialDateRange: initial,
-      helpText: 'Selecionar período',
-      saveText: 'Aplicar',
-      cancelText: 'Cancelar',
+      helpText: tr('Selecionar período'),
+      saveText: tr('Aplicar'),
+      cancelText: tr('Cancelar'),
+      locale: CwsLocalizations.current.locale,
     );
 
     if (!mounted) return;
@@ -532,9 +561,13 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao abrir mapa: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr('Erro ao abrir mapa: {error}', params: {'error': e}),
+          ),
+        ),
+      );
     }
   }
 
@@ -553,12 +586,14 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
     final obra = _obraAtual;
 
     final filtros = <Widget>[
-      _tag('Período: ${_labelPeriodo()}'),
-      _tag('Ordem: ${_labelOrdenacao()}'),
-      if (_filtroConcreteira != null) _tag('Concreteira: $_filtroConcreteira'),
-      if (_filtroBetoneira != null) _tag('Betoneira: $_filtroBetoneira'),
+      _tag(tr('Período: {value}', params: {'value': _labelPeriodo()})),
+      _tag(tr('Ordem: {value}', params: {'value': _labelOrdenacao()})),
+      if (_filtroConcreteira != null)
+        _tag(tr('Concreteira: {value}', params: {'value': _filtroConcreteira})),
+      if (_filtroBetoneira != null)
+        _tag(tr('Betoneira: {value}', params: {'value': _filtroBetoneira})),
       if (_buscaCtrl.text.trim().isNotEmpty)
-        _tag('Busca: ${_buscaCtrl.text.trim()}'),
+        _tag(tr('Busca: {value}', params: {'value': _buscaCtrl.text.trim()})),
     ];
 
     return Card(
@@ -572,25 +607,45 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
-            if (obra.cliente.isNotEmpty) Text('Cliente: ${obra.cliente}'),
-            if (obra.local.isNotEmpty) Text('Local: ${obra.local}'),
+            if (obra.cliente.isNotEmpty)
+              Text(tr('Cliente: {value}', params: {'value': obra.cliente})),
+            if (obra.local.isNotEmpty)
+              Text(tr('Local: {value}', params: {'value': obra.local})),
             if (obra.localizacaoDescricao.isNotEmpty) ...[
-              Text('Localizacao da obra: ${obra.localizacaoDescricao}'),
+              Text(
+                tr(
+                  'Localizacao da obra: {value}',
+                  params: {'value': obra.localizacaoDescricao},
+                ),
+              ),
               if (obra.latitude != null && obra.longitude != null)
                 Text(
-                  'Coordenadas: ${obra.latitude!.toStringAsFixed(6)}, ${obra.longitude!.toStringAsFixed(6)}',
+                  tr(
+                    'Coordenadas: {value}',
+                    params: {
+                      'value':
+                          '${obra.latitude!.toStringAsFixed(6)}, ${obra.longitude!.toStringAsFixed(6)}',
+                    },
+                  ),
                 ),
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 onPressed: _abrirNoMapa,
                 icon: const Icon(Icons.map_outlined),
-                label: const Text('Abrir no mapa'),
+                label: Text(tr('Abrir no mapa')),
               ),
             ],
             if (obra.responsavel.isNotEmpty)
-              Text('Responsável: ${obra.responsavel}'),
+              Text(
+                tr('Responsável: {value}', params: {'value': obra.responsavel}),
+              ),
             if (obra.emailEngenheiro.isNotEmpty)
-              Text('E-mail engenheiro: ${obra.emailEngenheiro}'),
+              Text(
+                tr(
+                  'E-mail engenheiro: {value}',
+                  params: {'value': obra.emailEngenheiro},
+                ),
+              ),
             const SizedBox(height: 12),
             Wrap(spacing: 8, runSpacing: 8, children: filtros),
             const SizedBox(height: 10),
@@ -598,9 +653,24 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _tag('Lançamentos: ${_resumo.quantidade}'),
-                _tag('Volume: ${_fmtNum(_resumo.volumeTotalM3, casas: 1)} m³'),
-                _tag('CWS: ${_fmtNum(_resumo.cwsTotalKg, casas: 1)} kg'),
+                _tag(
+                  tr(
+                    'Lançamentos: {count}',
+                    params: {'count': _resumo.quantidade},
+                  ),
+                ),
+                _tag(
+                  tr(
+                    'Volume: {value} m³',
+                    params: {'value': _fmtNum(_resumo.volumeTotalM3, casas: 1)},
+                  ),
+                ),
+                _tag(
+                  tr(
+                    'CWS: {value} kg',
+                    params: {'value': _fmtNum(_resumo.cwsTotalKg, casas: 1)},
+                  ),
+                ),
               ],
             ),
           ],
@@ -623,9 +693,9 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          chip('Todos', _PeriodoFiltro.todos),
+          chip(tr('Todos'), _PeriodoFiltro.todos),
           const SizedBox(width: 8),
-          chip('Hoje', _PeriodoFiltro.hoje),
+          chip(tr('Hoje'), _PeriodoFiltro.hoje),
           const SizedBox(width: 8),
           chip('7d', _PeriodoFiltro.ultimos7),
           const SizedBox(width: 8),
@@ -700,14 +770,14 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
                       width: 260,
                       child: DropdownButtonFormField<String?>(
                         initialValue: _filtroConcreteira,
-                        decoration: const InputDecoration(
-                          labelText: 'Concreteira',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: tr('Concreteira'),
+                          border: const OutlineInputBorder(),
                         ),
                         items: [
-                          const DropdownMenuItem<String?>(
+                          DropdownMenuItem<String?>(
                             value: null,
-                            child: Text('Todas'),
+                            child: Text(tr('Todas')),
                           ),
                           ...concs.map(
                             (v) => DropdownMenuItem<String?>(
@@ -728,14 +798,14 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
                       width: 260,
                       child: DropdownButtonFormField<String?>(
                         initialValue: _filtroBetoneira,
-                        decoration: const InputDecoration(
-                          labelText: 'Betoneira (nº/placa)',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: tr('Betoneira (nº/placa)'),
+                          border: const OutlineInputBorder(),
                         ),
                         items: [
-                          const DropdownMenuItem<String?>(
+                          DropdownMenuItem<String?>(
                             value: null,
-                            child: Text('Todas'),
+                            child: Text(tr('Todas')),
                           ),
                           ...bets.map(
                             (v) => DropdownMenuItem<String?>(
@@ -757,13 +827,15 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
                       child: TextField(
                         controller: _buscaCtrl,
                         decoration: InputDecoration(
-                          labelText: 'Busca (betoneira, concreteira, NF, obs)',
+                          labelText: tr(
+                            'Busca (betoneira, concreteira, NF, obs)',
+                          ),
                           border: const OutlineInputBorder(),
                           prefixIcon: const Icon(Icons.search),
                           suffixIcon: _buscaCtrl.text.trim().isEmpty
                               ? null
                               : IconButton(
-                                  tooltip: 'Limpar busca',
+                                  tooltip: tr('Limpar busca'),
                                   onPressed: () {
                                     _buscaCtrl.clear();
                                     setState(_aplicarFiltros);
@@ -777,42 +849,42 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
                       width: 320,
                       child: DropdownButtonFormField<_Ordenacao>(
                         initialValue: _ordenacao,
-                        decoration: const InputDecoration(
-                          labelText: 'Ordenação',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: tr('Ordenação'),
+                          border: const OutlineInputBorder(),
                         ),
-                        items: const [
+                        items: [
                           DropdownMenuItem(
                             value: _Ordenacao.dataDesc,
-                            child: Text('Data (recente→antigo)'),
+                            child: Text(tr('Data (recente→antigo)')),
                           ),
                           DropdownMenuItem(
                             value: _Ordenacao.dataAsc,
-                            child: Text('Data (antigo→recente)'),
+                            child: Text(tr('Data (antigo→recente)')),
                           ),
                           DropdownMenuItem(
                             value: _Ordenacao.volumeDesc,
-                            child: Text('Volume (maior→menor)'),
+                            child: Text(tr('Volume (maior→menor)')),
                           ),
                           DropdownMenuItem(
                             value: _Ordenacao.volumeAsc,
-                            child: Text('Volume (menor→maior)'),
+                            child: Text(tr('Volume (menor→maior)')),
                           ),
                           DropdownMenuItem(
                             value: _Ordenacao.cwsDesc,
-                            child: Text('CWS (maior→menor)'),
+                            child: Text(tr('CWS (maior→menor)')),
                           ),
                           DropdownMenuItem(
                             value: _Ordenacao.cwsAsc,
-                            child: Text('CWS (menor→maior)'),
+                            child: Text(tr('CWS (menor→maior)')),
                           ),
                           DropdownMenuItem(
                             value: _Ordenacao.betoneiraAsc,
-                            child: Text('Betoneira (A→Z)'),
+                            child: Text(tr('Betoneira (A→Z)')),
                           ),
                           DropdownMenuItem(
                             value: _Ordenacao.concreteiraAsc,
-                            child: Text('Concreteira (A→Z)'),
+                            child: Text(tr('Concreteira (A→Z)')),
                           ),
                         ],
                         onChanged: (v) {
@@ -828,7 +900,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
                       TextButton.icon(
                         onPressed: _limparFiltrosExtras,
                         icon: const Icon(Icons.filter_alt_off),
-                        label: const Text('Limpar filtros'),
+                        label: Text(tr('Limpar filtros')),
                       ),
                   ],
                 ),
@@ -853,16 +925,18 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: Column(
-            children: const [
-              Icon(Icons.foundation_outlined, size: 30),
-              SizedBox(height: 8),
+            children: [
+              const Icon(Icons.foundation_outlined, size: 30),
+              const SizedBox(height: 8),
               Text(
-                'Nenhuma concretagem com os filtros atuais.',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                tr('Nenhuma concretagem com os filtros atuais.'),
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
-                'Ajuste o período/filtros ou adicione uma nova concretagem.',
+                tr(
+                  'Ajuste o período/filtros ou adicione uma nova concretagem.',
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -894,14 +968,14 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
                   .reduce((a, b) => a.isAfter(b) ? a : b);
         final controle =
             concretagem.controleTecnologico.trim().toLowerCase() == 'sim'
-            ? 'Sim'
-            : 'Não informado';
+            ? tr('Sim')
+            : tr('Não informado');
         return Card(
           child: ListTile(
             leading: const CircleAvatar(child: Icon(Icons.foundation_outlined)),
             title: Text(
               concretagem.estruturaConcretada.trim().isEmpty
-                  ? 'Estrutura não informada'
+                  ? tr('Estrutura não informada')
                   : concretagem.estruturaConcretada,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
@@ -909,17 +983,63 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Concreteira: ${concretagem.concreteira.trim().isEmpty ? 'não informada' : concretagem.concreteira}',
+                  tr(
+                    'Concreteira: {value}',
+                    params: {
+                      'value': concretagem.concreteira.trim().isEmpty
+                          ? tr('não informada')
+                          : concretagem.concreteira,
+                    },
+                  ),
                 ),
-                Text('Controle tecnológico: $controle'),
                 Text(
-                  'Empresa tecnologia: ${concretagem.controleTecnologico.trim().toLowerCase() == 'sim' && concretagem.empresaTecnologiaConcreto.trim().isNotEmpty ? concretagem.empresaTecnologiaConcreto : 'não informada'}',
+                  tr(
+                    'Controle tecnológico: {value}',
+                    params: {'value': controle},
+                  ),
                 ),
-                Text('Lançamentos: ${lancamentos.length}'),
-                Text('Volume: ${_fmtNum(volume, casas: 1)} m³'),
-                Text('CWS: ${_fmtNum(cws, casas: 1)} kg'),
+                Text(
+                  tr(
+                    'Empresa tecnologia: {value}',
+                    params: {
+                      'value':
+                          concretagem.controleTecnologico
+                                      .trim()
+                                      .toLowerCase() ==
+                                  'sim' &&
+                              concretagem.empresaTecnologiaConcreto
+                                  .trim()
+                                  .isNotEmpty
+                          ? concretagem.empresaTecnologiaConcreto
+                          : tr('não informada'),
+                    },
+                  ),
+                ),
+                Text(
+                  tr(
+                    'Lançamentos: {count}',
+                    params: {'count': lancamentos.length},
+                  ),
+                ),
+                Text(
+                  tr(
+                    'Volume: {value} m³',
+                    params: {'value': _fmtNum(volume, casas: 1)},
+                  ),
+                ),
+                Text(
+                  tr(
+                    'CWS: {value} kg',
+                    params: {'value': _fmtNum(cws, casas: 1)},
+                  ),
+                ),
                 if (ultimoLancamento != null)
-                  Text('Último lançamento: ${_fmtDataHora(ultimoLancamento)}'),
+                  Text(
+                    tr(
+                      'Último lançamento: {date}',
+                      params: {'date': _fmtDataHora(ultimoLancamento)},
+                    ),
+                  ),
               ],
             ),
             trailing: const Icon(Icons.chevron_right),
@@ -934,15 +1054,15 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Obra'),
+        title: Text(context.tr('Obra')),
         actions: [
           IconButton(
-            tooltip: 'Salvar ou compartilhar CSV',
+            tooltip: context.tr('Salvar ou compartilhar CSV'),
             onPressed: _exportarCsv,
             icon: const Icon(Icons.table_chart_outlined),
           ),
           IconButton(
-            tooltip: 'Editar obra',
+            tooltip: context.tr('Editar obra'),
             onPressed: _editarObra,
             icon: const Icon(Icons.edit),
           ),
@@ -975,7 +1095,7 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
           child: FilledButton.icon(
             onPressed: _abrirNovaConcretagem,
             icon: const Icon(Icons.add),
-            label: const Text('Nova Concretagem'),
+            label: Text(context.tr('Nova Concretagem')),
           ),
         ),
       ),

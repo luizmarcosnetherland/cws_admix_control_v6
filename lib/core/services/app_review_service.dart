@@ -3,6 +3,8 @@ import 'package:in_app_review/in_app_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../localization/app_localizations.dart';
+
 enum AppReviewRequestResult {
   requested,
   openedStore,
@@ -114,10 +116,10 @@ class AppReviewService {
   Future<bool> openFeedbackEmail({String? versionLabel}) {
     final body = [
       if (versionLabel != null && versionLabel.trim().isNotEmpty)
-        'Versao: ${versionLabel.trim()}',
-      'Plataforma: ${_platformLabel()}',
+        '${tr('Versao')}: ${versionLabel.trim()}',
+      '${tr('Plataforma')}: ${_platformLabel()}',
       '',
-      'Conte aqui sua sugestao, problema ou melhoria:',
+      tr('Conte aqui sua sugestao, problema ou melhoria:'),
       '',
     ].join('\n');
 
@@ -125,7 +127,7 @@ class AppReviewService {
       scheme: 'mailto',
       path: _supportEmail,
       queryParameters: {
-        'subject': 'Feedback - CWS Admix Control',
+        'subject': '${tr('Feedback')} - ${tr('CWS Admix Control')}',
         'body': body,
       },
     );

@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:printing/printing.dart';
@@ -15,6 +14,7 @@ import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'core/localization/app_localizations.dart';
 import 'core/services/app_review_service.dart';
 import 'core/services/app_update_service.dart';
 import 'core/services/onboarding_service.dart';
@@ -25,8 +25,19 @@ import 'cws_calculator_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await _configureDatabaseFactory();
-  Intl.defaultLocale = 'pt_BR';
-  await initializeDateFormatting('pt_BR', null);
+  await Future.wait([
+    initializeDateFormatting('pt_BR', null),
+    initializeDateFormatting('en_US', null),
+    initializeDateFormatting('es', null),
+  ]);
+  CwsLocalizations.activate(
+    CwsLocalizations(
+      CwsLocalizations.resolve(
+        WidgetsBinding.instance.platformDispatcher.locale,
+        CwsLocalizations.supportedLocales,
+      ),
+    ),
+  );
   runApp(const NetherlandApp());
 }
 
@@ -61,14 +72,16 @@ class NetherlandApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Netherland Admix Control',
+      onGenerateTitle: (context) => context.tr('Netherland Admix Control'),
       debugShowCheckedModeBanner: false,
       localizationsDelegates: const [
+        CwsLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [Locale('pt', 'BR')],
+      supportedLocales: CwsLocalizations.supportedLocales,
+      localeResolutionCallback: CwsLocalizations.resolve,
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF1E3A5F),
@@ -359,10 +372,10 @@ class _SplashScreenState extends State<_SplashScreen> {
                         ],
                       ),
                       SizedBox(height: isCompact ? 24 : 28),
-                      const FittedBox(
+                      FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          'Netherland Admix',
+                          tr('Netherland Admix'),
                           style: titleStyle,
                           textAlign: TextAlign.center,
                         ),
@@ -519,7 +532,7 @@ class _HomePageState extends State<HomePage> {
       opacityShadow: 0.82,
       paddingFocus: 8,
       pulseEnable: false,
-      textSkip: 'Pular',
+      textSkip: tr('Pular'),
       textStyleSkip: const TextStyle(
         color: Colors.white,
         fontWeight: FontWeight.w800,
@@ -569,41 +582,46 @@ class _HomePageState extends State<HomePage> {
       _homeOnboardingTarget(
         identify: 'calculator',
         key: _calculatorKey,
-        title: 'Calculadora CWS',
-        body:
-            'Calcule a dosagem do CWS Admix pelo volume da concretagem e siga para a solicitação comercial.',
+        title: tr('Calculadora CWS'),
+        body: tr(
+          'Calcule a dosagem do CWS Admix pelo volume da concretagem e siga para a solicitação comercial.',
+        ),
         align: ContentAlign.bottom,
       ),
       _homeOnboardingTarget(
         identify: 'obras',
         key: _obrasKey,
-        title: 'Obras',
-        body:
-            'Cadastre uma obra, acompanhe concretagens, lançamentos, fotos, notas fiscais e relatórios.',
+        title: tr('Obras'),
+        body: tr(
+          'Cadastre uma obra, acompanhe concretagens, lançamentos, fotos, notas fiscais e relatórios.',
+        ),
         align: ContentAlign.bottom,
       ),
       _homeOnboardingTarget(
         identify: 'literatura',
         key: _literaturaKey,
-        title: 'Literatura técnica',
-        body:
-            'Consulte ficha técnica e orientações de cura do concreto sem sair do aplicativo.',
+        title: tr('Literatura técnica'),
+        body: tr(
+          'Consulte ficha técnica e orientações de cura do concreto sem sair do aplicativo.',
+        ),
         align: ContentAlign.top,
       ),
       _homeOnboardingTarget(
         identify: 'agendamento',
         key: _agendamentoKey,
-        title: 'Agendamento',
-        body:
-            'Programe uma concretagem futura e compartilhe o compromisso com quem precisa acompanhar.',
+        title: tr('Agendamento'),
+        body: tr(
+          'Programe uma concretagem futura e compartilhe o compromisso com quem precisa acompanhar.',
+        ),
         align: ContentAlign.top,
       ),
       _homeOnboardingTarget(
         identify: 'about',
         key: _aboutKey,
-        title: 'Sobre e suporte',
-        body:
-            'Aqui ficam versão do app, suporte, feedback, avaliação e a opção de rever esta introdução.',
+        title: tr('Sobre e suporte'),
+        body: tr(
+          'Aqui ficam versão do app, suporte, feedback, avaliação e a opção de rever esta introdução.',
+        ),
         align: ContentAlign.bottom,
         radius: 28,
       ),
@@ -634,7 +652,7 @@ class _HomePageState extends State<HomePage> {
             return _OnboardingTipCard(
               title: title,
               body: body,
-              actionLabel: isLast ? 'Concluir' : 'Próximo',
+              actionLabel: isLast ? tr('Concluir') : tr('Próximo'),
               onPressed: controller.next,
             );
           },
@@ -649,8 +667,8 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Acessos rápidos',
+          Text(
+            tr('Acessos rápidos'),
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w800,
@@ -660,7 +678,7 @@ class _HomePageState extends State<HomePage> {
           ),
           SizedBox(height: compact ? 2 : 4),
           Text(
-            'Toque em um card para abrir a área desejada.',
+            tr('Toque em um card para abrir a área desejada.'),
             style: TextStyle(
               fontSize: 13,
               height: compact ? 1.25 : 1.35,
@@ -735,7 +753,7 @@ class _HomePageState extends State<HomePage> {
       child: Semantics(
         button: true,
         label: '$title. $subtitle',
-        hint: 'Toque para abrir',
+        hint: tr('Toque para abrir'),
         child: Material(
           key: targetKey,
           color: surfaceColor,
@@ -853,9 +871,10 @@ class _HomePageState extends State<HomePage> {
             children: [
               _menuButton(
                 context: context,
-                title: 'Calculadora CWS',
-                subtitle:
-                    'Calcule a quantidade de aditivo para sua concretagem e solicite uma cotação.',
+                title: tr('Calculadora CWS'),
+                subtitle: tr(
+                  'Calcule a quantidade de aditivo para sua concretagem e solicite uma cotação.',
+                ),
                 icon: Icons.calculate,
                 accentColor: const Color(0xFF2B63A7),
                 onTap: () => _openCalculator(context),
@@ -864,9 +883,10 @@ class _HomePageState extends State<HomePage> {
               ),
               _menuButton(
                 context: context,
-                title: 'Obras',
-                subtitle:
-                    'Cadastre sua obra, controle sua concretagem e gere relatórios locais em PDF ou CSV.',
+                title: tr('Obras'),
+                subtitle: tr(
+                  'Cadastre sua obra, controle sua concretagem e gere relatórios locais em PDF ou CSV.',
+                ),
                 icon: Icons.apartment,
                 accentColor: const Color(0xFF1B7A73),
                 onTap: () => _openObras(context),
@@ -886,9 +906,10 @@ class _HomePageState extends State<HomePage> {
                 Expanded(
                   child: _menuButton(
                     context: context,
-                    title: 'Calculadora CWS',
-                    subtitle:
-                        'Calcule a quantidade de aditivo para sua concretagem e solicite uma cotação.',
+                    title: tr('Calculadora CWS'),
+                    subtitle: tr(
+                      'Calcule a quantidade de aditivo para sua concretagem e solicite uma cotação.',
+                    ),
                     icon: Icons.calculate,
                     accentColor: const Color(0xFF2B63A7),
                     onTap: () => _openCalculator(context),
@@ -901,9 +922,10 @@ class _HomePageState extends State<HomePage> {
                 Expanded(
                   child: _menuButton(
                     context: context,
-                    title: 'Obras',
-                    subtitle:
-                        'Cadastre sua obra, controle sua concretagem e gere relatórios locais em PDF ou CSV.',
+                    title: tr('Obras'),
+                    subtitle: tr(
+                      'Cadastre sua obra, controle sua concretagem e gere relatórios locais em PDF ou CSV.',
+                    ),
                     icon: Icons.apartment,
                     accentColor: const Color(0xFF1B7A73),
                     onTap: () => _openObras(context),
@@ -935,9 +957,10 @@ class _HomePageState extends State<HomePage> {
             children: [
               _menuButton(
                 context: context,
-                title: 'Literatura técnica',
-                subtitle:
-                    'Acesse ficha técnica e orientações para consulta rápida em campo.',
+                title: tr('Literatura técnica'),
+                subtitle: tr(
+                  'Acesse ficha técnica e orientações para consulta rápida em campo.',
+                ),
                 icon: Icons.menu_book_outlined,
                 accentColor: const Color(0xFF9A621A),
                 onTap: () => _openLiteraturaTecnica(context),
@@ -946,9 +969,10 @@ class _HomePageState extends State<HomePage> {
               ),
               _menuButton(
                 context: context,
-                title: 'Agendamento de Concretagem',
-                subtitle:
-                    'Programe concretagens futuras e compartilhe convites de calendário.',
+                title: tr('Agendamento de Concretagem'),
+                subtitle: tr(
+                  'Programe concretagens futuras e compartilhe convites de calendário.',
+                ),
                 icon: Icons.event_note_outlined,
                 accentColor: const Color(0xFF5F4CA8),
                 onTap: () => _openAgendamentoConcretagem(context),
@@ -968,9 +992,10 @@ class _HomePageState extends State<HomePage> {
                 Expanded(
                   child: _menuButton(
                     context: context,
-                    title: 'Literatura técnica',
-                    subtitle:
-                        'Acesse ficha técnica e orientações para consulta rápida em campo.',
+                    title: tr('Literatura técnica'),
+                    subtitle: tr(
+                      'Acesse ficha técnica e orientações para consulta rápida em campo.',
+                    ),
                     icon: Icons.menu_book_outlined,
                     accentColor: const Color(0xFF9A621A),
                     onTap: () => _openLiteraturaTecnica(context),
@@ -983,9 +1008,10 @@ class _HomePageState extends State<HomePage> {
                 Expanded(
                   child: _menuButton(
                     context: context,
-                    title: 'Agendamento de Concretagem',
-                    subtitle:
-                        'Programe concretagens futuras e compartilhe convites de calendário.',
+                    title: tr('Agendamento de Concretagem'),
+                    subtitle: tr(
+                      'Programe concretagens futuras e compartilhe convites de calendário.',
+                    ),
                     icon: Icons.event_note_outlined,
                     accentColor: const Color(0xFF5F4CA8),
                     onTap: () => _openAgendamentoConcretagem(context),
@@ -1097,17 +1123,17 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5F7),
       appBar: AppBar(
-        title: const Text('Dashboard'),
+        title: Text(tr('Dashboard')),
         actions: [
           IconButton(
             key: _aboutKey,
-            tooltip: 'Sobre',
+            tooltip: tr('Sobre'),
             icon: const Icon(Icons.info_outline),
             onPressed: () => _openAbout(context),
           ),
           IconButton(
             key: _obrasShortcutKey,
-            tooltip: 'Obras',
+            tooltip: tr('Obras'),
             icon: const Icon(Icons.apartment),
             onPressed: () => _openObras(context),
           ),
@@ -1233,9 +1259,7 @@ class _AboutPageState extends State<AboutPage> {
     if (await launchUrl(_supportEmailUri)) return;
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Nao foi possivel abrir o email de suporte.'),
-      ),
+      SnackBar(content: Text(tr('Nao foi possivel abrir o email de suporte.'))),
     );
   }
 
@@ -1248,8 +1272,8 @@ class _AboutPageState extends State<AboutPage> {
     );
     if (!context.mounted || opened) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Nao foi possivel abrir o email de feedback.'),
+      SnackBar(
+        content: Text(tr('Nao foi possivel abrir o email de feedback.')),
       ),
     );
   }
@@ -1261,12 +1285,15 @@ class _AboutPageState extends State<AboutPage> {
     final message = switch (result) {
       AppReviewRequestResult.openedStore => null,
       AppReviewRequestResult.requested => null,
-      AppReviewRequestResult.missingAppStoreId =>
+      AppReviewRequestResult.missingAppStoreId => tr(
         'A avaliacao pela App Store sera ativada quando o app estiver publicado.',
-      AppReviewRequestResult.unsupportedPlatform =>
+      ),
+      AppReviewRequestResult.unsupportedPlatform => tr(
         'A avaliacao direta esta disponivel no Android e no iOS.',
-      AppReviewRequestResult.failed =>
+      ),
+      AppReviewRequestResult.failed => tr(
         'Nao foi possivel abrir a loja para avaliacao.',
+      ),
     };
 
     if (message == null) return;
@@ -1283,8 +1310,8 @@ class _AboutPageState extends State<AboutPage> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Abra o Dashboard para rever a introducao guiada.'),
+      SnackBar(
+        content: Text(tr('Abra o Dashboard para rever a introducao guiada.')),
       ),
     );
   }
@@ -1312,11 +1339,11 @@ class _AboutPageState extends State<AboutPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5F7),
-      appBar: AppBar(title: const Text('Sobre')),
+      appBar: AppBar(title: Text(tr('Sobre'))),
       body: FutureBuilder<String>(
         future: _versionLabelFuture,
         builder: (context, snapshot) {
-          final versionLabel = snapshot.data ?? 'Carregando...';
+          final versionLabel = snapshot.data ?? tr('Carregando...');
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -1338,9 +1365,9 @@ class _AboutPageState extends State<AboutPage> {
                             height: 32,
                           ),
                           const SizedBox(width: 12),
-                          const Expanded(
+                          Expanded(
                             child: Text(
-                              'CWS Admix Control',
+                              tr('CWS Admix Control'),
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800,
@@ -1351,8 +1378,10 @@ class _AboutPageState extends State<AboutPage> {
                         ],
                       ),
                       const SizedBox(height: 14),
-                      const Text(
-                        'Sistema para controle e acompanhamento operacional de obras e concretos aditivados com CWS Admix.',
+                      Text(
+                        tr(
+                          'Sistema para controle e acompanhamento operacional de obras e concretos aditivados com CWS Admix.',
+                        ),
                       ),
                     ],
                   ),
@@ -1370,19 +1399,19 @@ class _AboutPageState extends State<AboutPage> {
                     children: [
                       _infoTile(
                         icon: Icons.verified_outlined,
-                        title: 'Versao',
+                        title: tr('Versao'),
                         value: versionLabel,
                       ),
                       const Divider(height: 18),
                       _infoTile(
                         icon: Icons.business_outlined,
-                        title: 'Copyright',
+                        title: tr('Copyright'),
                         value: '2026 Netherland Engenharia e Comercio Ltda.',
                       ),
                       const Divider(height: 18),
                       _infoTile(
                         icon: Icons.support_agent_outlined,
-                        title: 'Suporte',
+                        title: tr('Suporte'),
                         value: 'netherland@netherland.com.br',
                       ),
                       const SizedBox(height: 12),
@@ -1392,7 +1421,7 @@ class _AboutPageState extends State<AboutPage> {
                             child: OutlinedButton.icon(
                               onPressed: () => _openSupportEmail(context),
                               icon: const Icon(Icons.email_outlined),
-                              label: const Text('Enviar email'),
+                              label: Text(tr('Enviar email')),
                             ),
                           ),
                         ],
@@ -1404,7 +1433,7 @@ class _AboutPageState extends State<AboutPage> {
                             child: OutlinedButton.icon(
                               onPressed: () => _openAppReview(context),
                               icon: const Icon(Icons.star_outline),
-                              label: const Text('Avaliar o app'),
+                              label: Text(tr('Avaliar o app')),
                             ),
                           ),
                         ],
@@ -1419,7 +1448,7 @@ class _AboutPageState extends State<AboutPage> {
                                 versionLabel: versionLabel,
                               ),
                               icon: const Icon(Icons.rate_review_outlined),
-                              label: const Text('Enviar feedback'),
+                              label: Text(tr('Enviar feedback')),
                             ),
                           ),
                         ],
@@ -1431,7 +1460,7 @@ class _AboutPageState extends State<AboutPage> {
                             child: TextButton.icon(
                               onPressed: () => _replayOnboarding(context),
                               icon: const Icon(Icons.tips_and_updates_outlined),
-                              label: const Text('Ver introducao novamente'),
+                              label: Text(tr('Ver introducao novamente')),
                             ),
                           ),
                         ],
@@ -1444,11 +1473,11 @@ class _AboutPageState extends State<AboutPage> {
                               onPressed: snapshot.hasData
                                   ? () => showLicensePage(
                                       context: context,
-                                      applicationName: 'CWS Admix Control',
+                                      applicationName: tr('CWS Admix Control'),
                                       applicationVersion: versionLabel,
                                     )
                                   : null,
-                              child: const Text('Ver licencas'),
+                              child: Text(tr('Ver licencas')),
                             ),
                           ),
                         ],
@@ -1468,17 +1497,34 @@ class _AboutPageState extends State<AboutPage> {
 class LiteraturaTecnicaPage extends StatelessWidget {
   const LiteraturaTecnicaPage({super.key});
 
-  static const String _fichaTecnicaAsset =
+  static const String _fichaTecnicaPtBrAsset =
       'assets/docs/ficha_tecnica_cws_admix_2026.pdf';
+  static const String _fichaTecnicaEnAsset =
+      'assets/docs/cws_admix_technical_data_sheet_en.pdf';
+  static const String _fichaTecnicaEsAsset =
+      'assets/docs/ficha_tecnica_cws_admix_es.pdf';
   static const String _curaConcretoAsset =
       'assets/docs/orientacao_tecnica_cura_do_concreto.pdf';
+  static const Map<String, String> _fichaTecnicaAssets = {
+    'pt': _fichaTecnicaPtBrAsset,
+    'en': _fichaTecnicaEnAsset,
+    'es': _fichaTecnicaEsAsset,
+  };
+  static const Map<String, String> _fichaTecnicaLanguageLabels = {
+    'pt': 'PT-BR',
+    'en': 'ENG',
+    'es': 'ES',
+  };
   static final Uri _whatsAppUri = Uri.parse(
     'https://wa.me/5541999731741?text=Ol%C3%A1%2C%20gostaria%20de%20solicitar%20a%20FDS%20do%20CWS%20Admix.',
   );
   static final Uri _emailUri = Uri.parse(
     'mailto:luizmarcos@netherland.com.br?subject=Solicita%C3%A7%C3%A3o%20de%20FDS%20CWS%20Admix',
   );
-  static final Uri _siteUri = Uri.parse('https://www.netherland.com.br');
+  static final Uri _sitePtBrUri = Uri.parse('https://www.netherland.com.br');
+  static final Uri _siteInternationalUri = Uri.parse(
+    'https://www.cwswaterproofing.com',
+  );
 
   Future<void> _abrirLink(
     BuildContext context, {
@@ -1487,9 +1533,28 @@ class LiteraturaTecnicaPage extends StatelessWidget {
   }) async {
     if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
     if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Nao foi possivel abrir "$label".')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          tr('Nao foi possivel abrir "{label}".', params: {'label': label}),
+        ),
+      ),
+    );
+  }
+
+  bool _isPtBr(Locale locale) {
+    return locale.languageCode.toLowerCase() == 'pt' &&
+        locale.countryCode?.toUpperCase() == 'BR';
+  }
+
+  Uri _siteUriForLocale(Locale locale) {
+    return _isPtBr(locale) ? _sitePtBrUri : _siteInternationalUri;
+  }
+
+  String _siteLabelForLocale(Locale locale) {
+    return _isPtBr(locale)
+        ? tr('Site Netherland')
+        : tr('Site CWS Waterproofing');
   }
 
   TextSpan _linkSpan(
@@ -1518,6 +1583,7 @@ class LiteraturaTecnicaPage extends StatelessWidget {
     required IconData icon,
     required VoidCallback primaryAction,
     required String primaryLabel,
+    List<Widget> secondaryActions = const [],
   }) {
     return Card(
       elevation: 0,
@@ -1560,12 +1626,40 @@ class LiteraturaTecnicaPage extends StatelessWidget {
                   icon: const Icon(Icons.open_in_new),
                   label: Text(primaryLabel),
                 ),
+                ...secondaryActions,
               ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  String _fichaTecnicaAssetForLanguage(String languageCode) {
+    return _fichaTecnicaAssets[languageCode] ?? _fichaTecnicaPtBrAsset;
+  }
+
+  String _fichaTecnicaTitleForLanguage(String languageCode) {
+    final label = _fichaTecnicaLanguageLabels[languageCode] ?? 'PT-BR';
+    return '${tr('Ficha técnica CWS Admix')} - $label';
+  }
+
+  List<Widget> _fichaTecnicaLanguageActions(BuildContext context) {
+    return _fichaTecnicaAssets.entries
+        .map((entry) {
+          final languageCode = entry.key;
+          return OutlinedButton(
+            onPressed: () => _abrirPdf(
+              context,
+              assetPath: entry.value,
+              title: _fichaTecnicaTitleForLanguage(languageCode),
+            ),
+            child: Text(
+              _fichaTecnicaLanguageLabels[languageCode] ?? languageCode,
+            ),
+          );
+        })
+        .toList(growable: false);
   }
 
   Future<void> _abrirPdf(
@@ -1589,16 +1683,29 @@ class LiteraturaTecnicaPage extends StatelessWidget {
       );
     } catch (_) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Nao foi possivel abrir "$title".')),
+        SnackBar(
+          content: Text(
+            tr('Nao foi possivel abrir "{label}".', params: {'label': title}),
+          ),
+        ),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final fichaTecnicaLanguageCode = context.l10n.languageCode;
+    final fichaTecnicaAsset = _fichaTecnicaAssetForLanguage(
+      fichaTecnicaLanguageCode,
+    );
+    final fichaTecnicaTitle = _fichaTecnicaTitleForLanguage(
+      fichaTecnicaLanguageCode,
+    );
+    final siteLocale = context.l10n.locale;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5F7),
-      appBar: AppBar(title: const Text('Literatura técnica')),
+      appBar: AppBar(title: Text(tr('Literatura técnica'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1607,18 +1714,20 @@ class LiteraturaTecnicaPage extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
             ),
-            child: const Padding(
-              padding: EdgeInsets.all(18),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Materiais de apoio',
+                    tr('Materiais de apoio'),
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
-                    'Abra os documentos tecnicos abaixo para consulta rapida durante visitas e acompanhamento de obra.',
+                    tr(
+                      'Abra os documentos tecnicos abaixo para consulta rapida durante visitas e acompanhamento de obra.',
+                    ),
                   ),
                 ],
               ),
@@ -1627,27 +1736,29 @@ class LiteraturaTecnicaPage extends StatelessWidget {
           const SizedBox(height: 10),
           _docCard(
             context,
-            title: 'Ficha técnica CWS Admix',
-            subtitle:
-                'Informacoes tecnicas, instrucoes para uso, armazenamento e suporte.',
+            title: tr('Ficha técnica CWS Admix'),
+            subtitle: tr(
+              'Informacoes tecnicas, instrucoes para uso, armazenamento e suporte.',
+            ),
             icon: Icons.description_outlined,
-            primaryLabel: 'Abrir documento',
+            primaryLabel: tr('Abrir documento'),
             primaryAction: () => _abrirPdf(
               context,
-              assetPath: _fichaTecnicaAsset,
-              title: 'Ficha técnica CWS Admix',
+              assetPath: fichaTecnicaAsset,
+              title: fichaTecnicaTitle,
             ),
+            secondaryActions: _fichaTecnicaLanguageActions(context),
           ),
           _docCard(
             context,
-            title: 'Orientação técnica para a cura do concreto',
-            subtitle: 'Boas praticas e orientacoes de aplicacao.',
+            title: tr('Orientação técnica para a cura do concreto'),
+            subtitle: tr('Boas praticas e orientacoes de aplicacao.'),
             icon: Icons.fact_check_outlined,
-            primaryLabel: 'Abrir documento',
+            primaryLabel: tr('Abrir documento'),
             primaryAction: () => _abrirPdf(
               context,
               assetPath: _curaConcretoAsset,
-              title: 'Orientação técnica para a cura do concreto',
+              title: tr('Orientação técnica para a cura do concreto'),
             ),
           ),
           const SizedBox(height: 10),
@@ -1676,8 +1787,8 @@ class LiteraturaTecnicaPage extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'FDS CWS Admix',
+                            Text(
+                              tr('FDS CWS Admix'),
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w700,
@@ -1693,16 +1804,17 @@ class LiteraturaTecnicaPage extends StatelessWidget {
                                       ),
                                     ),
                                 children: [
-                                  const TextSpan(
-                                    text:
-                                        'FDS disponível sob demanda. Solicite via ',
+                                  TextSpan(
+                                    text: tr(
+                                      'FDS disponível sob demanda. Solicite via ',
+                                    ),
                                   ),
                                   _linkSpan(
                                     context,
                                     label: 'WhatsApp',
                                     uri: _whatsAppUri,
                                   ),
-                                  const TextSpan(text: ' ou '),
+                                  TextSpan(text: tr(' ou ')),
                                   _linkSpan(
                                     context,
                                     label: 'email',
@@ -1724,13 +1836,17 @@ class LiteraturaTecnicaPage extends StatelessWidget {
           const SizedBox(height: 10),
           _docCard(
             context,
-            title: 'Acesse nosso site',
-            subtitle:
-                'Maiores informações, outros produtos da Netherland, videos e obras executadas.',
+            title: tr('Acesse nosso site'),
+            subtitle: tr(
+              'Maiores informações, outros produtos da Netherland, videos e obras executadas.',
+            ),
             icon: Icons.language_outlined,
-            primaryLabel: 'Abrir site',
-            primaryAction: () =>
-                _abrirLink(context, uri: _siteUri, label: 'Site Netherland'),
+            primaryLabel: tr('Abrir site'),
+            primaryAction: () => _abrirLink(
+              context,
+              uri: _siteUriForLocale(siteLocale),
+              label: _siteLabelForLocale(siteLocale),
+            ),
           ),
         ],
       ),

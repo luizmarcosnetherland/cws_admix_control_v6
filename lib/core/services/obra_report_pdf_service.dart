@@ -13,6 +13,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../data/models/concretagem_model.dart';
 import '../../data/models/lancamento_model.dart';
 import '../../data/models/obra_model.dart';
+import '../localization/app_localizations.dart';
 import 'local_storage_service.dart';
 
 const _pdfPhotoMaxSidePx = 360;
@@ -34,7 +35,7 @@ class ObraReportPdfService {
   }) async {
     if (kIsWeb) {
       throw UnsupportedError(
-        'Geracao de arquivo local PDF nao esta disponivel no navegador.',
+        tr('Geracao de arquivo local PDF nao esta disponivel no navegador.'),
       );
     }
 
@@ -75,7 +76,7 @@ class ObraReportPdfService {
     final generatedAt = DateTime.now();
     final generatedAtLabel = DateFormat(
       'dd/MM/yyyy HH:mm',
-      'pt_BR',
+      CwsLocalizations.current.dateLocale,
     ).format(generatedAt);
 
     double volumeTotal = 0;
@@ -107,11 +108,20 @@ class ObraReportPdfService {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                'Relatório gerado em $generatedAtLabel',
+                tr(
+                  'Relatório gerado em {date}',
+                  params: {'date': generatedAtLabel},
+                ),
                 style: const pw.TextStyle(fontSize: 9),
               ),
               pw.Text(
-                'Página ${context.pageNumber} de ${context.pagesCount}',
+                tr(
+                  'Página {page} de {pages}',
+                  params: {
+                    'page': context.pageNumber,
+                    'pages': context.pagesCount,
+                  },
+                ),
                 style: const pw.TextStyle(fontSize: 9),
               ),
             ],
@@ -153,7 +163,7 @@ class ObraReportPdfService {
                         ? '-'
                         : DateFormat(
                             'dd/MM/yyyy',
-                            'pt_BR',
+                            CwsLocalizations.current.dateLocale,
                           ).format(curaUmidaAte),
                   ),
                 ]),
@@ -192,12 +202,12 @@ class ObraReportPdfService {
         ),
         pw.SizedBox(height: 12),
         pw.Text(
-          _pdfSafe('Relatório da obra ${obra.nome}'),
+          _pdfSafe(tr('Relatório da obra {obra}', params: {'obra': obra.nome})),
           style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
         ),
         pw.SizedBox(height: 4),
         pw.Text(
-          _pdfSafe('Gerado em $generatedAtLabel'),
+          _pdfSafe(tr('Gerado em {date}', params: {'date': generatedAtLabel})),
           style: const pw.TextStyle(fontSize: 10),
         ),
         pw.Divider(),
@@ -224,8 +234,11 @@ class ObraReportPdfService {
 
       await Share.shareXFiles(
         [XFile.fromData(bytes, mimeType: 'application/pdf', name: filename)],
-        text: 'Relatório em PDF da obra ${obra.nome}',
-        subject: 'Relatório da obra ${obra.nome}',
+        text: tr(
+          'Relatório em PDF da obra {obra}',
+          params: {'obra': obra.nome},
+        ),
+        subject: tr('Relatório da obra {obra}', params: {'obra': obra.nome}),
         sharePositionOrigin: sharePositionOrigin,
       );
       return;
@@ -239,8 +252,8 @@ class ObraReportPdfService {
 
     await Share.shareXFiles(
       [XFile(path, name: filename)],
-      text: 'Relatório em PDF da obra ${obra.nome}',
-      subject: 'Relatório da obra ${obra.nome}',
+      text: tr('Relatório em PDF da obra {obra}', params: {'obra': obra.nome}),
+      subject: tr('Relatório da obra {obra}', params: {'obra': obra.nome}),
       sharePositionOrigin: sharePositionOrigin,
     );
   }
@@ -252,7 +265,7 @@ class ObraReportPdfService {
   }) async {
     if (kIsWeb) {
       throw UnsupportedError(
-        'Geracao de arquivo local PDF nao esta disponivel no navegador.',
+        tr('Geracao de arquivo local PDF nao esta disponivel no navegador.'),
       );
     }
 
@@ -288,7 +301,7 @@ class ObraReportPdfService {
     );
     final generatedAtLabel = DateFormat(
       'dd/MM/yyyy HH:mm',
-      'pt_BR',
+      CwsLocalizations.current.dateLocale,
     ).format(DateTime.now());
     final volumeTotal = lancamentosOrdenados.fold<double>(
       0,
@@ -323,11 +336,20 @@ class ObraReportPdfService {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                'Relatório gerado em $generatedAtLabel',
+                tr(
+                  'Relatório gerado em {date}',
+                  params: {'date': generatedAtLabel},
+                ),
                 style: const pw.TextStyle(fontSize: 9),
               ),
               pw.Text(
-                'Página ${context.pageNumber} de ${context.pagesCount}',
+                tr(
+                  'Página {page} de {pages}',
+                  params: {
+                    'page': context.pageNumber,
+                    'pages': context.pagesCount,
+                  },
+                ),
                 style: const pw.TextStyle(fontSize: 9),
               ),
             ],
@@ -363,7 +385,7 @@ class ObraReportPdfService {
                   _kv(
                     'Estrutura',
                     concretagem.estruturaConcretada.trim().isEmpty
-                        ? 'nao informada'
+                        ? tr('nao informada')
                         : concretagem.estruturaConcretada.trim(),
                   ),
                   _kv(
@@ -387,7 +409,7 @@ class ObraReportPdfService {
                         ? '-'
                         : DateFormat(
                             'dd/MM/yyyy HH:mm',
-                            'pt_BR',
+                            CwsLocalizations.current.dateLocale,
                           ).format(primeiroLancamento),
                   ),
                   _kv(
@@ -396,7 +418,7 @@ class ObraReportPdfService {
                         ? '-'
                         : DateFormat(
                             'dd/MM/yyyy HH:mm',
-                            'pt_BR',
+                            CwsLocalizations.current.dateLocale,
                           ).format(ultimoLancamento),
                   ),
                   _kv(
@@ -405,7 +427,7 @@ class ObraReportPdfService {
                         ? '-'
                         : DateFormat(
                             'dd/MM/yyyy',
-                            'pt_BR',
+                            CwsLocalizations.current.dateLocale,
                           ).format(curaUmidaAte),
                   ),
                 ]),
@@ -439,9 +461,14 @@ class ObraReportPdfService {
     ui.Rect? sharePositionOrigin,
   }) async {
     final filename = _concretagemReportFilename(obra, concretagem);
-    final assunto =
-        'Relatório da concretagem ${_concretagemReportLabel(concretagem)}';
-    final texto = '$assunto - obra ${obra.nome}';
+    final assunto = tr(
+      'Relatório da concretagem {concretagem}',
+      params: {'concretagem': _concretagemReportLabel(concretagem)},
+    );
+    final texto = tr(
+      '{subject} - obra {obra}',
+      params: {'subject': assunto, 'obra': obra.nome},
+    );
 
     if (kIsWeb) {
       final bytes = await buildConcretagemReportPdfBytes(
@@ -495,16 +522,21 @@ class ObraReportPdfService {
         ),
         pw.SizedBox(height: 12),
         pw.Text(
-          _pdfSafe('Relatório da concretagem - $titulo'),
+          _pdfSafe(
+            tr(
+              'Relatório da concretagem - {concretagem}',
+              params: {'concretagem': titulo},
+            ),
+          ),
           style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
         ),
         pw.SizedBox(height: 4),
         pw.Text(
-          _pdfSafe('Obra: ${obra.nome}'),
+          _pdfSafe(tr('Obra: {value}', params: {'value': obra.nome})),
           style: const pw.TextStyle(fontSize: 10),
         ),
         pw.Text(
-          _pdfSafe('Gerado em $generatedAtLabel'),
+          _pdfSafe(tr('Gerado em {date}', params: {'date': generatedAtLabel})),
           style: const pw.TextStyle(fontSize: 10),
         ),
         pw.Divider(),
@@ -517,7 +549,7 @@ class ObraReportPdfService {
     return pw.Padding(
       padding: const pw.EdgeInsets.only(bottom: 6),
       child: pw.Text(
-        title,
+        tr(title),
         style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
       ),
     );
@@ -547,7 +579,7 @@ class ObraReportPdfService {
           pw.SizedBox(
             width: 110,
             child: pw.Text(
-              _pdfSafe(label),
+              _pdfSafe(tr(label)),
               style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
             ),
           ),
@@ -570,7 +602,10 @@ class ObraReportPdfService {
         border: pw.Border.all(color: PdfColors.grey300),
         borderRadius: pw.BorderRadius.circular(8),
       ),
-      child: pw.Text(_pdfSafe(text), style: const pw.TextStyle(fontSize: 10)),
+      child: pw.Text(
+        _pdfSafe(tr(text)),
+        style: const pw.TextStyle(fontSize: 10),
+      ),
     );
   }
 
@@ -658,7 +693,7 @@ class ObraReportPdfService {
         pw.Padding(
           padding: const pw.EdgeInsets.only(left: 2, bottom: 6),
           child: pw.Text(
-            'Lançamentos desta concretagem',
+            tr('Lançamentos desta concretagem'),
             style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
           ),
         ),
@@ -694,11 +729,11 @@ class ObraReportPdfService {
               .map((item) => item.dataHora)
               .reduce((a, b) => a.isAfter(b) ? a : b);
 
-    return _infoCard('Concretagem ${index + 1}', [
+    return _infoCard(tr('Concretagem {index}', params: {'index': index + 1}), [
       _kv(
         'Estrutura',
         concretagem.estruturaConcretada.trim().isEmpty
-            ? 'nao informada'
+            ? tr('nao informada')
             : concretagem.estruturaConcretada.trim(),
       ),
       _kv('Concreteira', _fallbackNaoInformada(concretagem.concreteira)),
@@ -717,7 +752,10 @@ class ObraReportPdfService {
         'Ultimo lancamento',
         ultimoLancamento == null
             ? '-'
-            : DateFormat('dd/MM/yyyy HH:mm', 'pt_BR').format(ultimoLancamento),
+            : DateFormat(
+                'dd/MM/yyyy HH:mm',
+                CwsLocalizations.current.dateLocale,
+              ).format(ultimoLancamento),
       ),
     ]);
   }
@@ -865,7 +903,7 @@ class ObraReportPdfService {
     renderedImage.dispose();
 
     if (byteData == null) {
-      throw Exception('Falha ao renderizar a planta para o PDF.');
+      throw Exception(tr('Falha ao renderizar a planta para o PDF.'));
     }
 
     return _RenderedRastreioPreview(
@@ -944,15 +982,17 @@ class ObraReportPdfService {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(
-            'Planta de rastreio da concretagem',
+            tr('Planta de rastreio da concretagem'),
             style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 4),
           pw.Text(
             _pdfSafe(
               marcados.isEmpty
-                  ? 'Planta escaneada sem marcações registradas.'
-                  : 'Planta ampliada com as marcações realizadas nesta concretagem.',
+                  ? tr('Planta escaneada sem marcações registradas.')
+                  : tr(
+                      'Planta ampliada com as marcações realizadas nesta concretagem.',
+                    ),
             ),
             style: const pw.TextStyle(fontSize: 9.2),
           ),
@@ -971,7 +1011,7 @@ class ObraReportPdfService {
           if (lancamentos.isNotEmpty) ...[
             pw.SizedBox(height: 10),
             pw.Text(
-              'Legenda dos lançamentos',
+              tr('Legenda dos lançamentos'),
               style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
             ),
             pw.SizedBox(height: 6),
@@ -1023,7 +1063,7 @@ class ObraReportPdfService {
           pw.SizedBox(width: 6),
           pw.Text(
             _pdfSafe(
-              '${_legendTitleLancamento(lancamento)}${marcado ? '' : ' - sem marcação'}',
+              '${_legendTitleLancamento(lancamento)}${marcado ? '' : tr(' - sem marcação')}',
             ),
             style: const pw.TextStyle(fontSize: 8.6),
           ),
@@ -1036,32 +1076,61 @@ class ObraReportPdfService {
     Lancamento l,
     List<pw.MemoryImage> fotos,
   ) {
+    final dataHora = DateFormat(
+      'dd/MM/yyyy HH:mm',
+      CwsLocalizations.current.dateLocale,
+    ).format(l.dataHora);
     final linhas = <String>[
-      'Data/hora: ${DateFormat('dd/MM/yyyy HH:mm', 'pt_BR').format(l.dataHora)}',
-      'Betoneira: ${_fallback(l.caminhao)}',
+      tr('Data/hora: {date}', params: {'date': dataHora}),
+      tr('Betoneira: {value}', params: {'value': _fallback(l.caminhao)}),
       'NF: ${_fallback(l.notaFiscal)}',
-      'Volume: ${_fmtNum(l.volumeM3, 1)} m³',
-      'Dosagem: ${_fmtNum(l.dosagemKgM3, 1)} kg/m³',
-      'CWS total: ${_fmtNum(l.cwsTotalKg, 1)} kg',
+      tr('Volume: {value} m³', params: {'value': _fmtNum(l.volumeM3, 1)}),
+      tr(
+        'Dosagem: {value} kg/m³',
+        params: {'value': _fmtNum(l.dosagemKgM3, 1)},
+      ),
+      tr('CWS total: {value} kg', params: {'value': _fmtNum(l.cwsTotalKg, 1)}),
     ];
 
     if (l.cwsAdicionadoKg != null) {
-      linhas.add('CWS adicionado: ${_fmtNum(l.cwsAdicionadoKg!, 1)} kg');
+      linhas.add(
+        tr(
+          'CWS adicionado: {value} kg',
+          params: {'value': _fmtNum(l.cwsAdicionadoKg!, 1)},
+        ),
+      );
     }
     if (l.slumpAntes != null) {
-      linhas.add('Slump antes: ${_fmtNum(l.slumpAntes!, 1)} cm');
+      linhas.add(
+        tr(
+          'Slump antes: {value} cm',
+          params: {'value': _fmtNum(l.slumpAntes!, 1)},
+        ),
+      );
     }
     if (l.slumpDepois != null) {
-      linhas.add('Slump depois: ${_fmtNum(l.slumpDepois!, 1)} cm');
+      linhas.add(
+        tr(
+          'Slump depois: {value} cm',
+          params: {'value': _fmtNum(l.slumpDepois!, 1)},
+        ),
+      );
     }
     if (l.tempoMisturaMin != null) {
-      linhas.add('Tempo de mistura: ${_fmtNum(l.tempoMisturaMin!, 1)} min');
+      linhas.add(
+        tr(
+          'Tempo de mistura: {value} min',
+          params: {'value': _fmtNum(l.tempoMisturaMin!, 1)},
+        ),
+      );
     }
     if (l.observacoes.trim().isNotEmpty) {
-      linhas.add('Observações: ${l.observacoes.trim()}');
+      linhas.add(
+        tr('Observações: {value}', params: {'value': l.observacoes.trim()}),
+      );
     }
     if (fotos.isNotEmpty) {
-      linhas.add('Fotos anexas: ${fotos.length}');
+      linhas.add(tr('Fotos anexas: {count}', params: {'count': fotos.length}));
     }
 
     return pw.Container(
@@ -1178,16 +1247,18 @@ class ObraReportPdfService {
 
   String _fallbackNaoInformada(String value) {
     final trimmed = value.trim();
-    return trimmed.isEmpty ? 'nao informada' : trimmed;
+    return trimmed.isEmpty ? tr('nao informada') : trimmed;
   }
 
   String _controleTecnologicoLabel(String value) {
-    return value.trim().toLowerCase() == 'sim' ? 'Sim' : 'nao informado';
+    return value.trim().toLowerCase() == 'sim'
+        ? tr('Sim')
+        : tr('nao informado');
   }
 
   String _empresaTecnologiaLabelConcretagem(Concretagem concretagem) {
     if (concretagem.controleTecnologico.trim().toLowerCase() != 'sim') {
-      return 'nao informada';
+      return tr('nao informada');
     }
     return _fallbackNaoInformada(concretagem.empresaTecnologiaConcreto);
   }
@@ -1198,11 +1269,11 @@ class ObraReportPdfService {
 
   String _legendTitleLancamento(Lancamento lancamento) {
     final titulo = lancamento.caminhao.trim().isEmpty
-        ? 'Lançamento ${lancamento.id ?? ''}'.trim()
+        ? tr('Lançamento {id}', params: {'id': lancamento.id ?? ''}).trim()
         : lancamento.caminhao.trim();
     final dataHora = DateFormat(
       'dd/MM HH:mm',
-      'pt_BR',
+      CwsLocalizations.current.dateLocale,
     ).format(lancamento.dataHora);
     return '$titulo • $dataHora • ${_fmtNum(lancamento.volumeM3, 1)} m³';
   }

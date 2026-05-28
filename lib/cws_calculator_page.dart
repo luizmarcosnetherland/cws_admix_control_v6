@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:keyboard_actions/keyboard_actions.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'core/localization/app_localizations.dart';
+
 class CwsCalculatorPage extends StatefulWidget {
   final double? initialVolumeM3;
 
@@ -39,24 +41,24 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
 
   String fmt(double value, {int casas = 1}) =>
       NumberFormat.decimalPatternDigits(
-        locale: 'pt_BR',
+        locale: CwsLocalizations.current.dateLocale,
         decimalDigits: casas,
       ).format(value);
 
   String _campoCotacao(String label, String value) {
     final texto = value.trim();
-    return '$label: ${texto.isEmpty ? 'Nao informado' : texto}';
+    return '${tr(label)}: ${texto.isEmpty ? tr('Nao informado') : texto}';
   }
 
   String get _mensagemCotacao => [
-    'Olá, gostaria de solicitar uma cotação do CWS Admix.',
+    tr('Olá, gostaria de solicitar uma cotação do CWS Admix.'),
     '',
-    'Volume de concreto: ${fmt(volume, casas: 1)} m³',
-    'Consumo de cimento: ${fmt(cementKgM3, casas: 1)} kg/m³',
-    'Dosagem aplicada: ${fmt(dosageKgM3, casas: 1)} kg/m³',
-    'Quantidade necessária: ${fmt(totalKg, casas: 1)} kg',
-    'Sacos de 6,4 kg: $bags',
-    'Quantidade para compra: ${fmt(providedKg, casas: 1)} kg',
+    '${tr('Volume de concreto')}: ${fmt(volume, casas: 1)} m³',
+    '${tr('Consumo de cimento')}: ${fmt(cementKgM3, casas: 1)} kg/m³',
+    '${tr('Dosagem aplicada')}: ${fmt(dosageKgM3, casas: 1)} kg/m³',
+    '${tr('Quantidade necessária')}: ${fmt(totalKg, casas: 1)} kg',
+    '${tr('Sacos de 6,4 kg')}: $bags',
+    '${tr('Quantidade para compra')}: ${fmt(providedKg, casas: 1)} kg',
     '',
     _campoCotacao('Endereco de entrega', _enderecoEntregaCtrl.text),
     _campoCotacao('Cidade', _cidadeCtrl.text),
@@ -71,21 +73,21 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
         scheme: 'mailto',
         path: _cotacaoEmail,
         query: _encodeQueryParameters({
-          'subject': 'Solicitação de cotação CWS Admix',
+          'subject': tr('Solicitação de cotação CWS Admix'),
           'body': _mensagemCotacao,
         }),
       );
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         if (!mounted) return;
         await _showContatoFallback(
-          titulo: 'Solicitar cotação por e-mail',
+          titulo: tr('Solicitar cotação por e-mail'),
           destino: _cotacaoEmail,
         );
       }
     } catch (_) {
       if (!mounted) return;
       await _showContatoFallback(
-        titulo: 'Solicitar cotação por e-mail',
+        titulo: tr('Solicitar cotação por e-mail'),
         destino: _cotacaoEmail,
       );
     }
@@ -99,14 +101,14 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         if (!mounted) return;
         await _showContatoFallback(
-          titulo: 'Solicitar cotação por WhatsApp',
+          titulo: tr('Solicitar cotação por WhatsApp'),
           destino: '+55 41 99973-1741',
         );
       }
     } catch (_) {
       if (!mounted) return;
       await _showContatoFallback(
-        titulo: 'Solicitar cotação por WhatsApp',
+        titulo: tr('Solicitar cotação por WhatsApp'),
         destino: '+55 41 99973-1741',
       );
     }
@@ -130,27 +132,31 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
       builder: (context) => AlertDialog(
         title: Text(titulo),
         content: SelectableText(
-          'Destino: $destino\n\nMensagem:\n$_mensagemCotacao',
+          '${tr('Destino')}: $destino\n\n${tr('Mensagem')}:\n$_mensagemCotacao',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Fechar'),
+            child: Text(tr('Fechar')),
           ),
           FilledButton(
             onPressed: () async {
               await Clipboard.setData(
-                ClipboardData(text: 'Destino: $destino\n\n$_mensagemCotacao'),
+                ClipboardData(
+                  text: '${tr('Destino')}: $destino\n\n$_mensagemCotacao',
+                ),
               );
               if (!context.mounted) return;
               Navigator.of(context).pop();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Dados copiados para a área de transferência.'),
+                SnackBar(
+                  content: Text(
+                    tr('Dados copiados para a área de transferência.'),
+                  ),
                 ),
               );
             },
-            child: const Text('Copiar'),
+            child: Text(tr('Copiar')),
           ),
         ],
       ),
@@ -197,7 +203,7 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
         toolbarButtons: [
           (focusNode) => TextButton(
             onPressed: focusNode.unfocus,
-            child: const Text('Enter'),
+            child: Text(tr('Enter')),
           ),
         ],
       );
@@ -216,7 +222,7 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Calculadora CWS'),
+        title: Text(tr('Calculadora CWS')),
         backgroundColor: blue,
         foregroundColor: Colors.white,
       ),
@@ -235,8 +241,8 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Cálculo de produto por volume de concreto',
+                    Text(
+                      tr('Cálculo de produto por volume de concreto'),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -244,7 +250,9 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Ajuste o volume de concreto da sua concretagem e veja quanto CWS Admix será necessário.',
+                      tr(
+                        'Ajuste o volume de concreto da sua concretagem e veja quanto CWS Admix será necessário.',
+                      ),
                       style: TextStyle(
                         color: Colors.black.withValues(alpha: 0.68),
                       ),
@@ -286,8 +294,8 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Resultado',
+                        Text(
+                          tr('Resultado'),
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
@@ -324,8 +332,8 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Dados para cotacao',
+                    Text(
+                      tr('Dados para cotacao'),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -358,13 +366,13 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
             FilledButton.icon(
               onPressed: _solicitarCotacaoEmail,
               icon: const Icon(Icons.email_outlined),
-              label: const Text('Solicitar cotação por e-mail'),
+              label: Text(tr('Solicitar cotação por e-mail')),
             ),
             const SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: _solicitarCotacaoWhatsapp,
               icon: const Icon(Icons.chat_outlined),
-              label: const Text('Solicitar cotação por WhatsApp'),
+              label: Text(tr('Solicitar cotação por WhatsApp')),
             ),
           ],
         ),
@@ -389,7 +397,7 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
         onSubmitted: (_) => _dismissKeyboard(),
         onTapOutside: (_) => _dismissKeyboard(),
         decoration: InputDecoration(
-          labelText: label,
+          labelText: tr(label),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
@@ -403,7 +411,7 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
         children: [
           Expanded(
             child: Text(
-              label,
+              tr(label),
               style: TextStyle(color: Colors.black.withValues(alpha: 0.68)),
             ),
           ),
