@@ -1034,6 +1034,9 @@ class _HomePageState extends State<HomePage> {
     final logoHeight = compact ? 56.0 : 62.0;
     final dividerHeight = compact ? 42.0 : 48.0;
     final horizontalSpacing = compact ? 18.0 : 22.0;
+    final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;
+    final companyLogoAsset = companyLogoAssetForLocale(deviceLocale);
+    final isPtBr = isPtBrLocale(deviceLocale);
 
     return Card(
       elevation: 0,
@@ -1045,20 +1048,49 @@ class _HomePageState extends State<HomePage> {
             opacity: 0.9,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  companyLogoAssetForDeviceLocale(),
-                  height: logoHeight,
-                ),
-                SizedBox(width: horizontalSpacing),
-                Container(
-                  width: 1,
-                  height: dividerHeight,
-                  color: const Color(0xFF1E3A5F),
-                ),
-                SizedBox(width: horizontalSpacing),
-                Image.asset(kCwsAdmixLogoAsset, height: logoHeight),
-              ],
+              children: isPtBr
+                  ? [
+                      Image.asset(companyLogoAsset, height: logoHeight),
+                      SizedBox(width: horizontalSpacing),
+                      Container(
+                        width: 1,
+                        height: dividerHeight,
+                        color: const Color(0xFF1E3A5F),
+                      ),
+                      SizedBox(width: horizontalSpacing),
+                      Image.asset(kCwsAdmixLogoAsset, height: logoHeight),
+                    ]
+                  : [
+                      Expanded(
+                        flex: 5,
+                        child: SizedBox(
+                          height: logoHeight,
+                          child: FittedBox(
+                            alignment: Alignment.centerRight,
+                            fit: BoxFit.contain,
+                            child: Image.asset(companyLogoAsset),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: compact ? 10 : 12),
+                      Container(
+                        width: 1,
+                        height: dividerHeight,
+                        color: const Color(0xFF1E3A5F),
+                      ),
+                      SizedBox(width: compact ? 10 : 12),
+                      Expanded(
+                        flex: 4,
+                        child: SizedBox(
+                          height: logoHeight,
+                          child: FittedBox(
+                            alignment: Alignment.centerLeft,
+                            fit: BoxFit.contain,
+                            child: Image.asset(kCwsAdmixLogoAsset),
+                          ),
+                        ),
+                      ),
+                    ],
             ),
           ),
         ),
@@ -1616,16 +1648,18 @@ class LiteraturaTecnicaPage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 14),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 FilledButton.icon(
                   onPressed: primaryAction,
                   icon: const Icon(Icons.open_in_new),
                   label: Text(primaryLabel),
                 ),
-                ...secondaryActions,
+                if (secondaryActions.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Wrap(spacing: 10, runSpacing: 10, children: secondaryActions),
+                ],
               ],
             ),
           ],
