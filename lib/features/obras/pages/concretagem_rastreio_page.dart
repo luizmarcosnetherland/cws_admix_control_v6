@@ -1288,7 +1288,14 @@ class _ConcretagemRastreioPageState extends State<ConcretagemRastreioPage>
                 '${_fmtDataHora(_lancamentoSelecionado!.dataHora)} • ${_fmtNum(_lancamentoSelecionado!.volumeM3)} m³',
               ),
               if (_lancamentoSelecionado!.notaFiscal.trim().isNotEmpty)
-                Text('NF: ${_lancamentoSelecionado!.notaFiscal.trim()}'),
+                Text(
+                  tr(
+                    'NF: {value}',
+                    params: {
+                      'value': _lancamentoSelecionado!.notaFiscal.trim(),
+                    },
+                  ),
+                ),
             ],
           ],
         ),

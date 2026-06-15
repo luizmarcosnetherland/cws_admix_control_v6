@@ -12,6 +12,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../cws_calculator_page.dart';
 
+enum _CalendarSaveResult { created, opened, shared }
+
 class AgendamentoConcretagemPage extends StatefulWidget {
   final VoidCallback? onBackFallback;
 
@@ -194,7 +196,25 @@ class _AgendamentoConcretagemPageState
   }
 
   String _mensagemCompartilhamento() {
-    return '${_tituloEvento()}\n\n${_descricaoEvento()}';
+    return [
+      tr('Segue o agendamento de concretagem:'),
+      '',
+      _tituloEvento(),
+      '',
+      _descricaoEvento(),
+    ].join('\n');
+  }
+
+  String _mensagemConfirmacaoCalendario(_CalendarSaveResult result) {
+    return switch (result) {
+      _CalendarSaveResult.created => tr('Evento criado no Calendario.'),
+      _CalendarSaveResult.opened => tr(
+        'O evento foi enviado ao aplicativo de calendario. Confira e salve para concluir.',
+      ),
+      _CalendarSaveResult.shared => tr(
+        'Convite de calendario preparado. Use o aplicativo escolhido para concluir.',
+      ),
+    };
   }
 
   String _dtCalendar(DateTime dateTime) {
@@ -302,10 +322,16 @@ class _AgendamentoConcretagemPageState
       await action();
     } catch (e) {
       if (!mounted) return;
+      final error = e is PlatformException && (e.message?.isNotEmpty ?? false)
+          ? e.message!
+          : e.toString();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            tr('Erro ao preparar agendamento: {error}', params: {'error': e}),
+            tr(
+              'Erro ao preparar agendamento: {error}',
+              params: {'error': error},
+            ),
           ),
         ),
       );
@@ -318,14 +344,17 @@ class _AgendamentoConcretagemPageState
 
   Future<void> _agendar() async {
     await _executarAcao(() async {
-      await _salvarNoCalendario();
+      final calendarResult = await _salvarNoCalendario();
 
       if (!mounted) return;
       final compartilhar = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(tr('Agendamento criado')),
-          content: Text(tr('Deseja compartilhar no WhatsApp?')),
+          title: Text(tr('Agendamento enviado')),
+          content: Text(
+            '${_mensagemConfirmacaoCalendario(calendarResult)}\n\n'
+            '${tr('Deseja enviar um resumo pelo WhatsApp?')}',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -343,13 +372,13 @@ class _AgendamentoConcretagemPageState
       setState(() => _agendamentoConcluido = true);
 
       if (compartilhar == true) {
-        await _compartilharWhatsAppArquivo();
+        await _compartilharWhatsAppResumo();
         if (!mounted) return;
       }
     });
   }
 
-  Future<void> _salvarNoCalendario() async {
+  Future<_CalendarSaveResult> _salvarNoCalendario() async {
     final inicio = _inicioConcretagem();
     final fim = inicio.add(const Duration(hours: 2));
 
@@ -362,7 +391,19 @@ class _AgendamentoConcretagemPageState
         'alarmOffsetSeconds': -86400,
       });
 
-      return;
+      return _CalendarSaveResult.created;
+    }
+
+    if (!kIsWeb && Platform.isAndroid) {
+      await _calendarChannel.invokeMethod<void>('openEventEditor', {
+        'title': _tituloEvento(),
+        'notes': _descricaoEvento(),
+        'startMillis': inicio.millisecondsSinceEpoch,
+        'endMillis': fim.millisecondsSinceEpoch,
+        'alarmOffsetSeconds': -86400,
+      });
+
+      return _CalendarSaveResult.opened;
     }
 
     final xFile = await _icsXFile();
@@ -370,36 +411,35 @@ class _AgendamentoConcretagemPageState
     if (!kIsWeb && Platform.isMacOS) {
       final result = await Process.run('open', [xFile.path]);
       if (result.exitCode == 0) {
-        if (!mounted) return;
+        if (!mounted) return _CalendarSaveResult.opened;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(tr('Evento enviado ao Calendario.'))),
         );
-        return;
+        return _CalendarSaveResult.opened;
       }
     }
 
-    if (!mounted) return;
+    if (!mounted) return _CalendarSaveResult.shared;
     await Share.shareXFiles(
       [xFile],
       subject: _tituloEvento(),
       text: _mensagemCompartilhamento(),
       sharePositionOrigin: _shareOrigin(),
     );
+    return _CalendarSaveResult.shared;
   }
 
   Future<void> _compartilharWhatsApp() async {
     await _executarAcao(() async {
-      await _compartilharWhatsAppArquivo();
+      await _compartilharWhatsAppResumo();
     });
   }
 
-  Future<void> _compartilharWhatsAppArquivo() async {
-    final xFile = await _icsXFile();
+  Future<void> _compartilharWhatsAppResumo() async {
     if (!mounted) return;
-    await Share.shareXFiles(
-      [xFile],
+    await Share.share(
+      _mensagemCompartilhamento(),
       subject: _tituloEvento(),
-      text: _mensagemCompartilhamento(),
       sharePositionOrigin: _shareOrigin(),
     );
   }
@@ -495,7 +535,7 @@ class _AgendamentoConcretagemPageState
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              tr('Agendamento criado.'),
+              tr('Agendamento enviado ao Calendario.'),
               style: const TextStyle(fontWeight: FontWeight.w800),
             ),
           ),

@@ -17,7 +17,10 @@ void main() {
     expect(find.text('Volume estimado (m³)'), findsOneWidget);
     expect(find.text('Estrutura a ser concretada'), findsOneWidget);
     expect(find.text('Traço do concreto'), findsOneWidget);
-    expect(find.text('CWS Admix previsto: informe o volume.'), findsOneWidget);
+    expect(
+      find.text('Informe o volume para ver o CWS Admix previsto.'),
+      findsOneWidget,
+    );
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Volume estimado (m³)'),
       '10',

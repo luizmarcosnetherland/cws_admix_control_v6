@@ -1,5 +1,6 @@
 import 'package:cws_admix_control/core/branding/brand_assets.dart';
 import 'package:cws_admix_control/core/localization/app_localizations.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -71,5 +72,36 @@ void main() {
     expect(tr('Nova Obra'), 'Nueva Obra');
     expect(tr('Rastreio da Planta'), 'Rastreo de la Planta');
     expect(tr('Lançamentos: {count}', params: {'count': 3}), 'Lanzamientos: 3');
+  });
+
+  test('usa textos amigaveis em portugues e limpa erros tecnicos', () {
+    CwsLocalizations.activate(CwsLocalizations(const Locale('pt', 'BR')));
+
+    expect(
+      tr('CWS Admix previsto: informe o volume.'),
+      'Informe o volume para ver o CWS Admix previsto.',
+    );
+    expect(
+      tr(
+        'Erro ao preparar agendamento: {error}',
+        params: {
+          'error': PlatformException(
+            code: 'calendar_unavailable',
+            message:
+                'Não encontramos um aplicativo de calendário para criar o evento.',
+          ),
+        },
+      ),
+      'Não foi possível preparar o agendamento. Detalhes: '
+      'Não encontramos um aplicativo de calendário para criar o evento.',
+    );
+    expect(
+      tr(
+        'Erro ao abrir mapa: {error}',
+        params: {'error': Exception('Nao foi possivel abrir o app de mapas.')},
+      ),
+      'Não foi possível abrir o mapa. Detalhes: '
+      'Não conseguimos abrir o app de mapas.',
+    );
   });
 }

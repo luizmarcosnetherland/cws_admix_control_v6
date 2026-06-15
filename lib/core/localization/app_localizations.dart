@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 
@@ -49,15 +50,43 @@ class CwsLocalizations {
   }
 
   String t(String source, {Map<String, Object?> params = const {}}) {
-    final localized = languageCode == 'pt'
-        ? source
-        : (_translations[source]?[languageCode] ?? source);
+    final localized = _translations[source]?[languageCode] ?? source;
 
     if (params.isEmpty) return localized;
 
     return params.entries.fold(localized, (text, entry) {
-      return text.replaceAll('{${entry.key}}', entry.value.toString());
+      return text.replaceAll(
+        '{${entry.key}}',
+        _formatParam(entry.key, entry.value),
+      );
     });
+  }
+
+  String _formatParam(String key, Object? value) {
+    if (key == 'error') return _friendlyError(value);
+    return value.toString();
+  }
+
+  String _friendlyError(Object? value) {
+    if (value == null) return '';
+    var text = value is PlatformException
+        ? (value.message?.trim().isNotEmpty ?? false)
+              ? value.message!.trim()
+              : value.code
+        : value.toString().trim();
+    final platformText = RegExp(
+      r'^PlatformException\([^,]*,\s*([^,\)]*)',
+    ).firstMatch(text)?.group(1)?.trim();
+    if (platformText != null &&
+        platformText.isNotEmpty &&
+        platformText.toLowerCase() != 'null') {
+      text = platformText;
+    }
+    text = text
+        .replaceFirst(RegExp(r'^Exception:\s*'), '')
+        .replaceFirst(RegExp(r'^UnsupportedError:\s*'), '')
+        .replaceFirst(RegExp(r'^Unsupported operation:\s*'), '');
+    return _translations[text]?[languageCode] ?? text;
   }
 
   static void activate(CwsLocalizations localizations) {
@@ -107,6 +136,92 @@ const _translations = <String, Map<String, String>>{
   },
   'Netherland Admix': {'en': 'Netherland Admix', 'es': 'Netherland Admix'},
   'CWS Admix Control': {'en': 'CWS Admix Control', 'es': 'CWS Admix Control'},
+  'Atualização disponível': {
+    'en': 'Update available',
+    'es': 'Actualización disponible',
+  },
+  'Uma nova versão do {appName} está disponível na App Store.': {
+    'en': 'A new version of {appName} is available on the App Store.',
+    'es': 'Hay una nueva versión de {appName} disponible en App Store.',
+  },
+  'Versão instalada: {version} (build {build})': {
+    'en': 'Installed version: {version} (build {build})',
+    'es': 'Versión instalada: {version} (build {build})',
+  },
+  'Nova versão: {version}': {
+    'en': 'New version: {version}',
+    'es': 'Nueva versión: {version}',
+  },
+  'Depois': {'en': 'Later', 'es': 'Después'},
+  'Atualizar': {'en': 'Update', 'es': 'Actualizar'},
+  'Não foi possível abrir a App Store. Tente novamente em instantes.': {
+    'en': 'We could not open the App Store. Please try again in a moment.',
+    'es': 'No pudimos abrir App Store. Inténtelo nuevamente en unos instantes.',
+  },
+  'Não conseguimos preparar os dados do evento.': {
+    'en': 'We could not prepare the event details.',
+    'es': 'No pudimos preparar los datos del evento.',
+  },
+  'Não temos permissão para criar eventos no Calendário.': {
+    'en': 'We do not have permission to create Calendar events.',
+    'es': 'No tenemos permiso para crear eventos en el Calendario.',
+  },
+  'Não encontramos um calendário disponível para novos eventos.': {
+    'en': 'We could not find a calendar available for new events.',
+    'es': 'No encontramos un calendario disponible para nuevos eventos.',
+  },
+  'Não encontramos um aplicativo de calendário para criar o evento.': {
+    'en': 'We could not find a calendar app to create the event.',
+    'es': 'No encontramos una app de calendario para crear el evento.',
+  },
+  'Ative a localizacao do aparelho para continuar.': {
+    'pt': 'Ative a localização do aparelho para continuar.',
+    'en': 'Turn on device location to continue.',
+    'es': 'Active la ubicación del dispositivo para continuar.',
+  },
+  'Permissao de localizacao negada.': {
+    'pt': 'A permissão de localização foi negada.',
+    'en': 'Location permission was denied.',
+    'es': 'Se denegó el permiso de ubicación.',
+  },
+  'Permissao de localizacao negada permanentemente. Libere nas configuracoes do aparelho.': {
+    'pt':
+        'A permissão de localização está bloqueada. Libere o acesso nas configurações do aparelho.',
+    'en':
+        'Location permission is blocked. Allow access in the device settings.',
+    'es':
+        'El permiso de ubicación está bloqueado. Habilite el acceso en la configuración del dispositivo.',
+  },
+  'Nao foi possivel localizar o endereco informado.': {
+    'pt':
+        'Não conseguimos localizar esse endereço. Revise os dados ou use a localização atual.',
+    'en':
+        'We could not locate this address. Review the details or use current location.',
+    'es':
+        'No pudimos ubicar esa dirección. Revise los datos o use la ubicación actual.',
+  },
+  'Nao foi possivel abrir o app de mapas.': {
+    'pt': 'Não conseguimos abrir o app de mapas.',
+    'en': 'We could not open the maps app.',
+    'es': 'No pudimos abrir la app de mapas.',
+  },
+  'Plugin de e-mail indisponivel nesta execucao. Reinstale/reinicie o app para carregar o plugin nativo.': {
+    'pt':
+        'Não conseguimos abrir o e-mail neste momento. Reinicie o app e tente novamente.',
+    'en': 'We could not open email right now. Restart the app and try again.',
+    'es':
+        'No pudimos abrir el email en este momento. Reinicie la app e inténtelo nuevamente.',
+  },
+  'Falha ao abrir o Mail no macOS.': {
+    'pt': 'Não conseguimos abrir o Mail no macOS.',
+    'en': 'We could not open Mail on macOS.',
+    'es': 'No pudimos abrir Mail en macOS.',
+  },
+  'OCR de nota fiscal disponivel apenas em Android e iOS.': {
+    'pt': 'A leitura da nota fiscal está disponível apenas no Android e iOS.',
+    'en': 'Invoice scanning is available only on Android and iOS.',
+    'es': 'La lectura de factura está disponible solo en Android e iOS.',
+  },
   'Dashboard': {'en': 'Dashboard', 'es': 'Panel'},
   'Obras': {'en': 'Jobsites', 'es': 'Obras'},
   'Calculadora CWS': {'en': 'CWS Calculator', 'es': 'Calculadora CWS'},
@@ -224,12 +339,13 @@ const _translations = <String, Map<String, String>>{
     'es':
         'Sistema para control y seguimiento operativo de obras y hormigones aditivados con CWS Admix.',
   },
-  'Versao': {'en': 'Version', 'es': 'Versión'},
+  'Versao': {'pt': 'Versão', 'en': 'Version', 'es': 'Versión'},
   'Plataforma': {'en': 'Platform', 'es': 'Plataforma'},
   'Feedback': {'en': 'Feedback', 'es': 'Feedback'},
   'Conte aqui sua sugestao, problema ou melhoria:': {
+    'pt': 'Conte aqui sua sugestão, problema ou ideia de melhoria:',
     'en': 'Tell us your suggestion, issue, or improvement:',
-    'es': 'Cuéntenos su sugerencia, problema o mejora:',
+    'es': 'Cuéntenos su sugerencia, problema o idea de mejora:',
   },
   'Copyright': {'en': 'Copyright', 'es': 'Copyright'},
   'Suporte': {'en': 'Support', 'es': 'Soporte'},
@@ -237,33 +353,47 @@ const _translations = <String, Map<String, String>>{
   'Avaliar o app': {'en': 'Rate the app', 'es': 'Calificar la app'},
   'Enviar feedback': {'en': 'Send feedback', 'es': 'Enviar feedback'},
   'Ver introducao novamente': {
+    'pt': 'Ver introdução novamente',
     'en': 'View introduction again',
     'es': 'Ver introducción nuevamente',
   },
-  'Ver licencas': {'en': 'View licenses', 'es': 'Ver licencias'},
+  'Ver licencas': {
+    'pt': 'Ver licenças',
+    'en': 'View licenses',
+    'es': 'Ver licencias',
+  },
   'Carregando...': {'en': 'Loading...', 'es': 'Cargando...'},
   'Nao foi possivel abrir o email de suporte.': {
-    'en': 'Could not open the support email.',
-    'es': 'No se pudo abrir el email de soporte.',
+    'pt':
+        'Não conseguimos abrir seu aplicativo de e-mail. Você pode tentar novamente em instantes.',
+    'en': 'We could not open your email app. Please try again in a moment.',
+    'es':
+        'No pudimos abrir su app de email. Inténtelo nuevamente en unos instantes.',
   },
   'Nao foi possivel abrir o email de feedback.': {
-    'en': 'Could not open the feedback email.',
-    'es': 'No se pudo abrir el email de feedback.',
+    'pt':
+        'Não conseguimos abrir seu aplicativo de e-mail para enviar o feedback.',
+    'en': 'We could not open your email app to send feedback.',
+    'es': 'No pudimos abrir su app de email para enviar el feedback.',
   },
   'A avaliacao pela App Store sera ativada quando o app estiver publicado.': {
-    'en': 'App Store rating will be enabled after the app is published.',
+    'pt': 'A avaliação pela App Store ficará disponível após a publicação.',
+    'en': 'App Store rating will be available after the app is published.',
     'es':
-        'La calificación en App Store se activará cuando la app esté publicada.',
+        'La calificación en App Store estará disponible cuando la app esté publicada.',
   },
   'A avaliacao direta esta disponivel no Android e no iOS.': {
+    'pt': 'A avaliação direta está disponível no Android e no iOS.',
     'en': 'Direct rating is available on Android and iOS.',
     'es': 'La calificación directa está disponible en Android e iOS.',
   },
   'Nao foi possivel abrir a loja para avaliacao.': {
-    'en': 'Could not open the store for rating.',
-    'es': 'No se pudo abrir la tienda para calificar.',
+    'pt': 'Não conseguimos abrir a loja para avaliação agora.',
+    'en': 'We could not open the store for rating right now.',
+    'es': 'No pudimos abrir la tienda para calificar ahora.',
   },
   'Abra o Dashboard para rever a introducao guiada.': {
+    'pt': 'Abra o Dashboard para ver a introdução guiada novamente.',
     'en': 'Open the Dashboard to view the guided introduction again.',
     'es': 'Abra el panel para ver nuevamente la introducción guiada.',
   },
@@ -276,12 +406,15 @@ const _translations = <String, Map<String, String>>{
     'es': 'Materiales de apoyo',
   },
   'Abra os documentos tecnicos abaixo para consulta rapida durante visitas e acompanhamento de obra.': {
+    'pt':
+        'Abra os documentos técnicos abaixo para consultar rapidamente durante visitas e acompanhamento da obra.',
     'en':
         'Open the technical documents below for quick reference during visits and jobsite follow-up.',
     'es':
         'Abra los documentos técnicos abajo para consulta rápida durante visitas y seguimiento de obra.',
   },
   'Informacoes tecnicas, instrucoes para uso, armazenamento e suporte.': {
+    'pt': 'Informações técnicas, instruções de uso, armazenamento e suporte.',
     'en': 'Technical information, usage instructions, storage, and support.',
     'es':
         'Información técnica, instrucciones de uso, almacenamiento y soporte.',
@@ -291,6 +424,7 @@ const _translations = <String, Map<String, String>>{
     'es': 'Orientación técnica para el curado del hormigón',
   },
   'Boas praticas e orientacoes de aplicacao.': {
+    'pt': 'Boas práticas e orientações de aplicação.',
     'en': 'Best practices and application guidance.',
     'es': 'Buenas prácticas y orientaciones de aplicación.',
   },
@@ -303,6 +437,13 @@ const _translations = <String, Map<String, String>>{
     'en': 'SDS available on request. Ask via ',
     'es': 'FDS disponible bajo solicitud. Solicite por ',
   },
+  'Filtros': {'en': 'Filters', 'es': 'Filtros'},
+  'Filtros ({count} ativos)': {
+    'en': 'Filters ({count} active)',
+    'es': 'Filtros ({count} activos)',
+  },
+  'Expandir filtros': {'en': 'Expand filters', 'es': 'Expandir filtros'},
+  'Recolher filtros': {'en': 'Collapse filters', 'es': 'Contraer filtros'},
   ' ou ': {'en': ' or ', 'es': ' o '},
   'Acesse nosso site': {
     'en': 'Visit our website',
@@ -312,8 +453,12 @@ const _translations = <String, Map<String, String>>{
   'Solicitar FDS': {'en': 'Request SDS', 'es': 'Solicitar FDS'},
   'Abrir site': {'en': 'Open website', 'es': 'Abrir sitio'},
   'Nao foi possivel abrir "{label}".': {
-    'en': 'Could not open "{label}".',
-    'es': 'No se pudo abrir "{label}".',
+    'pt':
+        'Não conseguimos abrir "{label}" agora. Tente novamente em instantes.',
+    'en':
+        'We could not open "{label}" right now. Please try again in a moment.',
+    'es':
+        'No pudimos abrir "{label}" ahora. Inténtelo nuevamente en unos instantes.',
   },
   'Maiores informações, outros produtos da Netherland, videos e obras executadas.': {
     'en':
@@ -346,6 +491,7 @@ const _translations = <String, Map<String, String>>{
     'es': 'Cantidad para compra',
   },
   'Endereco de entrega': {
+    'pt': 'Endereço de entrega',
     'en': 'Delivery address',
     'es': 'Dirección de entrega',
   },
@@ -353,7 +499,11 @@ const _translations = <String, Map<String, String>>{
   'Estado': {'en': 'State', 'es': 'Estado'},
   'Empresa': {'en': 'Company', 'es': 'Empresa'},
   'E-mail': {'en': 'Email', 'es': 'Email'},
-  'Nao informado': {'en': 'Not provided', 'es': 'No informado'},
+  'Nao informado': {
+    'pt': 'Não informado',
+    'en': 'Not provided',
+    'es': 'No informado',
+  },
   'Solicitação de cotação CWS Admix': {
     'en': 'CWS Admix quote request',
     'es': 'Solicitud de cotización CWS Admix',
@@ -385,14 +535,19 @@ const _translations = <String, Map<String, String>>{
   'Solicitar cotação': {'en': 'Request quote', 'es': 'Solicitar cotización'},
   'WhatsApp': {'en': 'WhatsApp', 'es': 'WhatsApp'},
   'Informe um volume maior que zero.': {
-    'en': 'Enter a volume greater than zero.',
-    'es': 'Ingrese un volumen mayor que cero.',
+    'pt': 'Informe um volume maior que zero para continuar.',
+    'en': 'Enter a volume greater than zero to continue.',
+    'es': 'Ingrese un volumen mayor que cero para continuar.',
   },
   'Copiar mensagem': {'en': 'Copy message', 'es': 'Copiar mensaje'},
   'Mensagem copiada.': {'en': 'Message copied.', 'es': 'Mensaje copiado.'},
   'Destino': {'en': 'Destination', 'es': 'Destino'},
   'Mensagem': {'en': 'Message', 'es': 'Mensaje'},
-  'OK': {'en': 'OK', 'es': 'OK'},
+  'OK': {
+    'pt': 'Dentro do previsto',
+    'en': 'Within range',
+    'es': 'Dentro de lo previsto',
+  },
   'Data da concretagem *': {
     'en': 'Concrete pour date *',
     'es': 'Fecha de hormigonado *',
@@ -413,14 +568,20 @@ const _translations = <String, Map<String, String>>{
     'en': 'Concrete mix design',
     'es': 'Dosificación del hormigón',
   },
-  'Selecione a data.': {'en': 'Select the date.', 'es': 'Seleccione la fecha.'},
+  'Selecione a data.': {
+    'pt': 'Selecione a data para continuar.',
+    'en': 'Select the date to continue.',
+    'es': 'Seleccione la fecha para continuar.',
+  },
   'Selecione o horário.': {
-    'en': 'Select the time.',
-    'es': 'Seleccione el horario.',
+    'pt': 'Selecione o horário para continuar.',
+    'en': 'Select the time to continue.',
+    'es': 'Seleccione el horario para continuar.',
   },
   'Informe um volume válido.': {
-    'en': 'Enter a valid volume.',
-    'es': 'Ingrese un volumen válido.',
+    'pt': 'Informe um volume válido para continuar.',
+    'en': 'Enter a valid volume to continue.',
+    'es': 'Ingrese un volumen válido para continuar.',
   },
   'Haverá adição do CWS Admix ao concreto.': {
     'en': 'CWS Admix will be added to the concrete.',
@@ -435,8 +596,9 @@ const _translations = <String, Map<String, String>>{
     'es': 'Realizar pedido de CWS Admix',
   },
   'CWS Admix previsto: informe o volume.': {
-    'en': 'Estimated CWS Admix: enter the volume.',
-    'es': 'CWS Admix previsto: informe el volumen.',
+    'pt': 'Informe o volume para ver o CWS Admix previsto.',
+    'en': 'Enter the volume to see the estimated CWS Admix.',
+    'es': 'Informe el volumen para ver el CWS Admix previsto.',
   },
   'CWS Admix previsto': {
     'en': 'Estimated CWS Admix',
@@ -446,7 +608,11 @@ const _translations = <String, Map<String, String>>{
     'en': 'Product calculation by concrete volume',
     'es': 'Cálculo de producto por volumen de hormigón',
   },
-  'Dados para cotacao': {'en': 'Quote details', 'es': 'Datos para cotización'},
+  'Dados para cotacao': {
+    'pt': 'Dados para cotação',
+    'en': 'Quote details',
+    'es': 'Datos para cotización',
+  },
   'Copiar': {'en': 'Copy', 'es': 'Copiar'},
   'Fechar': {'en': 'Close', 'es': 'Cerrar'},
   'Enter': {'en': 'Enter', 'es': 'Enter'},
@@ -459,11 +625,20 @@ const _translations = <String, Map<String, String>>{
     'en': 'Share via WhatsApp',
     'es': 'Compartir por WhatsApp',
   },
+  'Segue o agendamento de concretagem:': {
+    'en': 'Here are the concrete pour scheduling details:',
+    'es': 'Sigue la programación del hormigonado:',
+  },
   'Agendamento criado.': {
     'en': 'Schedule created.',
     'es': 'Programación creada.',
   },
+  'Agendamento enviado ao Calendario.': {
+    'en': 'Schedule sent to Calendar.',
+    'es': 'Programación enviada al Calendario.',
+  },
   'Agendamento criado': {'en': 'Schedule created', 'es': 'Programación creada'},
+  'Agendamento enviado': {'en': 'Schedule sent', 'es': 'Programación enviada'},
   'Agendamento de concretagem': {
     'en': 'Concrete pour scheduling',
     'es': 'Programación de hormigonado',
@@ -471,6 +646,10 @@ const _translations = <String, Map<String, String>>{
   'Deseja compartilhar no WhatsApp?': {
     'en': 'Do you want to share it on WhatsApp?',
     'es': '¿Desea compartirlo por WhatsApp?',
+  },
+  'Deseja enviar um resumo pelo WhatsApp?': {
+    'en': 'Do you want to send a summary via WhatsApp?',
+    'es': '¿Desea enviar un resumen por WhatsApp?',
   },
   'Agora não': {'en': 'Not now', 'es': 'Ahora no'},
   'Voltar': {'en': 'Back', 'es': 'Volver'},
@@ -480,32 +659,54 @@ const _translations = <String, Map<String, String>>{
     'es': 'Datos del hormigonado',
   },
   'Informe a data da concretagem.': {
-    'en': 'Enter the concrete pour date.',
-    'es': 'Informe la fecha del hormigonado.',
+    'pt': 'Informe a data da concretagem para continuar.',
+    'en': 'Enter the concrete pour date to continue.',
+    'es': 'Informe la fecha del hormigonado para continuar.',
   },
   'Informe o horario previsto.': {
-    'en': 'Enter the planned time.',
-    'es': 'Informe el horario previsto.',
+    'pt': 'Informe o horário previsto para continuar.',
+    'en': 'Enter the planned time to continue.',
+    'es': 'Informe el horario previsto para continuar.',
   },
   'Informe um volume valido.': {
-    'en': 'Enter a valid volume.',
-    'es': 'Ingrese un volumen válido.',
+    'pt': 'Informe um volume válido para continuar.',
+    'en': 'Enter a valid volume to continue.',
+    'es': 'Ingrese un volumen válido para continuar.',
   },
   'Informe uma data e horario futuros.': {
-    'en': 'Enter a future date and time.',
-    'es': 'Informe una fecha y horario futuros.',
+    'pt': 'Escolha uma data e um horário futuros.',
+    'en': 'Choose a future date and time.',
+    'es': 'Elija una fecha y un horario futuros.',
   },
   'Informe o volume previsto antes de fazer o pedido.': {
-    'en': 'Enter the planned volume before ordering.',
-    'es': 'Informe el volumen previsto antes de realizar el pedido.',
+    'pt': 'Informe o volume previsto antes de seguir para o pedido.',
+    'en': 'Enter the planned volume before continuing to the order.',
+    'es': 'Informe el volumen previsto antes de continuar con el pedido.',
   },
   'Erro ao preparar agendamento: {error}': {
-    'en': 'Error preparing schedule: {error}',
-    'es': 'Error al preparar la programación: {error}',
+    'pt': 'Não foi possível preparar o agendamento. Detalhes: {error}',
+    'en': 'We could not prepare the schedule. Details: {error}',
+    'es': 'No pudimos preparar la programación. Detalles: {error}',
   },
   'Evento enviado ao Calendario.': {
+    'pt': 'Evento enviado ao Calendário.',
     'en': 'Event sent to Calendar.',
     'es': 'Evento enviado al Calendario.',
+  },
+  'O evento foi enviado ao aplicativo de calendario. Confira e salve para concluir.': {
+    'pt':
+        'O evento foi enviado ao aplicativo de calendário. Confira os dados e salve para concluir.',
+    'en':
+        'The event was sent to the calendar app. Review and save it to finish.',
+    'es':
+        'El evento fue enviado a la aplicación de calendario. Revíselo y guárdelo para concluir.',
+  },
+  'Convite de calendario preparado. Use o aplicativo escolhido para concluir.': {
+    'pt':
+        'Convite de calendário preparado. Use o aplicativo escolhido para concluir.',
+    'en': 'Calendar invite prepared. Use the selected app to finish.',
+    'es':
+        'Invitación de calendario preparada. Use la aplicación elegida para concluir.',
   },
   'Concretagem programada': {
     'en': 'Scheduled concrete pour',
@@ -523,24 +724,35 @@ const _translations = <String, Map<String, String>>{
   'Compartilhar': {'en': 'Share', 'es': 'Compartir'},
   'Cancelar': {'en': 'Cancel', 'es': 'Cancelar'},
   'Permissao para criar evento no Calendario negada.': {
-    'en': 'Permission to create a Calendar event was denied.',
-    'es': 'Permiso para crear evento en el Calendario denegado.',
+    'pt':
+        'Não temos permissão para criar eventos no Calendário. Revise as permissões do app.',
+    'en':
+        'We do not have permission to create Calendar events. Review the app permissions.',
+    'es':
+        'No tenemos permiso para crear eventos en el Calendario. Revise los permisos de la app.',
   },
   'Nao foi possivel criar o evento no Calendario.': {
-    'en': 'Could not create the Calendar event.',
-    'es': 'No se pudo crear el evento en el Calendario.',
+    'pt':
+        'Não conseguimos criar o evento no Calendário. Confira as permissões e tente novamente.',
+    'en':
+        'We could not create the Calendar event. Check permissions and try again.',
+    'es':
+        'No pudimos crear el evento en el Calendario. Revise los permisos e inténtelo nuevamente.',
   },
   'Evento criado no Calendario.': {
+    'pt': 'Evento criado no Calendário.',
     'en': 'Calendar event created.',
     'es': 'Evento creado en el Calendario.',
   },
   'Compartilhamento indisponivel nesta plataforma.': {
-    'en': 'Sharing is unavailable on this platform.',
+    'pt': 'O compartilhamento não está disponível nesta plataforma.',
+    'en': 'Sharing is not available on this platform.',
     'es': 'Compartir no está disponible en esta plataforma.',
   },
   ' - ATENÇÃO: acima do limite de 2h30': {
-    'en': ' - WARNING: above the 2h30 limit',
-    'es': ' - ATENCIÓN: por encima del límite de 2h30',
+    'pt': ' - revisar: acima do limite de 2h30',
+    'en': ' - review: above the 2h30 limit',
+    'es': ' - revisar: por encima del límite de 2h30',
   },
   ' - sem marcação': {'en': ' - unmarked', 'es': ' - sin marca'},
   'A planta já foi salva. Agora basta cadastrar o primeiro lançamento desta concretagem para começar a marcação.': {
@@ -559,17 +771,23 @@ const _translations = <String, Map<String, String>>{
   'Adicionar': {'en': 'Add', 'es': 'Agregar'},
   'Agora nao': {'en': 'Not now', 'es': 'Ahora no'},
   'Ainda resta 1 lançamento sem marcação. Deseja encerrar mesmo assim?': {
-    'en': 'There is still 1 unmarked placement. Close anyway?',
+    'pt':
+        'Ainda resta 1 lançamento sem marcação na planta. Deseja encerrar mesmo assim?',
+    'en': 'There is still 1 unmarked placement on the plan. Close anyway?',
     'es': 'Aún queda 1 lanzamiento sin marca. ¿Desea cerrar de todos modos?',
   },
   'Ainda restam {count} lançamentos sem marcação. Deseja encerrar mesmo assim?': {
-    'en': 'There are still {count} unmarked placements. Close anyway?',
+    'pt':
+        'Ainda restam {count} lançamentos sem marcação na planta. Deseja encerrar mesmo assim?',
+    'en':
+        'There are still {count} unmarked placements on the plan. Close anyway?',
     'es':
         'Aún quedan {count} lanzamientos sin marca. ¿Desea cerrar de todos modos?',
   },
   'Ajuste o período/filtros ou adicione uma nova concretagem.': {
-    'en': 'Adjust the period/filters or add a new concrete pour.',
-    'es': 'Ajuste el período/filtros o agregue un nuevo hormigonado.',
+    'pt': 'Ajuste o período ou os filtros, ou adicione uma nova concretagem.',
+    'en': 'Adjust the period or filters, or add a new concrete pour.',
+    'es': 'Ajuste el período o los filtros, o agregue un nuevo hormigonado.',
   },
   'Alterações pendentes': {'en': 'Pending changes', 'es': 'Cambios pendientes'},
   'Aplicar': {'en': 'Apply', 'es': 'Aplicar'},
@@ -618,10 +836,13 @@ const _translations = <String, Map<String, String>>{
     'es': 'CSV exportado ({count} líneas): {path}',
   },
   'CSV pronto para compartilhar ({count} linhas).': {
+    'pt': 'CSV pronto para compartilhar ({count} linhas).',
     'en': 'CSV ready to share ({count} rows).',
     'es': 'CSV listo para compartir ({count} líneas).',
   },
   'CSV pronto para exportacao ({count} linhas). Use "Salvar em Arquivos".': {
+    'pt':
+        'CSV pronto para exportação ({count} linhas). Use "Salvar em Arquivos".',
     'en': 'CSV ready to export ({count} rows). Use "Save to Files".',
     'es':
         'CSV listo para exportar ({count} líneas). Use "Guardar en Archivos".',
@@ -644,10 +865,16 @@ const _translations = <String, Map<String, String>>{
     'es': 'Registre el email del ingeniero en la obra antes de enviar.',
   },
   'Carregamento em {date}. Intervalo de {duration} até o preenchimento.': {
+    'pt':
+        'Carregamento em {date}. Intervalo de {duration} até o preenchimento.',
     'en': 'Loaded at {date}. Interval of {duration} until entry.',
     'es': 'Carga a las {date}. Intervalo de {duration} hasta el registro.',
   },
-  'Carregamento: {date}': {'en': 'Loading: {date}', 'es': 'Carga: {date}'},
+  'Carregamento: {date}': {
+    'pt': 'Carregamento: {date}',
+    'en': 'Loading: {date}',
+    'es': 'Carga: {date}',
+  },
   'Cliente': {'en': 'Client', 'es': 'Cliente'},
   'Cliente: {value}': {'en': 'Client: {value}', 'es': 'Cliente: {value}'},
   'Como esta sua experiencia?': {
@@ -686,7 +913,11 @@ const _translations = <String, Map<String, String>>{
     'es': 'Coordenadas: {value}',
   },
   'Criada em: {date}': {'en': 'Created on: {date}', 'es': 'Creada el: {date}'},
-  'DIVERGENTE': {'en': 'DIVERGENT', 'es': 'DIVERGENTE'},
+  'DIVERGENTE': {
+    'pt': 'Revisar dosagem',
+    'en': 'Review dosage',
+    'es': 'Revisar dosificación',
+  },
   'Dados extraídos da NF por OCR:': {
     'en': 'Invoice data extracted by OCR:',
     'es': 'Datos de la factura extraídos por OCR:',
@@ -702,29 +933,37 @@ const _translations = <String, Map<String, String>>{
   'Data/Hora': {'en': 'Date/Time', 'es': 'Fecha/Hora'},
   'Data/hora: {date}': {'en': 'Date/time: {date}', 'es': 'Fecha/hora: {date}'},
   'Deseja apagar todas as marcações desta planta?': {
-    'en': 'Do you want to delete all markings on this plan?',
+    'pt': 'Deseja apagar todas as marcações desta planta?',
+    'en': 'Do you want to clear all markings on this plan?',
     'es': '¿Desea borrar todas las marcas de esta planta?',
   },
   'Deseja arquivar a obra "{nome}"?': {
-    'en': 'Archive jobsite "{nome}"?',
-    'es': '¿Desea archivar la obra "{nome}"?',
+    'pt': 'Deseja arquivar a obra "{nome}"? Ela sairá da lista de ativas.',
+    'en': 'Archive jobsite "{nome}"? It will leave the active list.',
+    'es': '¿Desea archivar la obra "{nome}"? Saldrá de la lista de activas.',
   },
   'Deseja excluir o lançamento da betoneira "{betoneira}"?': {
+    'pt': 'Deseja excluir o lançamento da betoneira "{betoneira}"?',
     'en': 'Delete the placement from mixer truck "{betoneira}"?',
     'es': '¿Desea eliminar el lanzamiento del camión "{betoneira}"?',
   },
   'Deseja excluir permanentemente a obra "{nome}" e todos os seus lancamentos?': {
-    'en': 'Permanently delete jobsite "{nome}" and all its placements?',
+    'pt':
+        'Deseja excluir permanentemente a obra "{nome}" e todos os seus lançamentos? Esta ação não pode ser desfeita.',
+    'en':
+        'Permanently delete jobsite "{nome}" and all its placements? This cannot be undone.',
     'es':
-        '¿Desea eliminar permanentemente la obra "{nome}" y todos sus lanzamientos?',
+        '¿Desea eliminar permanentemente la obra "{nome}" y todos sus lanzamientos? Esta acción no se puede deshacer.',
   },
   'Deseja gerar o PDF da concretagem antes de encerrar?': {
-    'en': 'Generate the concrete pour PDF before closing?',
-    'es': '¿Desea generar el PDF del hormigonado antes de cerrar?',
+    'pt': 'Deseja gerar o PDF da concretagem antes de encerrar?',
+    'en': 'Generate the concrete pour PDF before closing it?',
+    'es': '¿Desea generar el PDF del hormigonado antes de cerrarlo?',
   },
   'Deseja restaurar a obra "{nome}" para Ativas?': {
-    'en': 'Restore jobsite "{nome}" to Active?',
-    'es': '¿Desea restaurar la obra "{nome}" a Activas?',
+    'pt': 'Deseja restaurar a obra "{nome}" para a lista de ativas?',
+    'en': 'Restore jobsite "{nome}" to the active list?',
+    'es': '¿Desea restaurar la obra "{nome}" a la lista de activas?',
   },
   'Deseja substituir a planta atual desta concretagem?': {
     'en': 'Replace the current plan for this concrete pour?',
@@ -737,8 +976,9 @@ const _translations = <String, Map<String, String>>{
     'es': 'Dosificación conforme',
   },
   'Dosagem deve ser maior que zero': {
-    'en': 'Dosage must be greater than zero',
-    'es': 'La dosificación debe ser mayor que cero',
+    'pt': 'A dosagem deve ser maior que zero.',
+    'en': 'Dosage must be greater than zero.',
+    'es': 'La dosificación debe ser mayor que cero.',
   },
   'Dosagem: {value} kg/m³': {
     'en': 'Dosage: {value} kg/m³',
@@ -749,8 +989,9 @@ const _translations = <String, Map<String, String>>{
     'es': 'Email del ingeniero: {value}',
   },
   'E-mail preparado para {email}': {
-    'en': 'Email prepared for {email}',
-    'es': 'Email preparado para {email}',
+    'pt': 'E-mail preparado para {email}. Revise e envie no seu aplicativo.',
+    'en': 'Email prepared for {email}. Review and send it in your email app.',
+    'es': 'Email preparado para {email}. Revíselo y envíelo en su app.',
   },
   'Editar': {'en': 'Edit', 'es': 'Editar'},
   'Editar Concretagem': {
@@ -785,76 +1026,95 @@ const _translations = <String, Map<String, String>>{
   'Entendi': {'en': 'Got it', 'es': 'Entendido'},
   'Enviar por e-mail': {'en': 'Send by email', 'es': 'Enviar por email'},
   'Erro ao abrir mapa: {error}': {
-    'en': 'Error opening map: {error}',
-    'es': 'Error al abrir el mapa: {error}',
+    'pt': 'Não foi possível abrir o mapa. Detalhes: {error}',
+    'en': 'We could not open the map. Details: {error}',
+    'es': 'No pudimos abrir el mapa. Detalles: {error}',
   },
   'Erro ao adicionar fotos: {error}': {
-    'en': 'Error adding photos: {error}',
-    'es': 'Error al agregar fotos: {error}',
+    'pt': 'Não foi possível adicionar as fotos. Detalhes: {error}',
+    'en': 'We could not add the photos. Details: {error}',
+    'es': 'No pudimos agregar las fotos. Detalles: {error}',
   },
   'Erro ao atualizar lançamento: {error}': {
-    'en': 'Error updating placement: {error}',
-    'es': 'Error al actualizar lanzamiento: {error}',
+    'pt': 'Não foi possível atualizar o lançamento. Detalhes: {error}',
+    'en': 'We could not update the placement. Details: {error}',
+    'es': 'No pudimos actualizar el lanzamiento. Detalles: {error}',
   },
   'Erro ao atualizar obra: {error}': {
-    'en': 'Error updating jobsite: {error}',
-    'es': 'Error al actualizar obra: {error}',
+    'pt': 'Não foi possível atualizar a obra. Detalhes: {error}',
+    'en': 'We could not update the jobsite. Details: {error}',
+    'es': 'No pudimos actualizar la obra. Detalles: {error}',
   },
   'Erro ao carregar lançamentos: {error}': {
-    'en': 'Error loading placements: {error}',
-    'es': 'Error al cargar lanzamientos: {error}',
+    'pt': 'Não foi possível carregar os lançamentos. Detalhes: {error}',
+    'en': 'We could not load the placements. Details: {error}',
+    'es': 'No pudimos cargar los lanzamientos. Detalles: {error}',
   },
   'Erro ao carregar obras: {error}': {
-    'en': 'Error loading jobsites: {error}',
-    'es': 'Error al cargar obras: {error}',
+    'pt': 'Não foi possível carregar as obras. Detalhes: {error}',
+    'en': 'We could not load the jobsites. Details: {error}',
+    'es': 'No pudimos cargar las obras. Detalles: {error}',
   },
   'Erro ao enviar relatório por e-mail: {error}': {
-    'en': 'Error sending report by email: {error}',
-    'es': 'Error al enviar informe por email: {error}',
+    'pt': 'Não foi possível enviar o relatório por e-mail. Detalhes: {error}',
+    'en': 'We could not send the report by email. Details: {error}',
+    'es': 'No pudimos enviar el informe por email. Detalles: {error}',
   },
   'Erro ao escanear nota fiscal: {error}': {
-    'en': 'Error scanning invoice: {error}',
-    'es': 'Error al escanear factura: {error}',
+    'pt': 'Não foi possível escanear a nota fiscal. Detalhes: {error}',
+    'en': 'We could not scan the invoice. Details: {error}',
+    'es': 'No pudimos escanear la factura. Detalles: {error}',
   },
   'Erro ao excluir lançamento: {error}': {
-    'en': 'Error deleting placement: {error}',
-    'es': 'Error al eliminar lanzamiento: {error}',
+    'pt': 'Não foi possível excluir o lançamento. Detalhes: {error}',
+    'en': 'We could not delete the placement. Details: {error}',
+    'es': 'No pudimos eliminar el lanzamiento. Detalles: {error}',
   },
   'Erro ao exportar CSV: {error}': {
-    'en': 'Error exporting CSV: {error}',
-    'es': 'Error al exportar CSV: {error}',
+    'pt': 'Não foi possível exportar o CSV. Detalhes: {error}',
+    'en': 'We could not export the CSV. Details: {error}',
+    'es': 'No pudimos exportar el CSV. Detalles: {error}',
   },
   'Erro ao gerar relatório da concretagem: {error}': {
-    'en': 'Error generating concrete pour report: {error}',
-    'es': 'Error al generar informe del hormigonado: {error}',
+    'pt':
+        'Não foi possível gerar o relatório da concretagem. Detalhes: {error}',
+    'en': 'We could not generate the concrete pour report. Details: {error}',
+    'es': 'No pudimos generar el informe del hormigonado. Detalles: {error}',
   },
   'Erro ao localizar endereco: {error}': {
-    'en': 'Error locating address: {error}',
-    'es': 'Error al ubicar dirección: {error}',
+    'pt': 'Não foi possível localizar o endereço. Detalhes: {error}',
+    'en': 'We could not locate the address. Details: {error}',
+    'es': 'No pudimos ubicar la dirección. Detalles: {error}',
   },
   'Erro ao obter localizacao: {error}': {
-    'en': 'Error getting location: {error}',
-    'es': 'Error al obtener ubicación: {error}',
+    'pt': 'Não foi possível obter a localização. Detalhes: {error}',
+    'en': 'We could not get the location. Details: {error}',
+    'es': 'No pudimos obtener la ubicación. Detalles: {error}',
   },
   'Erro ao salvar concretagem: {error}': {
-    'en': 'Error saving concrete pour: {error}',
-    'es': 'Error al guardar hormigonado: {error}',
+    'pt': 'Não foi possível salvar a concretagem. Detalhes: {error}',
+    'en': 'We could not save the concrete pour. Details: {error}',
+    'es': 'No pudimos guardar el hormigonado. Detalles: {error}',
   },
   'Erro ao salvar lançamento: {error}': {
-    'en': 'Error saving placement: {error}',
-    'es': 'Error al guardar lanzamiento: {error}',
+    'pt': 'Não foi possível salvar o lançamento. Detalhes: {error}',
+    'en': 'We could not save the placement. Details: {error}',
+    'es': 'No pudimos guardar el lanzamiento. Detalles: {error}',
   },
   'Erro ao salvar obra: {error}': {
-    'en': 'Error saving jobsite: {error}',
-    'es': 'Error al guardar obra: {error}',
+    'pt': 'Não foi possível salvar a obra. Detalhes: {error}',
+    'en': 'We could not save the jobsite. Details: {error}',
+    'es': 'No pudimos guardar la obra. Detalles: {error}',
   },
   'Erro ao salvar rastreio da planta: {error}': {
-    'en': 'Error saving plan tracking: {error}',
-    'es': 'Error al guardar rastreo de la planta: {error}',
+    'pt': 'Não foi possível salvar o rastreio da planta. Detalhes: {error}',
+    'en': 'We could not save the plan tracking. Details: {error}',
+    'es': 'No pudimos guardar el rastreo de la planta. Detalles: {error}',
   },
   'Erro ao selecionar a planta: {error}': {
-    'en': 'Error selecting plan: {error}',
-    'es': 'Error al seleccionar la planta: {error}',
+    'pt': 'Não foi possível selecionar a planta. Detalhes: {error}',
+    'en': 'We could not select the plan. Details: {error}',
+    'es': 'No pudimos seleccionar la planta. Detalles: {error}',
   },
   'Escanear com a câmera': {
     'en': 'Scan with camera',
@@ -893,8 +1153,9 @@ const _translations = <String, Map<String, String>>{
   },
   'Excluir obra': {'en': 'Delete jobsite', 'es': 'Eliminar obra'},
   'Falha ao renderizar a planta para o PDF.': {
-    'en': 'Failed to render the plan for the PDF.',
-    'es': 'No se pudo renderizar la planta para el PDF.',
+    'pt': 'Não conseguimos preparar a planta para o PDF.',
+    'en': 'We could not prepare the plan for the PDF.',
+    'es': 'No pudimos preparar la planta para el PDF.',
   },
   'Ferramentas de rastreio': {
     'en': 'Tracking tools',
@@ -906,6 +1167,7 @@ const _translations = <String, Map<String, String>>{
     'es': 'Fotos adjuntas: {count}',
   },
   'Geracao de arquivo local PDF nao esta disponivel no navegador.': {
+    'pt': 'A geração de arquivo PDF local não está disponível no navegador.',
     'en': 'Local PDF file generation is not available in the browser.',
     'es':
         'La generación de archivo PDF local no está disponible en el navegador.',
@@ -935,29 +1197,39 @@ const _translations = <String, Map<String, String>>{
         'Hay marcas pendientes en esta planta. ¿Desea guardar antes de salir?',
   },
   'Informe a betoneira': {
-    'en': 'Enter the mixer truck',
-    'es': 'Informe el camión mezclador',
+    'pt': 'Informe a betoneira para continuar.',
+    'en': 'Enter the mixer truck to continue.',
+    'es': 'Informe el camión mezclador para continuar.',
   },
   'Informe a dosagem': {
-    'en': 'Enter the dosage',
-    'es': 'Informe la dosificación',
+    'pt': 'Informe a dosagem para continuar.',
+    'en': 'Enter the dosage to continue.',
+    'es': 'Informe la dosificación para continuar.',
   },
   'Informe o e-mail do engenheiro': {
-    'en': 'Enter the engineer email',
-    'es': 'Informe el email del ingeniero',
+    'pt': 'Informe o e-mail do responsável técnico.',
+    'en': 'Enter the responsible engineer email.',
+    'es': 'Informe el email del responsable técnico.',
   },
   'Informe o endereco da obra para gerar a localizacao.': {
+    'pt': 'Informe o endereço da obra para gerar a localização.',
     'en': 'Enter the jobsite address to generate the location.',
     'es': 'Ingrese la dirección de la obra para generar la ubicación.',
   },
   'Informe o nome da obra': {
-    'en': 'Enter the jobsite name',
-    'es': 'Informe el nombre de la obra',
+    'pt': 'Informe o nome da obra para continuar.',
+    'en': 'Enter the jobsite name to continue.',
+    'es': 'Informe el nombre de la obra para continuar.',
   },
-  'Informe o volume': {'en': 'Enter the volume', 'es': 'Informe el volumen'},
+  'Informe o volume': {
+    'pt': 'Informe o volume para continuar.',
+    'en': 'Enter the volume to continue.',
+    'es': 'Informe el volumen para continuar.',
+  },
   'Informe um e-mail válido': {
-    'en': 'Enter a valid email',
-    'es': 'Ingrese un email válido',
+    'pt': 'Informe um e-mail válido.',
+    'en': 'Enter a valid email.',
+    'es': 'Ingrese un email válido.',
   },
   'Ir para o primeiro lançamento': {
     'en': 'Go to first placement',
@@ -968,12 +1240,14 @@ const _translations = <String, Map<String, String>>{
     'es': 'Ya existe una obra activa con ese nombre.',
   },
   'Lançamento atualizado com sucesso.': {
-    'en': 'Placement updated successfully.',
-    'es': 'Lanzamiento actualizado con éxito.',
+    'pt': 'Lançamento atualizado.',
+    'en': 'Placement updated.',
+    'es': 'Lanzamiento actualizado.',
   },
   'Lançamento salvo com sucesso.': {
-    'en': 'Placement saved successfully.',
-    'es': 'Lanzamiento guardado con éxito.',
+    'pt': 'Lançamento salvo.',
+    'en': 'Placement saved.',
+    'es': 'Lanzamiento guardado.',
   },
   'Lançamento {id}': {'en': 'Placement {id}', 'es': 'Lanzamiento {id}'},
   'Lançamentos desta concretagem': {
@@ -989,6 +1263,7 @@ const _translations = <String, Map<String, String>>{
     'es': 'Lanzamientos: {count}',
   },
   'Latitude': {'en': 'Latitude', 'es': 'Latitud'},
+  'Lacre: {value}': {'en': 'Seal: {value}', 'es': 'Lacre: {value}'},
   'Legenda dos lançamentos': {
     'en': 'Placement legend',
     'es': 'Leyenda de lanzamientos',
@@ -1023,39 +1298,53 @@ const _translations = <String, Map<String, String>>{
     'es': 'Mezcla: {value} min',
   },
   'Modo navegar ativo: use pinça e arraste para ampliar e posicionar a planta. Ao voltar para o spray, esse enquadramento é mantido.': {
+    'pt':
+        'Modo navegar ativo: use pinça e arraste para ajustar a planta. Ao voltar para o spray, esse enquadramento será mantido.',
     'en':
         'Navigate mode active: pinch and drag to zoom and position the plan. When you return to spray, this framing is kept.',
     'es':
         'Modo navegar activo: use pinza y arrastre para ampliar y posicionar la planta. Al volver al spray, este encuadre se mantiene.',
   },
   'Modo spray ativo: a planta fica travada no enquadramento atual para não se mover durante a marcação. Use Navegar para ajustar o zoom; as marcações são salvas automaticamente.': {
+    'pt':
+        'Modo spray ativo: a planta fica fixa durante a marcação. Use Navegar para ajustar o zoom; as marcações são salvas automaticamente.',
     'en':
         'Spray mode active: the plan is locked in the current framing so it does not move while marking. Use Navigate to adjust zoom; markings are saved automatically.',
     'es':
         'Modo spray activo: la planta queda fija en el encuadre actual para no moverse durante la marca. Use Navegar para ajustar el zoom; las marcas se guardan automáticamente.',
   },
   'NF': {'en': 'Invoice', 'es': 'Factura'},
+  'NF: {value}': {'en': 'Invoice: {value}', 'es': 'Factura: {value}'},
   'Nao foi possivel abrir as configuracoes do aparelho.': {
-    'en': 'Could not open device settings.',
-    'es': 'No se pudo abrir la configuración del dispositivo.',
+    'pt': 'Não conseguimos abrir as configurações do aparelho.',
+    'en': 'We could not open device settings.',
+    'es': 'No pudimos abrir la configuración del dispositivo.',
   },
   'Nao foi possivel gerar a localizacao pelo endereco. Revise o endereco ou use a localizacao atual.': {
+    'pt':
+        'Não conseguimos gerar a localização pelo endereço. Revise o endereço ou use a localização atual.',
     'en':
         'Could not generate the location from the address. Review the address or use the current location.',
     'es':
         'No se pudo generar la ubicación desde la dirección. Revise la dirección o use la ubicación actual.',
   },
-  'Nao informada': {'en': 'Not provided', 'es': 'No informada'},
+  'Nao informada': {
+    'pt': 'Não informada',
+    'en': 'Not provided',
+    'es': 'No informada',
+  },
   'Navegar': {'en': 'Navigate', 'es': 'Navegar'},
   'Nenhum dado estruturado identificado. Conferir a imagem.': {
-    'en': 'No structured data identified. Check the image.',
-    'es': 'No se identificaron datos estructurados. Revise la imagen.',
+    'pt': 'Não identificamos os dados principais. Confira a imagem.',
+    'en': 'We could not identify the main data. Check the image.',
+    'es': 'No identificamos los datos principales. Revise la imagen.',
   },
   'Nenhum lançamento cadastrado nesta concretagem.': {
     'en': 'No placements registered for this concrete pour.',
     'es': 'No hay lanzamientos registrados en este hormigonado.',
   },
   'Nenhuma concretagem com os filtros atuais.': {
+    'pt': 'Nenhuma concretagem encontrada com os filtros atuais.',
     'en': 'No concrete pours match the current filters.',
     'es': 'Ningún hormigonado coincide con los filtros actuales.',
   },
@@ -1064,6 +1353,8 @@ const _translations = <String, Map<String, String>>{
     'es': 'Ninguna obra archivada.',
   },
   'Nenhuma obra cadastrada ainda.\nToque em "+ Nova Obra".': {
+    'pt':
+        'Nenhuma obra cadastrada ainda.\nToque em "+ Nova Obra" para começar.',
     'en': 'No jobsites registered yet.\nTap "+ New Jobsite".',
     'es': 'Aún no hay obras registradas.\nToque "+ Nueva Obra".',
   },
@@ -1072,8 +1363,9 @@ const _translations = <String, Map<String, String>>{
     'es': 'Ninguna planta cargada',
   },
   'Nota fiscal escaneada. Confira os dados preenchidos.': {
-    'en': 'Invoice scanned. Check the filled data.',
-    'es': 'Factura escaneada. Revise los datos completados.',
+    'pt': 'Nota fiscal escaneada. Confira os dados antes de salvar.',
+    'en': 'Invoice scanned. Review the data before saving.',
+    'es': 'Factura escaneada. Revise los datos antes de guardar.',
   },
   'Nova Concretagem': {'en': 'New Concrete Pour', 'es': 'Nuevo Hormigonado'},
   'Nova Obra': {'en': 'New Jobsite', 'es': 'Nueva Obra'},
@@ -1085,39 +1377,54 @@ const _translations = <String, Map<String, String>>{
   },
   'Não': {'en': 'No', 'es': 'No'},
   'Não foi possível abrir a planta': {
-    'en': 'Could not open the plan',
-    'es': 'No se pudo abrir la planta',
+    'pt': 'Não conseguimos abrir a planta',
+    'en': 'We could not open the plan',
+    'es': 'No pudimos abrir la planta',
   },
   'Não informado': {'en': 'Not provided', 'es': 'No informado'},
   'Não pode ser negativo': {
-    'en': 'Cannot be negative',
-    'es': 'No puede ser negativo',
+    'pt': 'O valor não pode ser negativo.',
+    'en': 'The value cannot be negative.',
+    'es': 'El valor no puede ser negativo.',
   },
-  'Número inválido': {'en': 'Invalid number', 'es': 'Número inválido'},
+  'Número inválido': {
+    'pt': 'Informe um número válido.',
+    'en': 'Enter a valid number.',
+    'es': 'Ingrese un número válido.',
+  },
   'OCR concluído, mas os dados principais não foram identificados.': {
-    'en': 'OCR completed, but the main data was not identified.',
-    'es': 'OCR concluido, pero no se identificaron los datos principales.',
+    'pt':
+        'A leitura foi concluída, mas os dados principais não foram identificados. Confira a imagem ou preencha manualmente.',
+    'en':
+        'The scan finished, but the main data was not identified. Check the image or fill it in manually.',
+    'es':
+        'La lectura terminó, pero no se identificaron los datos principales. Revise la imagen o complete los datos manualmente.',
   },
   'OCR de nota fiscal disponível apenas em Android/iOS.': {
-    'en': 'Invoice OCR is available only on Android/iOS.',
-    'es': 'El OCR de factura está disponible solo en Android/iOS.',
+    'pt': 'A leitura da nota fiscal está disponível apenas no Android e iOS.',
+    'en': 'Invoice scanning is available only on Android and iOS.',
+    'es': 'La lectura de factura está disponible solo en Android e iOS.',
   },
   'Obra': {'en': 'Jobsite', 'es': 'Obra'},
   'Obra "{nome}" excluida.': {
+    'pt': 'Obra "{nome}" excluída.',
     'en': 'Jobsite "{nome}" deleted.',
     'es': 'Obra "{nome}" eliminada.',
   },
   'Obra atualizada com sucesso.': {
-    'en': 'Jobsite updated successfully.',
-    'es': 'Obra actualizada con éxito.',
+    'pt': 'Obra atualizada.',
+    'en': 'Jobsite updated.',
+    'es': 'Obra actualizada.',
   },
   'Obra criada com sucesso.': {
-    'en': 'Jobsite created successfully.',
-    'es': 'Obra creada con éxito.',
+    'pt': 'Obra criada.',
+    'en': 'Jobsite created.',
+    'es': 'Obra creada.',
   },
   'Obra sem ID (não persistida).': {
-    'en': 'Jobsite without ID (not persisted).',
-    'es': 'Obra sin ID (no persistida).',
+    'pt': 'Salve a obra antes de continuar.',
+    'en': 'Save the jobsite before continuing.',
+    'es': 'Guarde la obra antes de continuar.',
   },
   'Obra: {value}': {'en': 'Jobsite: {value}', 'es': 'Obra: {value}'},
   'Obs.: {value}': {'en': 'Notes: {value}', 'es': 'Obs.: {value}'},
@@ -1133,6 +1440,7 @@ const _translations = <String, Map<String, String>>{
   'Ordem: {value}': {'en': 'Order: {value}', 'es': 'Orden: {value}'},
   'Ordenação': {'en': 'Sorting', 'es': 'Ordenación'},
   'Permissao de localizacao': {
+    'pt': 'Permissão de localização',
     'en': 'Location permission',
     'es': 'Permiso de ubicación',
   },
@@ -1257,6 +1565,8 @@ const _translations = <String, Map<String, String>>{
   },
   'Spray': {'en': 'Spray', 'es': 'Spray'},
   'Sua avaliacao ajuda outros profissionais a encontrarem o CWS Admix Control. Se preferir, envie um feedback direto para a equipe.': {
+    'pt':
+        'Sua avaliação ajuda outros profissionais a encontrarem o CWS Admix Control. Se preferir, envie um feedback direto para a equipe.',
     'en':
         'Your rating helps other professionals find CWS Admix Control. If you prefer, send direct feedback to the team.',
     'es':
@@ -1264,17 +1574,21 @@ const _translations = <String, Map<String, String>>{
   },
   'Substituir': {'en': 'Replace', 'es': 'Sustituir'},
   'Substituir a planta vai limpar as marcações já feitas. Deseja continuar?': {
+    'pt':
+        'Substituir a planta vai limpar as marcações já feitas. Deseja continuar?',
     'en': 'Replacing the plan will clear existing markings. Continue?',
     'es': 'Sustituir la planta borrará las marcas ya hechas. ¿Desea continuar?',
   },
   'Substituir planta': {'en': 'Replace plan', 'es': 'Sustituir planta'},
   'Tempo carga-descarga: {duration}': {
+    'pt': 'Tempo carga-descarga: {duration}',
     'en': 'Load-discharge time: {duration}',
     'es': 'Tiempo carga-descarga: {duration}',
   },
   'Tempo de carregamento acima do limite': {
-    'en': 'Loading time above limit',
-    'es': 'Tiempo de carga por encima del límite',
+    'pt': 'Revisar tempo de carregamento',
+    'en': 'Review loading time',
+    'es': 'Revisar tiempo de carga',
   },
   'Tempo de mistura: {value} min': {
     'en': 'Mixing time: {value} min',
@@ -1313,8 +1627,9 @@ const _translations = <String, Map<String, String>>{
         'Use el botón abajo para ir al primer lanzamiento y luego vuelva para marcar la planta.',
   },
   'Use pelo menos 3 caracteres': {
-    'en': 'Use at least 3 characters',
-    'es': 'Use al menos 3 caracteres',
+    'pt': 'Use pelo menos 3 caracteres.',
+    'en': 'Use at least 3 characters.',
+    'es': 'Use al menos 3 caracteres.',
   },
   'Volume (maior→menor)': {
     'en': 'Volume (high-low)',
@@ -1330,8 +1645,9 @@ const _translations = <String, Map<String, String>>{
     'es': 'Volumen de hormigón: {value} m³',
   },
   'Volume deve ser maior que zero': {
-    'en': 'Volume must be greater than zero',
-    'es': 'El volumen debe ser mayor que cero',
+    'pt': 'O volume deve ser maior que zero.',
+    'en': 'Volume must be greater than zero.',
+    'es': 'El volumen debe ser mayor que cero.',
   },
   'Volume total: {value} m3': {
     'en': 'Total volume: {value} m3',
@@ -1391,4 +1707,51 @@ const _translations = <String, Map<String, String>>{
     'en': 'Pour batches',
     'es': 'Lanzamientos del hormigonado',
   },
+  'Betoneira * (nº/placa)': {
+    'en': 'Mixer truck * (no./plate)',
+    'es': 'Camión mezclador * (n.º/patente)',
+  },
+  'Concretagens': {'en': 'Concrete pours', 'es': 'Hormigonados'},
+  'Concretagens e lançamentos': {
+    'en': 'Concrete pours and placements',
+    'es': 'Hormigonados y lanzamientos',
+  },
+  'Controle tecnológico?': {
+    'en': 'Technical control?',
+    'es': '¿Control tecnológico?',
+  },
+  'Dosagem (kg/m³) *': {
+    'en': 'Dosage (kg/m³) *',
+    'es': 'Dosificación (kg/m³) *',
+  },
+  'E-mail do engenheiro *': {
+    'pt': 'E-mail do responsável técnico *',
+    'en': 'Responsible email *',
+    'es': 'Email del responsable *',
+  },
+  'Empresa de tecnologia do concreto': {
+    'en': 'Concrete technology company',
+    'es': 'Empresa de tecnología del concreto',
+  },
+  'Endereco da obra': {
+    'pt': 'Endereço da obra',
+    'en': 'Jobsite address',
+    'es': 'Dirección de la obra',
+  },
+  'Nenhuma concretagem cadastrada.': {
+    'en': 'No concrete pours registered.',
+    'es': 'No hay hormigonados registrados.',
+  },
+  'Nome da obra *': {'en': 'Jobsite name *', 'es': 'Nombre de la obra *'},
+  'Nota fiscal (NF)': {'en': 'Invoice (NF)', 'es': 'Factura (NF)'},
+  'Quantidade adicionada (kg)': {
+    'en': 'Added quantity (kg)',
+    'es': 'Cantidad agregada (kg)',
+  },
+  'Resumo': {'en': 'Summary', 'es': 'Resumen'},
+  'Tempo de mistura (min)': {
+    'en': 'Mixing time (min)',
+    'es': 'Tiempo de mezcla (min)',
+  },
+  'Volume (m³) *': {'en': 'Volume (m³) *', 'es': 'Volumen (m³) *'},
 };

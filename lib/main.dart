@@ -210,17 +210,31 @@ class _AppGateState extends State<AppGate> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Atualizacao disponivel'),
+        title: Text(tr('Atualização disponível')),
         content: Text(
-          'Ha uma nova versao do ${update.appName} disponivel na App Store.\n\n'
-          'Instalada: ${update.installedVersion} '
-          '(build ${update.installedBuildNumber})\n'
-          'Disponivel: ${update.storeVersion}',
+          [
+            tr(
+              'Uma nova versão do {appName} está disponível na App Store.',
+              params: {'appName': update.appName},
+            ),
+            '',
+            tr(
+              'Versão instalada: {version} (build {build})',
+              params: {
+                'version': update.installedVersion,
+                'build': update.installedBuildNumber,
+              },
+            ),
+            tr(
+              'Nova versão: {version}',
+              params: {'version': update.storeVersion},
+            ),
+          ].join('\n'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Depois'),
+            child: Text(tr('Depois')),
           ),
           FilledButton.icon(
             onPressed: () {
@@ -228,7 +242,7 @@ class _AppGateState extends State<AppGate> {
               unawaited(_openAppStore(update));
             },
             icon: const Icon(Icons.open_in_new),
-            label: const Text('Atualizar'),
+            label: Text(tr('Atualizar')),
           ),
         ],
       ),
@@ -245,7 +259,13 @@ class _AppGateState extends State<AppGate> {
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Nao foi possivel abrir a App Store.')),
+      SnackBar(
+        content: Text(
+          tr(
+            'Não foi possível abrir a App Store. Tente novamente em instantes.',
+          ),
+        ),
+      ),
     );
   }
 
@@ -328,7 +348,7 @@ class _SplashScreenState extends State<_SplashScreen> {
       body: FutureBuilder<String>(
         future: _versionLabelFuture,
         builder: (context, snapshot) {
-          final versionLabel = snapshot.data ?? 'Carregando...';
+          final versionLabel = snapshot.data ?? tr('Carregando...');
 
           return SafeArea(
             child: LayoutBuilder(

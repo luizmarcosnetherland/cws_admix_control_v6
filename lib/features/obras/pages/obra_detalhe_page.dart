@@ -735,16 +735,21 @@ class _ObraDetalhePageState extends State<ObraDetalhePage> {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         _temFiltrosExtras
-                            ? 'Filtros ($_quantidadeFiltrosExtrasAtivos ativos)'
-                            : 'Filtros',
+                            ? tr(
+                                'Filtros ({count} ativos)',
+                                params: {
+                                  'count': _quantidadeFiltrosExtrasAtivos,
+                                },
+                              )
+                            : tr('Filtros'),
                       ),
                     ),
                   ),
                 ),
                 IconButton(
                   tooltip: _filtrosExpandidos
-                      ? 'Recolher filtros'
-                      : 'Expandir filtros',
+                      ? tr('Recolher filtros')
+                      : tr('Expandir filtros'),
                   onPressed: () {
                     setState(() {
                       _filtrosExpandidos = !_filtrosExpandidos;

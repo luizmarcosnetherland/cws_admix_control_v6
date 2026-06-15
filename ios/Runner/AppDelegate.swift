@@ -41,7 +41,7 @@ import UIKit
     else {
       result(FlutterError(
         code: "invalid_calendar_event",
-        message: "Dados do evento de calendario invalidos.",
+        message: "Não conseguimos preparar os dados do evento.",
         details: nil
       ))
       return
@@ -65,7 +65,7 @@ import UIKit
         guard granted else {
           result(FlutterError(
             code: "calendar_permission_denied",
-            message: "Permissao para criar evento no Calendario negada.",
+            message: "Não temos permissão para criar eventos no Calendário.",
             details: nil
           ))
           return
@@ -74,7 +74,7 @@ import UIKit
         guard let calendar = self.eventStore.defaultCalendarForNewEvents else {
           result(FlutterError(
             code: "calendar_unavailable",
-            message: "Nenhum calendario disponivel para novos eventos.",
+            message: "Não encontramos um calendário disponível para novos eventos.",
             details: nil
           ))
           return

@@ -108,8 +108,8 @@ class ObraLocationService {
       );
     } catch (e) {
       if (e is ObraLocationException) rethrow;
-      throw ObraLocationException(
-        'Erro ao gerar localizacao a partir do endereco: $e',
+      throw const ObraLocationException(
+        'Nao foi possivel gerar a localizacao pelo endereco. Revise o endereco ou use a localizacao atual.',
       );
     }
   }

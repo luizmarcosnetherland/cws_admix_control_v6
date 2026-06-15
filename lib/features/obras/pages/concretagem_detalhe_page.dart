@@ -643,7 +643,8 @@ class _ConcretagemDetalhePageState extends State<ConcretagemDetalhePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(_fmtDataHora(l.dataHora)),
-                if (l.notaFiscal.isNotEmpty) Text('NF: ${l.notaFiscal}'),
+                if (l.notaFiscal.isNotEmpty)
+                  Text(tr('NF: {value}', params: {'value': l.notaFiscal})),
                 Text(
                   tr(
                     'Volume: {value} m³',

@@ -387,7 +387,9 @@ class _NovoLancamentoPageState extends State<NovoLancamentoPage> {
     }
 
     final lacre = result.lacre?.trim();
-    if (lacre != null && lacre.isNotEmpty) linhas.add('Lacre: $lacre');
+    if (lacre != null && lacre.isNotEmpty) {
+      linhas.add(tr('Lacre: {value}', params: {'value': lacre}));
+    }
 
     final betoneira = result.betoneira?.trim();
     if (betoneira != null && betoneira.isNotEmpty) {
