@@ -87,6 +87,13 @@ class NetherlandApp extends StatelessWidget {
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF1E3A5F),
         scaffoldBackgroundColor: Colors.transparent,
+        appBarTheme: const AppBarTheme(
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarBrightness: Brightness.light,
+            statusBarIconBrightness: Brightness.dark,
+            systemNavigationBarIconBrightness: Brightness.dark,
+          ),
+        ),
       ),
       builder: (context, child) {
         return Actions(
