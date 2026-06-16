@@ -1931,8 +1931,33 @@ class DocumentoPdfPage extends StatelessWidget {
         canDebug: false,
         allowPrinting: false,
         allowSharing: true,
-        pdfFileName: title,
+        pdfFileName: _safePdfFileName(title),
       ),
     );
+  }
+
+  static const Map<String, String> _diacritics = {
+    'á': 'a', 'à': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a',
+    'Á': 'A', 'À': 'A', 'Â': 'A', 'Ã': 'A', 'Ä': 'A',
+    'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+    'É': 'E', 'È': 'E', 'Ê': 'E', 'Ë': 'E',
+    'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i',
+    'Í': 'I', 'Ì': 'I', 'Î': 'I', 'Ï': 'I',
+    'ó': 'o', 'ò': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o',
+    'Ó': 'O', 'Ò': 'O', 'Ô': 'O', 'Õ': 'O', 'Ö': 'O',
+    'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
+    'Ú': 'U', 'Ù': 'U', 'Û': 'U', 'Ü': 'U',
+    'ç': 'c', 'Ç': 'C', 'ñ': 'n', 'Ñ': 'N',
+  };
+
+  static String _safePdfFileName(String title) {
+    var name = title.trim();
+    if (name.isEmpty) name = 'documento';
+    _diacritics.forEach((accented, plain) {
+      name = name.replaceAll(accented, plain);
+    });
+    name = name.replaceAll(RegExp(r'[\/\\\:\*\?"<>\|]'), '_');
+    name = name.replaceAll(RegExp(r'\s+'), '_');
+    return '$name.pdf';
   }
 }
