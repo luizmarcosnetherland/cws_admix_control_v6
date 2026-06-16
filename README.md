@@ -2,6 +2,20 @@
 
 A new Flutter project.
 
+## Version and build
+
+Use the helper script instead of editing build numbers by hand:
+
+```sh
+scripts/set_build.sh 37 1.0.12
+```
+
+That keeps `pubspec.yaml`, local Android metadata, and generated Flutter/Xcode metadata in sync. To regenerate local iOS, macOS, and Android artifacts with the same build number, run:
+
+```sh
+scripts/set_build.sh 37 1.0.12 --rebuild
+```
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
