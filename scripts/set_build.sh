@@ -9,8 +9,8 @@ Usage:
 
 Examples:
   scripts/set_build.sh 36
-  scripts/set_build.sh 36 1.0.12
-  scripts/set_build.sh 1.0.12+36 --rebuild
+  scripts/set_build.sh 38 1.0.13
+  scripts/set_build.sh 1.0.13+38 --rebuild
 
 Without --rebuild, this syncs local Flutter/Xcode/Android version metadata.
 With --rebuild, it also regenerates iOS, macOS, and Android build artifacts.
