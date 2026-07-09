@@ -19,22 +19,18 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
   static const _cotacaoEmail = 'luizmarcos@netherland.com.br';
   static const _cotacaoWhatsapp = '5541999731741';
   final _volumeCtrl = TextEditingController();
-  final _cementCtrl = TextEditingController(text: '350');
   final _enderecoEntregaCtrl = TextEditingController();
   final _cidadeCtrl = TextEditingController();
   final _estadoCtrl = TextEditingController();
   final _empresaCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _volumeFocusNode = FocusNode();
-  final _cementFocusNode = FocusNode();
-  late final Listenable _inputsListenable;
+  bool _consumoCimentoAcima450 = false;
 
   double get volume =>
       double.tryParse(_volumeCtrl.text.replaceAll(',', '.')) ?? 0.0;
-  double get cementKgM3 =>
-      double.tryParse(_cementCtrl.text.replaceAll(',', '.')) ?? 0.0;
 
-  double get dosageKgM3 => cementKgM3 > 450 ? 1.0 : 0.8;
+  double get dosageKgM3 => _consumoCimentoAcima450 ? 1.0 : 0.8;
   double get totalKg => volume * dosageKgM3;
   int get bags => totalKg <= 0 ? 0 : (totalKg / 6.4).ceil();
   double get providedKg => bags * 6.4;
@@ -54,8 +50,8 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
     tr('Olá, gostaria de solicitar uma cotação do CWS Admix.'),
     '',
     '${tr('Volume de concreto')}: ${fmt(volume, casas: 1)} m³',
-    '${tr('Consumo de cimento')}: ${fmt(cementKgM3, casas: 1)} kg/m³',
-    '${tr('Dosagem aplicada')}: ${fmt(dosageKgM3, casas: 1)} kg/m³',
+    '${tr('Consumo de cimento acima de 450 kg/m³')}: ${tr(_consumoCimentoAcima450 ? 'Sim' : 'Não')}',
+    '${tr('Dosagem aplicada')}: ${fmt(dosageKgM3, casas: 2)} kg/m³',
     '${tr('Quantidade necessária')}: ${fmt(totalKg, casas: 1)} kg',
     '${tr('Sacos de 6,4 kg')}: $bags',
     '${tr('Quantidade para compra')}: ${fmt(providedKg, casas: 1)} kg',
@@ -175,20 +171,17 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
           .toStringAsFixed(decimals)
           .replaceAll('.', ',');
     }
-    _inputsListenable = Listenable.merge([_volumeCtrl, _cementCtrl]);
   }
 
   @override
   void dispose() {
     _volumeCtrl.dispose();
-    _cementCtrl.dispose();
     _enderecoEntregaCtrl.dispose();
     _cidadeCtrl.dispose();
     _estadoCtrl.dispose();
     _empresaCtrl.dispose();
     _emailCtrl.dispose();
     _volumeFocusNode.dispose();
-    _cementFocusNode.dispose();
     super.dispose();
   }
 
@@ -212,7 +205,7 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
     return KeyboardActionsConfig(
       keyboardActionsPlatform: KeyboardActionsPlatform.ALL,
       nextFocus: false,
-      actions: [item(_volumeFocusNode), item(_cementFocusNode)],
+      actions: [item(_volumeFocusNode)],
     );
   }
 
@@ -267,22 +260,13 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
                       focusNode: _volumeFocusNode,
                       textInputAction: TextInputAction.done,
                     ),
-                    _field(
-                      _cementCtrl,
-                      'Consumo de cimento (kg/m³)',
-                      keyboard: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      focusNode: _cementFocusNode,
-                      textInputAction: TextInputAction.done,
-                    ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
             AnimatedBuilder(
-              animation: _inputsListenable,
+              animation: _volumeCtrl,
               builder: (context, _) {
                 return Card(
                   elevation: 0,
@@ -304,7 +288,7 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
                         const SizedBox(height: 12),
                         _resultLine(
                           'Dosagem aplicada',
-                          '${fmt(dosageKgM3, casas: 1)} kg/m³',
+                          '${fmt(dosageKgM3, casas: 2)} kg/m³',
                         ),
                         _resultLine(
                           'Quantidade necessária',
@@ -314,6 +298,45 @@ class _CwsCalculatorPageState extends State<CwsCalculatorPage> {
                         _resultLine(
                           'Quantidade para compra',
                           '${fmt(providedKg, casas: 1)} kg',
+                        ),
+                        const SizedBox(height: 8),
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        Text(
+                          _consumoCimentoAcima450
+                              ? tr(
+                                  'Cálculo ajustado para consumo de cimento acima de 450 kg/m³.',
+                                )
+                              : tr(
+                                  'Seu traço tem consumo de cimento acima de 450 kg/m³?',
+                                ),
+                          style: TextStyle(
+                            color: Colors.black.withValues(alpha: 0.68),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _consumoCimentoAcima450 =
+                                    !_consumoCimentoAcima450;
+                              });
+                            },
+                            icon: Icon(
+                              _consumoCimentoAcima450
+                                  ? Icons.undo
+                                  : Icons.calculate_outlined,
+                            ),
+                            label: Text(
+                              tr(
+                                _consumoCimentoAcima450
+                                    ? 'Usar dosagem padrão de 0,80 kg/m³'
+                                    : 'Recalcular com dosagem de 1,0 kg/m³',
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
