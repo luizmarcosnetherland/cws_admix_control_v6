@@ -480,6 +480,10 @@ const _translations = <String, Map<String, String>>{
     'en': 'Cement consumption',
     'es': 'Consumo de cemento',
   },
+  'Consumo de cimento acima de 450 kg/m³': {
+    'en': 'Cement consumption above 450 kg/m³',
+    'es': 'Consumo de cemento superior a 450 kg/m³',
+  },
   'Dosagem aplicada': {'en': 'Applied dosage', 'es': 'Dosificación aplicada'},
   'Quantidade necessária': {
     'en': 'Required quantity',
@@ -529,6 +533,22 @@ const _translations = <String, Map<String, String>>{
   'Consumo de cimento (kg/m³)': {
     'en': 'Cement consumption (kg/m³)',
     'es': 'Consumo de cemento (kg/m³)',
+  },
+  'Seu traço tem consumo de cimento acima de 450 kg/m³?': {
+    'en': 'Does your concrete mix use more than 450 kg of cement per m³?',
+    'es': '¿Su mezcla usa más de 450 kg de cemento por m³?',
+  },
+  'Cálculo ajustado para consumo de cimento acima de 450 kg/m³.': {
+    'en': 'Calculation adjusted for cement consumption above 450 kg/m³.',
+    'es': 'Cálculo ajustado para un consumo de cemento superior a 450 kg/m³.',
+  },
+  'Recalcular com dosagem de 1,0 kg/m³': {
+    'en': 'Recalculate using a dosage of 1.0 kg/m³',
+    'es': 'Recalcular con una dosificación de 1,0 kg/m³',
+  },
+  'Usar dosagem padrão de 0,80 kg/m³': {
+    'en': 'Use the standard dosage of 0.80 kg/m³',
+    'es': 'Usar la dosificación estándar de 0,80 kg/m³',
   },
   'Dosagem': {'en': 'Dosage', 'es': 'Dosificación'},
   'Resultado': {'en': 'Result', 'es': 'Resultado'},

@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
 class LocalStorageService {
+  static const _managedRootName = 'CWSadmixControl';
   String? _rootPathCache;
   String? _exportRootPathCache;
 
@@ -11,7 +12,7 @@ class LocalStorageService {
     final cached = _rootPathCache;
     if (cached != null) return cached;
     final dir = await getApplicationDocumentsDirectory();
-    final path = p.join(dir.path, 'CWSadmixControl');
+    final path = p.join(dir.path, _managedRootName);
     _rootPathCache = path;
     return path;
   }
@@ -98,5 +99,26 @@ class LocalStorageService {
     );
     await dir.create(recursive: true);
     return dir;
+  }
+
+  /// Resolves a file stored inside the app-managed directory even when iOS
+  /// changes the application container's absolute path between installations
+  /// or updates.
+  Future<String?> resolveManagedFilePath(String storedPath) async {
+    final trimmed = storedPath.trim();
+    if (trimmed.isEmpty) return null;
+
+    final storedFile = File(trimmed);
+    if (await storedFile.exists()) return storedFile.path;
+
+    final normalized = p.normalize(trimmed);
+    final parts = p.split(normalized);
+    final rootIndex = parts.lastIndexOf(_managedRootName);
+    if (rootIndex < 0 || rootIndex == parts.length - 1) return null;
+
+    final relativeParts = parts.sublist(rootIndex + 1);
+    final candidate = File(p.join(await rootPath, p.joinAll(relativeParts)));
+    if (await candidate.exists()) return candidate.path;
+    return null;
   }
 }
