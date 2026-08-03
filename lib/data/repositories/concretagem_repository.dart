@@ -1,10 +1,33 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../../core/services/local_storage_service.dart';
 import '../local/app_database.dart';
 import '../models/concretagem_model.dart';
 
 class ConcretagemRepository {
   final AppDatabase _db = AppDatabase.instance;
+  final LocalStorageService _storage = LocalStorageService();
+
+  Future<Concretagem> _recuperarPlantaLocal(
+    Database db,
+    Concretagem concretagem,
+  ) async {
+    final storedPath = concretagem.plantaPath.trim();
+    if (storedPath.isEmpty) return concretagem;
+
+    final resolvedPath = await _storage.resolveManagedFilePath(storedPath);
+    if (resolvedPath == null || resolvedPath == storedPath) return concretagem;
+
+    if (concretagem.id != null) {
+      await db.update(
+        'concretagens',
+        {'planta_path': resolvedPath},
+        where: 'id = ?',
+        whereArgs: [concretagem.id],
+      );
+    }
+    return concretagem.copyWith(plantaPath: resolvedPath);
+  }
 
   Future<List<Concretagem>> listarPorObra(int obraId) async {
     final db = await _db.database;
@@ -14,9 +37,12 @@ class ConcretagemRepository {
       whereArgs: [obraId],
       orderBy: 'created_at DESC',
     );
-    return rows
-        .map((row) => Concretagem.fromMap(Map<String, dynamic>.from(row)))
-        .toList();
+    final concretagens = <Concretagem>[];
+    for (final row in rows) {
+      final concretagem = Concretagem.fromMap(Map<String, dynamic>.from(row));
+      concretagens.add(await _recuperarPlantaLocal(db, concretagem));
+    }
+    return concretagens;
   }
 
   Future<Concretagem?> buscarPorId(int id) async {
@@ -28,7 +54,10 @@ class ConcretagemRepository {
       limit: 1,
     );
     if (rows.isEmpty) return null;
-    return Concretagem.fromMap(Map<String, dynamic>.from(rows.first));
+    final concretagem = Concretagem.fromMap(
+      Map<String, dynamic>.from(rows.first),
+    );
+    return _recuperarPlantaLocal(db, concretagem);
   }
 
   Future<Concretagem> criarConcretagem({
