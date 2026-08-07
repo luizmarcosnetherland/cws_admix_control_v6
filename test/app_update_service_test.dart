@@ -63,6 +63,7 @@ void main() {
     expect(update!.storeVersion, '1.0.8');
     expect(update.installedVersion, '1.0.7');
     expect(update.installedBuildNumber, '23');
+    expect(update.store, AppStore.appStore);
   });
 
   test(
@@ -80,11 +81,33 @@ void main() {
     },
   );
 
-  test('nao consulta App Store fora do iOS', () async {
+  test('retorna atualizacao quando Google Play tem versionCode maior', () async {
     final service = AppUpdateService(
       targetPlatform: TargetPlatform.android,
-      client: MockClient(
-        (_) async => throw StateError('Nao deveria consultar'),
+      androidUpdateChecker: () async => const AndroidUpdateStatus(
+        isAvailable: true,
+        availableVersionCode: 24,
+      ),
+    );
+    addTearDown(service.dispose);
+
+    final update = await service.checkForUpdate(packageInfo: packageInfo());
+
+    expect(update, isNotNull);
+    expect(update!.store, AppStore.googlePlay);
+    expect(update.storeBuildNumber, '24');
+    expect(
+      update.storeUri.toString(),
+      'https://play.google.com/store/apps/details?id=br.com.netherland.cwsadmixcontrol',
+    );
+  });
+
+  test('nao retorna atualizacao Android com versionCode igual', () async {
+    final service = AppUpdateService(
+      targetPlatform: TargetPlatform.android,
+      androidUpdateChecker: () async => const AndroidUpdateStatus(
+        isAvailable: true,
+        availableVersionCode: 23,
       ),
     );
     addTearDown(service.dispose);
@@ -92,5 +115,19 @@ void main() {
     final update = await service.checkForUpdate(packageInfo: packageInfo());
 
     expect(update, isNull);
+  });
+
+  test('nao consulta lojas em plataformas sem suporte', () async {
+    final service = AppUpdateService(
+      targetPlatform: TargetPlatform.windows,
+      client: MockClient(
+        (_) async => throw StateError('Nao deveria consultar'),
+      ),
+      androidUpdateChecker: () async =>
+          throw StateError('Nao deveria consultar'),
+    );
+    addTearDown(service.dispose);
+
+    expect(await service.checkForUpdate(packageInfo: packageInfo()), isNull);
   });
 }
