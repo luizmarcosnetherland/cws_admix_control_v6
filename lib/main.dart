@@ -213,6 +213,18 @@ class _AppGateState extends State<AppGate> {
 
     if (!mounted || updateInfo == null) return;
     final update = updateInfo;
+    final storeName = update.store == AppStore.googlePlay
+        ? 'Google Play'
+        : 'App Store';
+    final newVersionLabel = update.storeVersion != null
+        ? tr(
+            'Nova versão: {version}',
+            params: {'version': update.storeVersion!},
+          )
+        : tr(
+            'Novo build: {build}',
+            params: {'build': update.storeBuildNumber!},
+          );
 
     await showDialog<void>(
       context: context,
@@ -221,8 +233,8 @@ class _AppGateState extends State<AppGate> {
         content: Text(
           [
             tr(
-              'Uma nova versão do {appName} está disponível na App Store.',
-              params: {'appName': update.appName},
+              'Uma nova versão do {appName} está disponível na {storeName}.',
+              params: {'appName': update.appName, 'storeName': storeName},
             ),
             '',
             tr(
@@ -232,10 +244,7 @@ class _AppGateState extends State<AppGate> {
                 'build': update.installedBuildNumber,
               },
             ),
-            tr(
-              'Nova versão: {version}',
-              params: {'version': update.storeVersion},
-            ),
+            newVersionLabel,
           ].join('\n'),
         ),
         actions: [
@@ -269,7 +278,7 @@ class _AppGateState extends State<AppGate> {
       SnackBar(
         content: Text(
           tr(
-            'Não foi possível abrir a App Store. Tente novamente em instantes.',
+            'Não foi possível abrir a loja de aplicativos. Tente novamente em instantes.',
           ),
         ),
       ),
@@ -1937,17 +1946,54 @@ class DocumentoPdfPage extends StatelessWidget {
   }
 
   static const Map<String, String> _diacritics = {
-    'á': 'a', 'à': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a',
-    'Á': 'A', 'À': 'A', 'Â': 'A', 'Ã': 'A', 'Ä': 'A',
-    'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
-    'É': 'E', 'È': 'E', 'Ê': 'E', 'Ë': 'E',
-    'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i',
-    'Í': 'I', 'Ì': 'I', 'Î': 'I', 'Ï': 'I',
-    'ó': 'o', 'ò': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o',
-    'Ó': 'O', 'Ò': 'O', 'Ô': 'O', 'Õ': 'O', 'Ö': 'O',
-    'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
-    'Ú': 'U', 'Ù': 'U', 'Û': 'U', 'Ü': 'U',
-    'ç': 'c', 'Ç': 'C', 'ñ': 'n', 'Ñ': 'N',
+    'á': 'a',
+    'à': 'a',
+    'â': 'a',
+    'ã': 'a',
+    'ä': 'a',
+    'Á': 'A',
+    'À': 'A',
+    'Â': 'A',
+    'Ã': 'A',
+    'Ä': 'A',
+    'é': 'e',
+    'è': 'e',
+    'ê': 'e',
+    'ë': 'e',
+    'É': 'E',
+    'È': 'E',
+    'Ê': 'E',
+    'Ë': 'E',
+    'í': 'i',
+    'ì': 'i',
+    'î': 'i',
+    'ï': 'i',
+    'Í': 'I',
+    'Ì': 'I',
+    'Î': 'I',
+    'Ï': 'I',
+    'ó': 'o',
+    'ò': 'o',
+    'ô': 'o',
+    'õ': 'o',
+    'ö': 'o',
+    'Ó': 'O',
+    'Ò': 'O',
+    'Ô': 'O',
+    'Õ': 'O',
+    'Ö': 'O',
+    'ú': 'u',
+    'ù': 'u',
+    'û': 'u',
+    'ü': 'u',
+    'Ú': 'U',
+    'Ù': 'U',
+    'Û': 'U',
+    'Ü': 'U',
+    'ç': 'c',
+    'Ç': 'C',
+    'ñ': 'n',
+    'Ñ': 'N',
   };
 
   static String _safePdfFileName(String title) {

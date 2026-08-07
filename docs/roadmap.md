@@ -61,3 +61,19 @@ Escopo sugerido:
 Observacoes:
 - ideal usar links gerenciaveis para facilitar atualizacao sem depender de nova versao do app
 - vale alinhar quais videos serao institucionais e quais terao foco tecnico/comercial
+
+### 4. Aviso de atualizacao no Android (implementado)
+
+Objetivo:
+Habilitar no Android a verificacao de novas versoes publicadas na Google Play. O servico atual encerra a verificacao fora do iOS e consulta apenas a App Store da Apple.
+
+Escopo sugerido:
+- implementar a verificacao de atualizacao pela Google Play usando uma solucao oficial e compativel com a distribuicao do app
+- comparar corretamente a versao e o `versionCode` instalados com a versao disponivel
+- abrir a pagina correta do aplicativo na Google Play ao tocar em Atualizar
+- manter o comportamento atual do iOS e separar as regras especificas de cada loja
+- adicionar testes para Android sem remover os testes existentes de iOS
+
+Observacoes:
+- implementado para o proximo build usando a API oficial In-App Updates da Google Play
+- validar em um aparelho com a versao anterior instalada e a nova versao publicada na faixa de testes da Google Play

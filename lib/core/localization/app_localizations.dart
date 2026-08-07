@@ -144,6 +144,10 @@ const _translations = <String, Map<String, String>>{
     'en': 'A new version of {appName} is available on the App Store.',
     'es': 'Hay una nueva versión de {appName} disponible en App Store.',
   },
+  'Uma nova versão do {appName} está disponível na {storeName}.': {
+    'en': 'A new version of {appName} is available on {storeName}.',
+    'es': 'Hay una nueva versión de {appName} disponible en {storeName}.',
+  },
   'Versão instalada: {version} (build {build})': {
     'en': 'Installed version: {version} (build {build})',
     'es': 'Versión instalada: {version} (build {build})',
@@ -152,11 +156,20 @@ const _translations = <String, Map<String, String>>{
     'en': 'New version: {version}',
     'es': 'Nueva versión: {version}',
   },
+  'Novo build: {build}': {
+    'en': 'New build: {build}',
+    'es': 'Nueva compilación: {build}',
+  },
   'Depois': {'en': 'Later', 'es': 'Después'},
   'Atualizar': {'en': 'Update', 'es': 'Actualizar'},
   'Não foi possível abrir a App Store. Tente novamente em instantes.': {
     'en': 'We could not open the App Store. Please try again in a moment.',
     'es': 'No pudimos abrir App Store. Inténtelo nuevamente en unos instantes.',
+  },
+  'Não foi possível abrir a loja de aplicativos. Tente novamente em instantes.': {
+    'en': 'We could not open the app store. Please try again in a moment.',
+    'es':
+        'No pudimos abrir la tienda de aplicaciones. Inténtelo nuevamente en unos instantes.',
   },
   'Não conseguimos preparar os dados do evento.': {
     'en': 'We could not prepare the event details.',
